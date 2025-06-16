@@ -1,0 +1,37 @@
+{
+  "name": "dp-1",
+  "version": "1.0.0",
+  "description": "**A platform-neutral protocol for blockchain-native digital art (BNDA) distribution and playback.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "next build prototype/client && next export -o prototype/client/out",
+    "test": "vitest run",
+    "dev": "next dev prototype/client",
+    "worker": "wrangler dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250614.0",
+    "@tailwindcss/postcss": "^4.1.10",
+    "@types/node": "24.0.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3",
+    "wrangler": "^4.20.0"
+  }
+}

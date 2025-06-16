@@ -1,0 +1,21 @@
+[
+  {
+    "id": "geom-p1",
+    "title": "Generative Geometry Part 1",
+    "chain": "tezos",
+    "type": "code",
+    "items": [
+      {"id": "g1-1", "source": "https://example.com/art1.html", "duration": 10},
+      {"id": "g1-2", "source": "https://example.com/art2.html", "duration": 15}
+    ]
+  },
+  {
+    "id": "geom-p2",
+    "title": "Generative Geometry Part 2",
+    "chain": "tezos",
+    "type": "code",
+    "items": [
+      {"id": "g2-1", "source": "https://example.com/art3.html", "duration": 12}
+    ]
+  }
+]
