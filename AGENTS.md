@@ -60,6 +60,39 @@ curl -X GET http://localhost:8787/api/v1/playlists
 4. Schema validation works
 5. TypeScript compiles
 
+## Pull Request Guidelines
+
+### Conventional Commits
+All commits and PR titles must follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#specification):
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Required Types
+- `feat:` - New features (correlates with MINOR version)
+- `fix:` - Bug fixes (correlates with PATCH version)
+- `docs:` - Documentation changes
+- `test:` - Adding or updating tests
+- `refactor:` - Code refactoring without feature changes
+- `chore:` - Maintenance tasks, dependency updates
+
+#### Breaking Changes
+- Add `!` after type: `feat!: redesign playlist API`
+- Or use footer: `BREAKING CHANGE: playlist format changed`
+
+#### Examples
+```bash
+feat(worker): add AI playlist generation endpoint
+fix(ui): resolve chat panel scroll issue
+docs: update API documentation for v1.2.0
+test(playlist): add validation test cases
+```
+
 ## Prototype Architecture
 
 ### Client-Server Setup
