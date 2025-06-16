@@ -45,12 +45,12 @@ async function main() {
   });
 
   await page.waitForFunction(() => {
-    const logs = document.querySelectorAll('pre');
+    const logs = document.querySelectorAll('.chat-log pre');
     return logs.length && logs[logs.length - 1].textContent.includes('result');
   });
 
   const state = await page.evaluate(() => localStorage.getItem('dp1_state'));
-  const chat = await page.evaluate(() => document.querySelectorAll('pre')[0].textContent);
+  const chat = await page.evaluate(() => document.querySelector('.chat-log pre')?.textContent);
 
   const firstSrc = await page.$eval('iframe', el => el.getAttribute('src'));
   await new Promise(r => setTimeout(r, 1500));

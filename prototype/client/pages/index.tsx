@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+import type { GetStaticProps } from 'next';
+import fs from 'fs/promises';
+import path from 'path';
+import { marked } from 'marked';
 import playlistsData from '../../src/data/playlists.json';
 import playlistGroupsData from '../../src/data/playlist-groups.json';
 
@@ -22,7 +27,7 @@ function validateItems(items: any[]): any[] {
     }));
 }
 
-export default function Home() {
+export default function Home({ docHtml }: { docHtml: string }) {
   const [curl, setCurl] = useState('');
   const [log, setLog] = useState<LogEntry[]>([]);
   const [playlist, setPlaylist] = useState<any[]>([]);
@@ -115,34 +120,48 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen">
-      <div className="w-1/2 p-4 border-r">
-        <h1 className="text-xl font-bold mb-2">Player Panel</h1>
-        {playlist.length > 0 && (
-          <iframe
-            key={playlist[index].id}
-            src={playlist[index].source}
-            allow="*"
-            className="w-full h-96 border"
-          />
-        )}
-      </div>
-      <div className="w-1/2 p-4">
-        <h1 className="text-xl font-bold mb-2">Chat Panel</h1>
-        <button className="bg-gray-300 px-2 py-1 mr-2" onClick={example}>Example</button>
-        <div className="mt-2">
-          <textarea className="border w-full p-2" rows={4} value={curl} onChange={e => setCurl(e.target.value)} placeholder="curl command" />
-          <button className="mt-2 bg-blue-500 text-white px-2 py-1" onClick={send}>Send</button>
-        </div>
-        <div className="mt-4 h-40 overflow-y-auto border p-2 text-sm">
-          {log.map((l, i) => (
-            <div key={i} className="mb-2">
-              <div className="font-mono text-gray-600">$ {l.command}</div>
-              <pre className="whitespace-pre-wrap">{l.response}</pre>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="h-screen bg-gray-900 text-gray-100">
+      <PanelGroup direction="horizontal" className="h-full">
+        <Panel defaultSize={33} className="flex flex-col p-4 border-r border-gray-700">
+          <h1 className="text-xl font-bold mb-2">Player Panel</h1>
+          {playlist.length > 0 && (
+            <iframe
+              key={playlist[index].id}
+              src={playlist[index].source}
+              allow="*"
+              className="flex-1 w-full border"
+            />
+          )}
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600" />
+        <Panel defaultSize={34} className="flex flex-col p-4 border-r border-gray-700">
+          <h1 className="text-xl font-bold mb-2">Chat Panel</h1>
+          <div className="chat-log flex-1 overflow-y-auto space-y-2 pr-1">
+            {log.map((l, i) => (
+              <div key={i}>
+                <div className="flex justify-end">
+                  <div className="bg-blue-600 text-white px-3 py-1 rounded-lg font-mono whitespace-pre-wrap max-w-xs">
+                    {l.command}
+                  </div>
+                </div>
+                <div className="flex justify-start mt-1">
+                  <pre className="bg-gray-700 px-3 py-1 rounded-lg whitespace-pre-wrap max-w-xs">{l.response}</pre>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2">
+            <button className="bg-gray-700 px-2 py-1 mr-2" onClick={example}>Example</button>
+            <textarea className="border w-full p-2 mt-2 text-black" rows={4} value={curl} onChange={e => setCurl(e.target.value)} placeholder="curl command" />
+            <button className="mt-2 bg-blue-600 text-white px-2 py-1" onClick={send}>Send</button>
+          </div>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600" />
+        <Panel defaultSize={33} className="p-4 overflow-y-auto">
+          <h1 className="text-xl font-bold mb-2">Document</h1>
+          <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: docHtml }} />
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }
@@ -169,4 +188,12 @@ async function handleLocalApi(method: string, url: string, body?: string) {
   }
   return { error: 'unsupported' };
 }
+
+export const getStaticProps: GetStaticProps<{ docHtml: string }> = async () => {
+  const docsDir = path.join(process.cwd(), 'docs');
+  const file = (await fs.readdir(docsDir)).find(f => f.startsWith('DP')) as string;
+  const md = await fs.readFile(path.join(docsDir, file), 'utf8');
+  const docHtml = (await marked.parse(md)) as string;
+  return { props: { docHtml } };
+};
 
