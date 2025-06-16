@@ -6,7 +6,8 @@
     "summary": "Exploring procedural form…",
     "playlists": [
       "https://feed.ff.com/geom-p1/playlist.json",
-      "https://feed.ff.com/geom-p2/playlist.json"
+      "https://feed.ff.com/geom-p2/playlist.json",
+      "https://feed.ff.com/demo1/playlist.json"
     ],
     "created": "2025-05-20T00:00:00Z",
     "coverImage": "ipfs://bafyb.../cover.jpg"

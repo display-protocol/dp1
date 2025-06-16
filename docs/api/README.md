@@ -49,6 +49,15 @@ Example response snippet:
 }
 ```
 
+### POST `/api/v1/playlists`
+
+Submit a playlist for validation. The body must include `items[]`, `signature`, and the Ed25519 `pubkey` used to sign the SHA-256 hash of the JSON.
+
+```bash
+curl -X POST /api/v1/playlists \
+  -d '{"items":[{"id":"a","source":"https://example.com/a","duration":5}],"signature":"ed25519:<hex>","pubkey":"<hex>"}'
+```
+
 ## Deployment
 
 The API worker runs on Cloudflare Workers. The accompanying Next.js client is hosted on Cloudflare Pages. See the [Cloudflare Pages documentation](https://developers.cloudflare.com/pages/llms-full.txt) for deployment steps.
