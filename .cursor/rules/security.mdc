@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Security standards for blockchain verification, authentication, and data protection
+alwaysApply: false
+---
+
+# Security Standards
+
+## Cryptographic Requirements
+
+### Ed25519 Signature Verification
+```typescript
+// Canonical form: UTF-8 (no BOM), LF terminators
+// SHA-256 → Ed25519 → embed as: "signature": "ed25519:<hex>"
+async function verifyPlaylistSignature(playlist: string, signature: string): Promise<boolean> {
+  const canonicalForm = normalizeJSON(playlist);
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalForm));
+  return verifyEd25519Signature(hash, signature);
+}
+```
+
+### License Mode Authentication
+- **open**: No viewer authentication required
+- **token**: Wallet proof using EIP-4361 (Ethereum) or Tezos Signed Payload
+- **subscription**: Bearer JWT verification against operator's `/verify` endpoint
+
+### Secrets Management
+- NEVER embed secrets directly in code
+- Use Cloudflare Workers environment variables
+- Implement proper key rotation procedures
+- Use least privilege principle for all bindings
+
+## Request Security
+
+### Input Validation
+- Validate all incoming JSON against schemas
+- Sanitize user inputs to prevent injection attacks
+- Implement rate limiting per device/user
+- Validate content-addressed URIs before fetching
+
+### Authentication Headers
+```typescript
+// EIP-4361 wallet proof validation
+interface WalletProof {
+  domain: string;
+  address: string;
+  statement: string;
+  uri: string;
+  version: string;
+  chainId: number;
+  nonce: string;
+  issuedAt: string;
+  signature: string;
+}
+```
+
+### Security Headers
+```typescript
+const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'"
+};
+```
+
+## Data Protection
+
+### Content Addressing
+- Verify IPFS CID integrity before serving content
+- Validate Arweave transaction IDs
+- Implement hash verification for all immutable assets
+- Use content-addressed storage for capsule files
+
+### Provenance Security
+- Only playlist signers can update provenance blocks
+- Validate all dependency URIs in provenance data
+- Implement immutability checks for referenced content
+- Track all provenance modifications with audit logs
+
+### Transport Security
+- Require TLS ≥1.2 for all HTTP connections
+- Implement proper CORS policies
+- Support HTTP Range requests securely
+- Validate file:// and UNC path access in offline mode
+
+## Audit and Monitoring
+
+### Logging Security Events
+- Log all authentication attempts
+- Track signature verification failures
+- Monitor unusual access patterns
+- Alert on reproduction hash mismatches
+
+### Error Handling
+- Never expose sensitive information in error messages
+- Implement proper error boundaries
+- Use structured error responses with appropriate codes
+- Log security events for forensic analysis
+
+@prototype/types/security-types.ts
+@prototype/utils/crypto-utils.ts

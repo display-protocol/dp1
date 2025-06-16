@@ -1,0 +1,111 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Cloudflare Workers Development Standards
+
+Based on [Cloudflare Workers official guidelines](mdc:https:/developers.cloudflare.com/workers/prompt.txt).
+
+**Always reference [Cloudflare Workers API documentation](mdc:https:/developers.cloudflare.com/workers/llms-full.txt) when coding the prototype.**
+
+## Core Requirements
+
+### TypeScript & ES Modules
+- Generate code in TypeScript by default
+- Use ES modules format exclusively (NEVER Service Worker format)
+- MUST import all methods, classes and types used in the code
+- Keep all code in a single file unless otherwise specified
+- Use official SDKs when available
+- Minimize external dependencies
+- Do NOT use libraries that have FFI/native/C bindings
+
+### Configuration Standards
+- Always use `wrangler.jsonc` (NOT wrangler.toml)
+- Set `compatibility_date = "2025-03-07"`
+- Set `compatibility_flags = ["nodejs_compat"]`
+- Enable observability: `"enabled": true, "head_sampling_rate": 1`
+- Include only bindings actually used in code
+
+### Data Storage Strategy
+- **Workers KV**: Configuration data, user profiles, A/B testing
+- **Durable Objects**: Strongly consistent state management, playlist coordination
+- **D1**: Relational data for provenance, metadata
+- **R2**: Capsule storage (*.dp1c files), art assets
+- **Vectorize**: Embeddings for art similarity search
+- **Workers AI**: Default AI inference for playlist generation and art analysis
+
+### WebSocket Implementation (Durable Objects)
+```typescript
+// Use Hibernation API - NOT legacy addEventListener
+this.ctx.acceptWebSocket(server); // NOT server.accept()
+async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) { ... }
+async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) { ... }
+```
+
+## Prototype UI Architecture
+
+### Two-Panel Layout Requirements
+The prototype must implement a **two-panel layout**:
+
+**Left Panel - Player Interface**:
+- DP-1 playlist player for displaying digital art
+- Artwork rendering with display preferences (scaling, margin, background)
+- Playlist navigation and controls
+- Device status and connection indicators
+- Visual feedback for AI-generated playlists
+
+**Right Panel - Chat Interface**:
+- Natural language command input box
+- AI conversation history and responses
+- API call results and status messages
+- Real-time playlist generation feedback
+- Command palette for typed commands
+
+### Panel Communication Pattern
+```typescript
+// Chat panel sends commands to player panel
+interface ChatToPlayerMessage {
+  type: 'playlist_update' | 'device_command' | 'display_settings';
+  payload: {
+    playlistId?: string;
+    deviceId?: string;
+    settings?: DisplayPrefs;
+  };
+}
+
+// Player panel responds with status
+interface PlayerToChatMessage {
+  type: 'status_update' | 'playback_event' | 'error';
+  payload: {
+    status: 'playing' | 'paused' | 'error';
+    currentItem?: PlaylistItem;
+    error?: string;
+  };
+}
+```
+
+### Communication Flow
+```
+Chat Panel (Right) → API Calls → Player Panel (Left)
+     ↓                              ↑
+Natural Language    →    JSON Commands    →    Playlist Updates
+"Play ambient art"  →    PUT /playlist    →    Visual Display
+```
+
+### Security Best Practices
+- Never bake secrets into the code
+- Include proper error handling and logging
+- Follow least privilege principle for bindings
+- Implement proper request validation
+- Use appropriate security headers
+
+### Response Format
+- Always output complete files, never partial updates or diffs
+- Format code consistently using standard TypeScript conventions
+- Include comments explaining complex logic
+- Use appropriate HTTP status codes
+- Implement proper CORS headers
+
+@templates/worker-template.ts
+@templates/wrangler-config.jsonc

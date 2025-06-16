@@ -1,0 +1,160 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+---
+description: Testing standards for DP-1 protocol compliance and conservation workflow
+globs: ["**/*test*", "**/*spec*", "prototype/tests/**/*"]
+alwaysApply: false
+---
+
+# Testing Standards
+
+## Local Development and Testing
+
+### Running Workers Locally
+```bash
+# Start local development server
+npx wrangler dev
+
+# Run with specific port and environment
+npx wrangler dev --port 8787 --env development
+
+# Test with live reload for rapid development
+npx wrangler dev --live-reload
+```
+
+### Unit Testing Framework
+```bash
+# Install testing dependencies
+npm install --save-dev vitest @cloudflare/workers-types
+
+# Run unit tests
+npm test
+# or with Vitest directly
+npx vitest run
+
+# Run tests in watch mode during development
+npx vitest watch
+
+# Run specific test pattern
+npx vitest run -t "playlist validation"
+```
+
+## Required Test Coverage
+
+### JSON Schema Validation
+- All playlists MUST validate against DP-1 JSON Schema 2020-12
+- Test inheritance rules: defaults → ref → item.local
+- Validate error codes: `playlistInvalid`, `sigInvalid`, `licenseDenied`, `reproMismatch`, `sourceUnreachable`
+- Test canonical JSON serialization (UTF-8, LF terminators)
+
+### Cryptographic Verification
+- Ed25519 signature verification for playlists
+- EIP-4361 wallet proof validation in token mode
+- Bearer JWT verification for subscription mode
+- Content-addressed URI verification (IPFS, Arweave)
+
+### Deterministic Reproduction
+- SHA-256 hash verification for artworks
+- pHash comparison for visual drift detection
+- Frame hashing for conservation workflow
+- Reproduction mismatch detection and DBus signals
+
+### Cross-Chain Provenance
+- Validate provenance blocks with `seriesId` and optional `tokenId`
+- Test dependency resolution for external registries
+- Verify immutability constraints for content-addressed URIs
+- Test provenance updates and re-signing requirements
+
+### API Endpoint Testing
+
+#### Local API Testing with curl
+```bash
+# Test playlist endpoints locally
+curl -X GET http://localhost:8787/api/v1/playlists
+
+# Test playlist creation
+curl -X POST http://localhost:8787/api/v1/playlists \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test Playlist", "items": []}'
+
+# Test device playlist assignment
+curl -X PUT http://localhost:8787/api/v1/devices/device-123/playlist \
+  -H "Content-Type: application/json" \
+  -d '{"playlistId": "playlist-456"}'
+
+# Test AI playlist generation
+curl -X POST http://localhost:8787/api/v1/ai/generate-playlist \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "2-hour ambient art mix", "duration": 7200}'
+```
+
+#### Unit Test Patterns
+```typescript
+// Test idempotent operations
+describe('PUT /device/{id}/playlist', () => {
+  it('should be idempotent', async () => {
+    const result1 = await PUT('/device/123/playlist', playlist);
+    const result2 = await PUT('/device/123/playlist', playlist);
+    expect(result1).toEqual(result2);
+  });
+});
+
+// Workers Integration Testing with Miniflare
+import { Miniflare } from 'miniflare';
+
+describe('Worker Integration Tests', () => {
+  let mf: Miniflare;
+  
+  beforeAll(async () => {
+    mf = new Miniflare({
+      scriptPath: './src/index.ts',
+      modules: true,
+      bindings: {
+        // Mock KV, D1, AI bindings for testing
+      }
+    });
+  });
+  
+  test('should handle playlist generation request', async () => {
+    const response = await mf.dispatchFetch('http://localhost/api/v1/ai/generate-playlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'ambient art playlist' })
+    });
+    
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data).toHaveProperty('playlist');
+  });
+});
+```
+
+### Conservation Workflow Testing
+- Ring buffer preservation data testing
+- IPFS/Arweave archival workflow validation
+- Drift detection and alert system testing
+- Offline/online synchronization testing
+
+### Performance Testing
+- Cold start optimization validation
+- Caching strategy effectiveness
+- Range request handling for streaming
+- Progressive loading performance
+
+### Integration Testing
+- End-to-end playlist delivery workflow
+- Multi-device coordination via Durable Objects
+- WebSocket connection handling with Hibernation API
+- AI inference response time and accuracy
+
+### Compliance Testing
+- DP-1 Compatible badge requirements
+- DP-1 Deterministic badge (8-week Regenerate 2030 test)
+- Backwards compatibility validation
+- Migration guide testing
+
+@prototype/fixtures/test-playlists.json
+@prototype/helpers/test-utils.ts

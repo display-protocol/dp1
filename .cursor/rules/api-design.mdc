@@ -1,0 +1,84 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: API design standards for DP-1 protocol endpoints
+globs: ["prototype/api/**/*", "**/*api*", "**/*endpoint*"]
+alwaysApply: false
+---
+
+# API Design Standards
+
+## RESTful JSON API Design
+
+### Standard REST Endpoints
+- `GET /api/v1/playlists` - List playlists with filtering (JSON response)
+- `PUT /api/v1/devices/{id}/playlist` - Idempotent playlist assignment (JSON body)
+- `PATCH /api/v1/playlists/{id}` - Partial playlist updates (JSON-patch format)
+- `POST /api/v1/devices/{id}/commands` - Explicit device commands (JSON body)
+- `GET /api/v1/playlist-groups/{id}` - Exhibition metadata (JSON response)
+
+### Device Management Endpoints
+- `GET /api/v1/devices` - List all devices (JSON array)
+- `GET /api/v1/devices/{id}` - Get device state (JSON object)
+- `PUT /api/v1/devices/{id}` - Update device configuration (JSON body)
+
+### State Management Endpoints  
+- `GET /api/v1/state` - Get global application state (JSON object)
+- `GET /api/v1/state/devices/{id}` - Get device-specific state (JSON object)
+- `PUT /api/v1/state/devices/{id}` - Update device state (JSON body)
+
+## Implementation Architecture
+
+### Prototype vs Hardware
+- **Prototype**: Cloudflare Workers serverless implementation (proof-of-concept)
+- **Hardware**: Node.js, Go, or Rust implementation on FF1 devices (production)
+- **Storage**: JSON-only state in key-value databases (no SQL)
+- **API**: Consistent RESTful JSON endpoints across all implementations
+
+### JSON State Storage Requirements
+- All state stored as JSON in key-value format
+- Use consistent key patterns: `{type}:{id}`
+- Include version and timestamp in all state objects
+- Support atomic operations for concurrent access
+
+### Response Format Standards
+- Return JSON-patches for state changes to enable LLM reasoning
+- Include provenance data with `seriesId` and optional `tokenId`
+- Embed signature verification results
+- Use appropriate HTTP status codes (200, 201, 400, 401, 403, 404, 500)
+- Implement proper CORS headers
+- All responses in JSON format
+
+### Error Handling
+```typescript
+interface ApiError {
+  code: 'playlistInvalid' | 'sigInvalid' | 'licenseDenied' | 'reproMismatch' | 'sourceUnreachable';
+  message: string;
+  details?: Record<string, any>;
+}
+```
+
+### Authentication & Authorization
+- Support three license modes: "open", "token", "subscription"
+- Implement Ed25519 signature verification for playlists
+- Use EIP-4361 for wallet proof in token mode
+- Bearer JWT verification for subscription mode
+- Include caller information in mutating commands
+
+### Performance Optimization
+- Implement caching strategies using Workers KV
+- Support HTTP Range requests for streaming
+- Use content-addressed storage for immutable assets
+- Implement progressive loading for large datasets
+
+### Versioning
+- Use SemVer for API versions (`/v1/`, `/v2/`)
+- Mirror DP-1 protocol versioning
+- Maintain backwards compatibility
+- Provide migration guides for breaking changes
+
+@prototype/types/api-types.ts
+@prototype/schemas/api-schema.json
