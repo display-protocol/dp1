@@ -95,58 +95,25 @@ test(playlist): add validation test cases
 
 ## Prototype Architecture
 
-### Client-Server Setup
+See `prototype/client/AGENTS.md` for Next.js client instructions.
+
+### Server Setup
 **Server**: Cloudflare Worker (TypeScript) - API backend deployed to Workers
-**Client**: Next.js (TypeScript) - UI frontend deployed to Cloudflare Pages
-
-### Two-Panel UI Layout (Next.js Client)
-**Left Panel**: DP-1 playlist player with artwork rendering and controls
-**Right Panel**: Chat interface for natural language commands
-
-### Communication Flow
-```
-Next.js Client → Cloudflare Worker API → Response
-Chat Panel → PUT /api/playlist → Player Panel Update
-```
 
 ### Configuration
 **Worker**: TypeScript with ES modules, `compatibility_date = "2025-03-07"`
-**Next.js**: Static export for Cloudflare Pages deployment
 
 ## Dev Environment Tips
 
-### Workspace Management
-- Use `pnpm dlx turbo run dev --filter <project_name>` to jump to a specific package
-- Run `pnpm install --filter <project_name>` to add packages to workspace
-- Use `pnpm create next-app@latest <project_name> --typescript --tailwind --eslint --app` for Next.js client
-- Check the `name` field in each package's `package.json` for correct package names
-
 ### Quick Commands
 ```bash
-# Development (run both simultaneously)
+# Development
 npx wrangler dev --port 8787 --live-reload  # Worker server
-pnpm dev --filter prototype-ui               # Next.js client
 
 # Testing
 npx vitest run                               # Worker tests
-pnpm test --filter prototype-ui              # Next.js tests
 
 # Deployment
-wrangler deploy --env staging                # Deploy Worker
-pnpm build && pnpm pages:deploy              # Deploy Next.js to Pages
-```
-
-### Next.js + Cloudflare Pages Setup
-```bash
-# Configure Next.js for static export (required for Pages)
-# Add to next.config.js:
-# output: 'export'
-# trailingSlash: true
-# images: { unoptimized: true }
-
-# Deploy to Cloudflare Pages
-pnpm add @cloudflare/next-on-pages
-pnpm build
-npx @cloudflare/next-on-pages
+wrangler deploy --env staging
 ```
 

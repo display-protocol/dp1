@@ -33,8 +33,11 @@ prototype/  - Cloudflare Workers reference implementation
    ```
    Deploy the client to Pages and the API worker separately.
    See the [Cloudflare Pages documentation](https://developers.cloudflare.com/pages/llms-full.txt) for details.
-   The client features a two-panel UI where the right panel accepts curl-style commands and displays the API response.
+ The client features a responsive three-panel UI (player, chat, and document). The chat panel shows a message-style log with the command box at the bottom.
 3. **Build Hardware**: Use the spec to implement DP-1 on your preferred platform
+
+### Headless Testing
+Run `npm run headless` to build the client and verify the UI with Puppeteer. This test should pass before submitting client changes.
 
 ## AI-First Philosophy
 

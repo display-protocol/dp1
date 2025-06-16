@@ -18,9 +18,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "marked": "^15.0.12",
     "next": "^15.3.3",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-resizable-panels": "^3.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250614.0",
@@ -30,10 +32,10 @@
     "@types/react-dom": "^19.1.6",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.5",
+    "puppeteer": "^22.8.0",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3",
-    "wrangler": "^4.20.0",
-    "puppeteer": "^22.8.0"
+    "wrangler": "^4.20.0"
   }
 }
