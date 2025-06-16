@@ -24,7 +24,16 @@ prototype/  - Cloudflare Workers reference implementation
 ## Quick Start
 
 1. **Read the Specification**: Start with `docs/` for the complete DP-1 protocol definition
-2. **Try the Prototype**: Explore `prototype/` for a working Cloudflare Workers implementation
+2. **Try the Prototype**: Explore `prototype/` for a Cloudflare Worker API and a separate Next.js client
+   ```bash
+   # build the client for Cloudflare Pages
+   npm run build
+   # start the Worker locally
+   npm run worker
+   ```
+   Deploy the client to Pages and the API worker separately.
+   See the [Cloudflare Pages documentation](https://developers.cloudflare.com/pages/llms-full.txt) for details.
+   The client features a two-panel UI where the right panel accepts curl-style commands and displays the API response.
 3. **Build Hardware**: Use the spec to implement DP-1 on your preferred platform
 
 ## AI-First Philosophy
@@ -45,4 +54,6 @@ DP-1 embraces five core design principles:
 
 ---
 
-*Part of the Feral File ecosystem for blockchain-native digital art.* 
+*Part of the Feral File ecosystem for blockchain-native digital art.*
+
+See `docs/api/README.md` for example API requests and responses.

@@ -1,0 +1,8 @@
+node_modules
+
+.next
+.pnp.cjs
+.pnp.loader.mjs
+.yarn
+
+prototype/client/out
