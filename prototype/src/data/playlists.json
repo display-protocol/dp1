@@ -17,5 +17,16 @@
     "items": [
       {"id": "g2-1", "source": "https://example.com/art3.html", "duration": 12}
     ]
+  },
+  {
+    "id": "demo1",
+    "title": "Demo",
+    "chain": "tezos",
+    "type": "code",
+    "items": [
+      {"id": "a", "source": "https://example.com/a", "duration": 10}
+    ],
+    "signature": "ed25519:0a74db066ce2bc9e9390169f5eb9b7532a661a05c9924d50b64e6c7fa2d8eb12db2c6204c25725e4ea595fad0a902361446dc1747430cd2da7d5cf24a334730f",
+    "pubkey": "9414133c5617d8b67d817c895a0827c9d494ced441e400b797e2c37a6bef965f"
   }
 ]

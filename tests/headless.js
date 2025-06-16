@@ -33,11 +33,13 @@ async function main() {
 
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   const page = await browser.newPage();
+  page.on('console', msg => console.log('page-log', msg.text()));
   await page.goto('http://localhost:3000');
+  await page.waitForSelector('textarea');
 
   await page.evaluate(() => localStorage.clear());
 
-  const curl = "curl -X POST /api/v1/playlists -d '{\"items\":[{\"id\":\"a\",\"source\":\"https://example.com/a\",\"duration\":1},{\"id\":\"b\",\"source\":\"https://example.com/b\",\"duration\":1}]}'";
+  const curl = "curl -X POST /api/v1/playlists -d '{\"items\":[{\"id\":\"a\",\"source\":\"https://example.com/a\",\"duration\":1},{\"id\":\"b\",\"source\":\"https://example.com/b\",\"duration\":1}],\"signature\":\"ed25519:b85e26e24e061bcd63b83fe289cacc32140a70c49af3c177d8b33191a3687e07e2fe5b10877ffb3c40383ab8a87e8d34a1e7a0800e0b87ce3241f92b2cb33a0f\",\"pubkey\":\"dc9d83435cc336f16e1bebe812f2cc4990f8939441182443cc3916e56054290b\"}'";
   await page.type('textarea', curl);
   await page.$$eval('button', btns => {
     const b = btns.find(el => el.textContent.trim() === 'Send');
