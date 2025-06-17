@@ -1,15 +1,32 @@
 ---
-description: 
-globs: *.ts
-alwaysApply: false
----
----
 description: Testing standards for DP-1 protocol compliance and conservation workflow
-globs: ["**/*test*", "**/*spec*", "prototype/tests/**/*"]
+globs: *.ts,*.tsx
 alwaysApply: false
 ---
 
 # Testing Standards
+
+## Critical Client Testing Requirement
+
+### Mandatory Headless Testing for Client Updates
+**ALWAYS** run the headless test when making ANY changes to `prototype/client/`:
+
+```bash
+# Required test after any client updates
+node tests/headless.js
+```
+
+This end-to-end test:
+- Builds the Next.js client with `npx next build`
+- Serves the built client on localhost:3000
+- Uses Puppeteer to test the complete workflow:
+  - API playlist creation and validation
+  - Chat interface functionality
+  - Playlist playback verification
+  - State persistence in localStorage
+  - UI component interactions
+
+**NO CLIENT CHANGES** should be considered complete without a successful headless test run.
 
 ## Local Development and Testing
 
@@ -157,4 +174,4 @@ describe('Worker Integration Tests', () => {
 - Migration guide testing
 
 @prototype/fixtures/test-playlists.json
-@prototype/helpers/test-utils.ts
+@prototype/helpers/test-utils.ts 
