@@ -4,16 +4,6 @@
 
 ---
 
-### Review Guide  —  please read first
-
-• **Tech feedback** → tag comment threads with **\[ENG\]**  
-• **Conservation feedback** → tag **\[CONS\]**  
-• **Chain-specific notes** → tag **\[CHAIN\]**  
-• Internal reviewers: comments by **Fri 14 Jun**  
-• External reviewers: comments by **Fri 21 Jun**
-
----
-
 ## 1 · Scope & Goals
 
 **DP‑1** defines:
