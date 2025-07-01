@@ -57,7 +57,7 @@ npx wrangler login
 npm run setup:kv
 ```
 
-This will create three KV namespaces and print their IDs. Copy these IDs to update `wrangler.toml`:
+This will create KV namespaces and print their IDs. Copy these IDs to update `wrangler.toml`:
 
 ```toml
 [[kv_namespaces]]
@@ -69,11 +69,6 @@ preview_id = "YOUR_PLAYLISTS_PREVIEW_KV_ID_HERE"
 binding = "DP1_PLAYLIST_GROUPS"  
 id = "YOUR_PLAYLIST_GROUPS_KV_ID_HERE"
 preview_id = "YOUR_PLAYLIST_GROUPS_PREVIEW_KV_ID_HERE"
-
-[[kv_namespaces]]
-binding = "DP1_METADATA"
-id = "YOUR_METADATA_KV_ID_HERE"
-preview_id = "YOUR_METADATA_PREVIEW_KV_ID_HERE"
 ```
 
 ### 4. Set API Secrets
@@ -354,9 +349,6 @@ The `wrangler.toml` file configures:
 
 **DP1_PLAYLIST_GROUPS:**  
 - `playlist-group:{id}` - Individual groups
-
-**DP1_METADATA:**
-- `server:keypair` - Ed25519 signing keys
 
 ### Data Persistence
 

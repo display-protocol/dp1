@@ -6,24 +6,17 @@ compatibility_flags = ["nodejs_compat"]
 # Variables for all environments
 [vars]
 ENVIRONMENT = "development"
-API_SECRET = "test-api-secret"
-ED25519_PRIVATE_KEY = "302e020100300506032b657004220420602aa4320eca53a8ec2d9ddcf72a2a23545f5121f3137364f6169c7feff5a0c1"
 
 # KV namespace bindings for storing JSON data
 [[kv_namespaces]]
 binding = "DP1_PLAYLISTS"
-id = "5ec152b8b53a40e7857ca68ae9754943"
-preview_id = "5ec152b8b53a40e7857ca68ae9754943"
+id = "626b74ca2b5b4606904cac7c4bbfd454"
+preview_id = "648e8feef0f24832a01c372a79d76a0a"
 
 [[kv_namespaces]]
 binding = "DP1_PLAYLIST_GROUPS"
-id = "24a81f348b5040af864bae5358968c21"
-preview_id = "24a81f348b5040af864bae5358968c21"
-
-[[kv_namespaces]]
-binding = "DP1_METADATA"
-id = "a6464f5a98504e1c9124e3c253f77dfb"
-preview_id = "a6464f5a98504e1c9124e3c253f77dfb"
+id = "df9f99f5d73d43f9a941859819cf0f29"
+preview_id = "9a0626e294fa43f1b880b4432da55186"
 
 # Production environment
 [env.production]
@@ -35,15 +28,11 @@ ENVIRONMENT = "production"
 # Production KV namespaces
 [[env.production.kv_namespaces]]
 binding = "DP1_PLAYLISTS"
-id = "your-prod-playlists-kv-namespace-id"
+id = "626b74ca2b5b4606904cac7c4bbfd454"
 
 [[env.production.kv_namespaces]]
 binding = "DP1_PLAYLIST_GROUPS"
-id = "your-prod-playlist-groups-kv-namespace-id"
-
-[[env.production.kv_namespaces]]
-binding = "DP1_METADATA"
-id = "your-prod-metadata-kv-namespace-id"
+id = "df9f99f5d73d43f9a941859819cf0f29"
 
 # Development configuration
 [env.development]

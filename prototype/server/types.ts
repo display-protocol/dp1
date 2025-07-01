@@ -10,7 +10,6 @@ export interface Env {
   // Cloudflare KV bindings for serverless storage
   DP1_PLAYLISTS: KVNamespace;
   DP1_PLAYLIST_GROUPS: KVNamespace;
-  DP1_METADATA: KVNamespace;
 
   // Optional environment variables
   ENVIRONMENT?: string;

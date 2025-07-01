@@ -41,7 +41,6 @@ const testEnv: Env = {
   ENVIRONMENT: 'test',
   DP1_PLAYLISTS: createMockKV() as any,
   DP1_PLAYLIST_GROUPS: createMockKV() as any,
-  DP1_METADATA: createMockKV() as any,
 };
 
 // Test data with proper UUIDs
@@ -71,11 +70,9 @@ describe('DP-1 Feed Operator API', () => {
     // Clear storage between tests
     const mockPlaylistKV = testEnv.DP1_PLAYLISTS as any;
     const mockGroupKV = testEnv.DP1_PLAYLIST_GROUPS as any;
-    const mockMetaKV = testEnv.DP1_METADATA as any;
 
     mockPlaylistKV.storage.clear();
     mockGroupKV.storage.clear();
-    mockMetaKV.storage.clear();
   });
 
   describe('Health and Info Endpoints', () => {
