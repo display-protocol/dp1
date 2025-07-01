@@ -125,3 +125,6 @@ wrangler.toml.bak
 # Temporary files
 tmp/
 temp/
+
+# ed25519 private key
+*.pem

@@ -50,7 +50,6 @@ const testPlaylistItemUUID = '550e8400-e29b-41d4-a716-446655440000';
 const testPlaylistGroupUUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 const validPlaylist = {
-  dpVersion: '1.0.0',
   items: [
     {
       title: 'Test Artwork',
@@ -301,6 +300,7 @@ describe('DP-1 Feed Operator API', () => {
 
       const data = await response.json();
       expect(data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(data.dpVersion).toBe('0.9.0'); // Server should set current DP version
       expect(data.slug).toMatch(/^test-artwork-\d{4}$/);
       expect(data.created).toBeTruthy();
       expect(data.signature).toBeTruthy();
@@ -343,6 +343,7 @@ describe('DP-1 Feed Operator API', () => {
 
       const data = await updateResponse.json();
       expect(data.id).toBe(playlistId); // ID should remain the same
+      expect(data.dpVersion).toBe('0.9.0'); // Server should maintain current DP version
       expect(data.slug).toMatch(/^updated-artwork-title-\d{4}$/);
       expect(data.items[0].id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/

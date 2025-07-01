@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// Current DP-1 protocol version supported by this server
+export const CURRENT_DP_VERSION = '0.9.0';
+
 export interface Env {
   API_SECRET: string;
   ED25519_PRIVATE_KEY: string; // Required for playlist signing
@@ -158,10 +161,6 @@ export const PlaylistItemInputSchema = z.object({
 });
 
 export const PlaylistInputSchema = z.object({
-  dpVersion: z
-    .string()
-    .regex(/^[0-9]+\.[0-9]+\.[0-9]+$/)
-    .max(16),
   defaults: z
     .object({
       display: DisplayPrefsSchema,
@@ -389,7 +388,7 @@ export function createPlaylistFromInput(input: PlaylistInput): Playlist {
   const slug = generateSlug(firstItemTitle || playlistId);
 
   return {
-    dpVersion: input.dpVersion,
+    dpVersion: CURRENT_DP_VERSION,
     id: playlistId,
     slug,
     created: timestamp,

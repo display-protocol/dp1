@@ -1,7 +1,12 @@
 import { Hono, Context } from 'hono';
 import { z } from 'zod';
 import type { Env, PlaylistInput, Playlist } from '../types';
-import { PlaylistInputSchema, generateSlug, createPlaylistFromInput } from '../types';
+import {
+  PlaylistInputSchema,
+  generateSlug,
+  createPlaylistFromInput,
+  CURRENT_DP_VERSION,
+} from '../types';
 import { signPlaylist, getServerKeyPair } from '../crypto';
 import { listAllPlaylists, savePlaylist, getPlaylistByIdOrSlug } from '../fileUtils';
 
@@ -227,7 +232,7 @@ playlists.put('/:id', async c => {
 
     // Create updated playlist keeping original ID and created timestamp
     const updatedPlaylist: Playlist = {
-      dpVersion: validatedData.dpVersion,
+      dpVersion: CURRENT_DP_VERSION,
       id: existingPlaylist.id, // Keep original server-generated ID
       slug: newSlug,
       created: existingPlaylist.created,

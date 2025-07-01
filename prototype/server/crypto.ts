@@ -24,8 +24,7 @@ function hexToUint8Array(hex: string): Uint8Array {
  */
 async function importPrivateKeyFromHex(privateKeyHex: string): Promise<Uint8Array> {
   try {
-    const prefix = '302e020100300506032b657004220420';
-    const privateKeyBytes = hexToUint8Array(prefix + privateKeyHex);
+    const privateKeyBytes = hexToUint8Array(privateKeyHex);
 
     // Try to import as PKCS#8 first
     try {

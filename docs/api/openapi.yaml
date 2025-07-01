@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DP-1 Feed Operator API
-  version: 0.4.0-draft
+  version: 0.9.0-alpha
   description: |
     REST interface for creating, updating, and retrieving DP-1 playlists and
     playlist-groups (exhibitions) with **API key authentication**.
@@ -203,7 +203,7 @@ components:
       additionalProperties: false
 
     ####################################################################
-    # 2.4 PlaylistItem — id, source, duration, license REQUIRED
+    # 2.4 PlaylistItem — source, duration, license REQUIRED
     ####################################################################
     PlaylistItem:
       type: object
@@ -280,18 +280,19 @@ components:
       additionalProperties: false
 
     ####################################################################
-    # 2.5 Playlist — dpVersion, id, items REQUIRED
+    # 2.5 Playlist — items REQUIRED
     ####################################################################
     Playlist:
       type: object
-      required: [dpVersion, items]
+      required: [items]
       properties:
         dpVersion:
           type: string
-          description: SemVer version of DP-1 specification
+          description: Server-determined DP-1 protocol version
           pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
-          example: "1.0.0"
+          example: "0.9.0"
           maxLength: 16
+          readOnly: true
         id:
           type: string
           format: uuid
@@ -347,7 +348,7 @@ components:
       additionalProperties: false
 
     ####################################################################
-    # 2.6 PlaylistGroup — id, title, curator, playlists REQUIRED
+    # 2.6 PlaylistGroup — title, curator, playlists REQUIRED
     ####################################################################
     PlaylistGroup:
       type: object

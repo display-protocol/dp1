@@ -20,9 +20,8 @@ if (!apiSecret) {
   process.exit(1);
 }
 
-// Test data without IDs (server will generate them)
+// Test data without IDs or dpVersion (server will generate them)
 const testPlaylist = {
-  dpVersion: '1.0.0',
   defaults: {
     display: {
       scaling: 'fit',

@@ -32,7 +32,6 @@
     "format:check": "prettier --check .",
     "validate": "npm run type-check && npm run lint && npm run test",
     "schema:validate": "ajv validate -s ../schemas/playlist-schema.json -d data/playlist.json",
-    "crypto:test": "node scripts/test-crypto.js",
     "logs": "wrangler tail",
     "logs:production": "wrangler tail --env production",
     "kv:list": "wrangler kv namespace list",
