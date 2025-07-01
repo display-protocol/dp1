@@ -1,14 +1,9 @@
 import { Hono, Context } from 'hono';
 import { z } from 'zod';
-import type { Env, PlaylistInput } from '../types';
-import { PlaylistSchema, generateSlug } from '../types';
+import type { Env, PlaylistInput, Playlist } from '../types';
+import { PlaylistInputSchema, generateSlug, createPlaylistFromInput } from '../types';
 import { signPlaylist, getServerKeyPair } from '../crypto';
-import {
-  listAllPlaylists,
-  savePlaylist,
-  getPlaylistByIdOrSlug,
-  playlistExists,
-} from '../fileUtils';
+import { listAllPlaylists, savePlaylist, getPlaylistByIdOrSlug } from '../fileUtils';
 
 // Create playlist router
 const playlists = new Hono<{ Bindings: Env }>();
@@ -32,14 +27,14 @@ function validateIdentifier(identifier: string): {
 }
 
 /**
- * Validate request body against Zod schema
+ * Validate request body against Zod schema (input schema without server-generated fields)
  */
 async function validatePlaylistBody(
   c: Context
 ): Promise<PlaylistInput | { error: string; message: string; status: number }> {
   try {
     const body = await c.req.json();
-    const result = PlaylistSchema.parse(body);
+    const result = PlaylistInputSchema.parse(body);
     return result;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -124,7 +119,7 @@ playlists.get('/:id', async c => {
 });
 
 /**
- * POST /playlists - Create new playlist
+ * POST /playlists - Create new playlist (server-generated ID)
  */
 playlists.post('/', async c => {
   try {
@@ -141,32 +136,12 @@ playlists.post('/', async c => {
       );
     }
 
-    // Check if playlist already exists
-    if (await playlistExists(validatedData.id, c.env)) {
-      return c.json(
-        {
-          error: 'conflict',
-          message: 'Playlist with this ID already exists',
-        },
-        409
-      );
-    }
-
-    // Generate slug from title (fallback to ID if no title)
-    const title = validatedData.items.find(item => item.title)?.title || validatedData.id;
-    const slug = generateSlug(title);
-
-    // Create playlist with server timestamp, generated slug, and signature
-    const playlist = {
-      ...validatedData,
-      slug,
-      created: new Date().toISOString(),
-    };
+    // Create playlist with server-generated ID, timestamp, and slug
+    const playlist = createPlaylistFromInput(validatedData);
 
     // Sign the playlist using ed25519 as per DP-1 specification
     const keyPair = await getServerKeyPair(c.env);
     const playlistWithoutSignature = { ...playlist };
-    delete playlistWithoutSignature.signature;
 
     playlist.signature = await signPlaylist(playlistWithoutSignature, keyPair.privateKey);
 
@@ -240,30 +215,29 @@ playlists.put('/:id', async c => {
       );
     }
 
-    // Ensure the ID in the request body matches the found playlist's UUID
-    if (validatedData.id !== existingPlaylist.id) {
-      return c.json(
-        {
-          error: 'id_mismatch',
-          message: 'Playlist ID in request body must match the actual playlist UUID',
-        },
-        400
-      );
-    }
+    // Generate new IDs for playlist items
+    const itemsWithIds = validatedData.items.map(item => ({
+      ...item,
+      id: crypto.randomUUID(),
+    }));
 
-    // Create updated playlist keeping original created timestamp
-    const updatedPlaylist = {
-      ...validatedData,
-      slug: generateSlug(validatedData.items.find(item => item.title)?.title || validatedData.id),
-      created: existingPlaylist.created || new Date().toISOString(),
+    // Generate new slug from updated content
+    const firstItemTitle = itemsWithIds[0]?.title;
+    const newSlug = generateSlug(firstItemTitle || existingPlaylist.id);
+
+    // Create updated playlist keeping original ID and created timestamp
+    const updatedPlaylist: Playlist = {
+      dpVersion: validatedData.dpVersion,
+      id: existingPlaylist.id, // Keep original server-generated ID
+      slug: newSlug,
+      created: existingPlaylist.created,
+      defaults: validatedData.defaults,
+      items: itemsWithIds,
     };
 
     // Re-sign the playlist
     const keyPair = await getServerKeyPair(c.env);
-    const playlistWithoutSignature = { ...updatedPlaylist };
-    delete playlistWithoutSignature.signature;
-
-    updatedPlaylist.signature = await signPlaylist(playlistWithoutSignature, keyPair.privateKey);
+    updatedPlaylist.signature = await signPlaylist(updatedPlaylist, keyPair.privateKey);
 
     // Save updated playlist
     const saved = await savePlaylist(updatedPlaylist, c.env);

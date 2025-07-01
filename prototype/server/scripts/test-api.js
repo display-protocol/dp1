@@ -20,15 +20,9 @@ if (!apiSecret) {
   process.exit(1);
 }
 
-// Generate proper UUIDs for test data
-const testPlaylistId = randomUUID();
-const testPlaylistItemId = randomUUID();
-const testPlaylistGroupId = randomUUID();
-
-// Test data with proper UUIDs
+// Test data without IDs (server will generate them)
 const testPlaylist = {
   dpVersion: '1.0.0',
-  id: testPlaylistId,
   defaults: {
     display: {
       scaling: 'fit',
@@ -39,7 +33,6 @@ const testPlaylist = {
   },
   items: [
     {
-      id: testPlaylistItemId,
       title: 'My Amazing Test Artwork',
       source: 'https://example.com/test.html',
       duration: 300,
@@ -49,15 +42,16 @@ const testPlaylist = {
 };
 
 const testPlaylistGroup = {
-  id: testPlaylistGroupId,
   title: 'Digital Art Showcase 2024',
   curator: 'Test Curator',
   summary: 'A test exhibition for API validation with UUID and slug support',
-  playlists: [`https://api.feed.feralfile.com/playlists/${testPlaylistId}/playlist.json`],
+  playlists: [`https://api.feed.feralfile.com/playlists/sample-id/playlist.json`],
 };
 
-// Store generated slugs for testing
+// Store server-generated data for testing
+let createdPlaylistId = null;
 let createdPlaylistSlug = null;
+let createdPlaylistGroupId = null;
 let createdPlaylistGroupSlug = null;
 
 // Helper function to make HTTP requests
@@ -129,7 +123,7 @@ async function testListPlaylists() {
 }
 
 async function testCreatePlaylist() {
-  console.log('\n📝 Testing POST /playlists (UUID and slug generation)...');
+  console.log('\n📝 Testing POST /playlists (server-side ID and slug generation)...');
   const response = await makeRequest('POST', '/playlists', testPlaylist);
 
   if (response.ok) {
@@ -139,20 +133,37 @@ async function testCreatePlaylist() {
     console.log(`   Created: ${response.data.created}`);
     console.log(`   Signature: ${response.data.signature ? 'Present' : 'Missing'}`);
 
-    // Validate slug format
-    if (response.data.slug && /^[a-zA-Z0-9-]+-\d{4}$/.test(response.data.slug)) {
-      console.log('✅ Slug format is valid');
-      createdPlaylistSlug = response.data.slug;
+    // Store server-generated data
+    createdPlaylistId = response.data.id;
+    createdPlaylistSlug = response.data.slug;
+
+    // Validate UUID format
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(response.data.id)) {
+      console.log('✅ Server-generated UUID format is valid');
     } else {
-      console.log('❌ Slug format is invalid or missing');
+      console.log('❌ Server-generated UUID format is invalid');
       return false;
     }
 
-    // Validate UUID format
-    if (response.data.id === testPlaylistId) {
-      console.log('✅ UUID preserved correctly');
+    // Validate slug format
+    if (response.data.slug && /^[a-zA-Z0-9-]+-\d{4}$/.test(response.data.slug)) {
+      console.log('✅ Server-generated slug format is valid');
     } else {
-      console.log('❌ UUID not preserved correctly');
+      console.log('❌ Server-generated slug format is invalid or missing');
+      return false;
+    }
+
+    // Validate playlist item IDs are also generated
+    if (
+      response.data.items &&
+      response.data.items[0] &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        response.data.items[0].id
+      )
+    ) {
+      console.log('✅ Playlist item UUID format is valid');
+    } else {
+      console.log('❌ Playlist item UUID format is invalid');
       return false;
     }
   } else {
@@ -163,8 +174,13 @@ async function testCreatePlaylist() {
 }
 
 async function testGetPlaylistByUUID() {
+  if (!createdPlaylistId) {
+    console.log('\n⚠️  Skipping UUID test - no playlist ID available');
+    return true;
+  }
+
   console.log('\n📖 Testing GET /playlists/{uuid} (access by UUID)...');
-  const response = await makeRequest('GET', `/playlists/${testPlaylistId}`);
+  const response = await makeRequest('GET', `/playlists/${createdPlaylistId}`);
 
   if (response.ok) {
     console.log('✅ Playlist retrieved by UUID successfully');
@@ -193,7 +209,7 @@ async function testGetPlaylistBySlug() {
     console.log(`   Slug: ${response.data.slug}`);
 
     // Verify we get the same playlist
-    if (response.data.id === testPlaylistId) {
+    if (response.data.id === createdPlaylistId) {
       console.log('✅ Same playlist returned via slug and UUID');
     } else {
       console.log('❌ Different playlist returned via slug vs UUID');
@@ -207,7 +223,12 @@ async function testGetPlaylistBySlug() {
 }
 
 async function testUpdatePlaylist() {
-  console.log('\n📝 Testing PUT /playlists/{id} (slug regeneration)...');
+  if (!createdPlaylistId) {
+    console.log('\n⚠️  Skipping update test - no playlist ID available');
+    return true;
+  }
+
+  console.log('\n📝 Testing PUT /playlists/{id} (slug regeneration and new item IDs)...');
   const updatedPlaylist = {
     ...testPlaylist,
     items: [
@@ -216,7 +237,6 @@ async function testUpdatePlaylist() {
         title: 'Updated Amazing Digital Artwork',
       },
       {
-        id: randomUUID(),
         title: 'Second Test Artwork',
         source: 'https://example.com/test2.html',
         duration: 180,
@@ -225,7 +245,7 @@ async function testUpdatePlaylist() {
     ],
   };
 
-  const response = await makeRequest('PUT', `/playlists/${testPlaylistId}`, updatedPlaylist);
+  const response = await makeRequest('PUT', `/playlists/${createdPlaylistId}`, updatedPlaylist);
 
   if (response.ok) {
     console.log('✅ Playlist updated successfully');
@@ -253,7 +273,7 @@ async function testUpdatePlaylist() {
 }
 
 async function testCreatePlaylistGroup() {
-  console.log('\n📝 Testing POST /playlist-groups (UUID and slug generation)...');
+  console.log('\n📝 Testing POST /playlist-groups (server-side ID and slug generation)...');
   const response = await makeRequest('POST', '/playlist-groups', testPlaylistGroup);
 
   if (response.ok) {
@@ -263,20 +283,23 @@ async function testCreatePlaylistGroup() {
     console.log(`   Title: ${response.data.title}`);
     console.log(`   Created: ${response.data.created}`);
 
-    // Validate slug format
-    if (response.data.slug && /^[a-zA-Z0-9-]+-\d{4}$/.test(response.data.slug)) {
-      console.log('✅ Group slug format is valid');
-      createdPlaylistGroupSlug = response.data.slug;
+    // Store server-generated data
+    createdPlaylistGroupId = response.data.id;
+    createdPlaylistGroupSlug = response.data.slug;
+
+    // Validate UUID format
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(response.data.id)) {
+      console.log('✅ Server-generated group UUID format is valid');
     } else {
-      console.log('❌ Group slug format is invalid or missing');
+      console.log('❌ Server-generated group UUID format is invalid');
       return false;
     }
 
-    // Validate UUID format
-    if (response.data.id === testPlaylistGroupId) {
-      console.log('✅ Group UUID preserved correctly');
+    // Validate slug format
+    if (response.data.slug && /^[a-zA-Z0-9-]+-\d{4}$/.test(response.data.slug)) {
+      console.log('✅ Server-generated group slug format is valid');
     } else {
-      console.log('❌ Group UUID not preserved correctly');
+      console.log('❌ Server-generated group slug format is invalid or missing');
       return false;
     }
   } else {
@@ -308,8 +331,13 @@ async function testListPlaylistGroups() {
 }
 
 async function testGetPlaylistGroupByUUID() {
+  if (!createdPlaylistGroupId) {
+    console.log('\n⚠️  Skipping group UUID test - no group ID available');
+    return true;
+  }
+
   console.log('\n📖 Testing GET /playlist-groups/{uuid} (access by UUID)...');
-  const response = await makeRequest('GET', `/playlist-groups/${testPlaylistGroupId}`);
+  const response = await makeRequest('GET', `/playlist-groups/${createdPlaylistGroupId}`);
 
   if (response.ok) {
     console.log('✅ Playlist group retrieved by UUID successfully');
@@ -338,7 +366,7 @@ async function testGetPlaylistGroupBySlug() {
     console.log(`   Slug: ${response.data.slug}`);
 
     // Verify we get the same group
-    if (response.data.id === testPlaylistGroupId) {
+    if (response.data.id === createdPlaylistGroupId) {
       console.log('✅ Same playlist group returned via slug and UUID');
     } else {
       console.log('❌ Different playlist group returned via slug vs UUID');
@@ -434,8 +462,6 @@ async function testEmptyListing() {
 // Main test runner
 async function runTests() {
   console.log('🚀 Starting DP-1 Feed Operator API Tests (UUID + Slug Support)\n');
-  console.log(`📋 Test Playlist UUID: ${testPlaylistId}`);
-  console.log(`📋 Test Playlist Group UUID: ${testPlaylistGroupId}\n`);
 
   const tests = [
     { name: 'List Playlists', fn: testListPlaylists },

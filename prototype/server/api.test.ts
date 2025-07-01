@@ -51,10 +51,8 @@ const testPlaylistGroupUUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 const validPlaylist = {
   dpVersion: '1.0.0',
-  id: testPlaylistUUID,
   items: [
     {
-      id: testPlaylistItemUUID,
       title: 'Test Artwork',
       source: 'https://example.com/artwork.html',
       duration: 300,
@@ -64,7 +62,6 @@ const validPlaylist = {
 };
 
 const validPlaylistGroup = {
-  id: testPlaylistGroupUUID,
   title: 'Test Exhibition',
   curator: 'Test Curator',
   playlists: ['https://example.com/playlist.json'],
@@ -293,7 +290,7 @@ describe('DP-1 Feed Operator API', () => {
       expect(data.error).toBe('validation_error');
     });
 
-    it('POST /playlists should create playlist with generated slug', async () => {
+    it('POST /playlists should create playlist with server-generated ID and slug', async () => {
       const req = new Request('http://localhost/playlists', {
         method: 'POST',
         headers: validAuth,
@@ -303,10 +300,13 @@ describe('DP-1 Feed Operator API', () => {
       expect(response.status).toBe(201);
 
       const data = await response.json();
-      expect(data.id).toBe(testPlaylistUUID);
+      expect(data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(data.slug).toMatch(/^test-artwork-\d{4}$/);
       expect(data.created).toBeTruthy();
       expect(data.signature).toBeTruthy();
+      expect(data.items[0].id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
     });
 
     it('PUT /playlists/:id should update playlist and regenerate slug', async () => {
@@ -319,6 +319,9 @@ describe('DP-1 Feed Operator API', () => {
       const createResponse = await app.fetch(createReq, testEnv);
       expect(createResponse.status).toBe(201);
 
+      const createdPlaylist = await createResponse.json();
+      const playlistId = createdPlaylist.id;
+
       // Then update it with new title
       const updatedPlaylist = {
         ...validPlaylist,
@@ -330,7 +333,7 @@ describe('DP-1 Feed Operator API', () => {
         ],
       };
 
-      const updateReq = new Request(`http://localhost/playlists/${testPlaylistUUID}`, {
+      const updateReq = new Request(`http://localhost/playlists/${playlistId}`, {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(updatedPlaylist),
@@ -339,7 +342,11 @@ describe('DP-1 Feed Operator API', () => {
       expect(updateResponse.status).toBe(200);
 
       const data = await updateResponse.json();
+      expect(data.id).toBe(playlistId); // ID should remain the same
       expect(data.slug).toMatch(/^updated-artwork-title-\d{4}$/);
+      expect(data.items[0].id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
     });
   });
 
@@ -371,7 +378,7 @@ describe('DP-1 Feed Operator API', () => {
       expect(data.error).toBe('not_found');
     });
 
-    it('POST /playlist-groups should create group with generated slug', async () => {
+    it('POST /playlist-groups should create group with server-generated ID and slug', async () => {
       const req = new Request('http://localhost/playlist-groups', {
         method: 'POST',
         headers: validAuth,
@@ -381,34 +388,31 @@ describe('DP-1 Feed Operator API', () => {
       expect(response.status).toBe(201);
 
       const data = await response.json();
-      expect(data.id).toBe(testPlaylistGroupUUID);
+      expect(data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(data.slug).toMatch(/^test-exhibition-\d{4}$/);
       expect(data.created).toBeTruthy();
     });
 
     it('PUT /playlist-groups/:id should update group and regenerate slug', async () => {
-      // First create a playlist group with a different UUID to avoid conflicts
-      const newGroupUUID = '7ca7b850-9dad-11d1-80b4-00c04fd430c9';
-      const createGroup = {
-        ...validPlaylistGroup,
-        id: newGroupUUID,
-      };
-
+      // First create a playlist group
       const createReq = new Request('http://localhost/playlist-groups', {
         method: 'POST',
         headers: validAuth,
-        body: JSON.stringify(createGroup),
+        body: JSON.stringify(validPlaylistGroup),
       });
       const createResponse = await app.fetch(createReq, testEnv);
       expect(createResponse.status).toBe(201);
 
+      const createdGroup = await createResponse.json();
+      const groupId = createdGroup.id;
+
       // Then update it with new title
       const updatedGroup = {
-        ...createGroup,
+        ...validPlaylistGroup,
         title: 'Updated Exhibition Title',
       };
 
-      const updateReq = new Request(`http://localhost/playlist-groups/${newGroupUUID}`, {
+      const updateReq = new Request(`http://localhost/playlist-groups/${groupId}`, {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(updatedGroup),
@@ -417,6 +421,7 @@ describe('DP-1 Feed Operator API', () => {
       expect(updateResponse.status).toBe(200);
 
       const data = await updateResponse.json();
+      expect(data.id).toBe(groupId); // ID should remain the same
       expect(data.slug).toMatch(/^updated-exhibition-title-\d{4}$/);
     });
   });

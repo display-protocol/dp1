@@ -1,13 +1,8 @@
 import { Hono, Context } from 'hono';
 import { z } from 'zod';
-import type { Env, PlaylistGroupInput } from '../types';
-import { PlaylistGroupSchema, generateSlug } from '../types';
-import {
-  listAllPlaylistGroups,
-  savePlaylistGroup,
-  getPlaylistGroupByIdOrSlug,
-  playlistGroupExists,
-} from '../fileUtils';
+import type { Env, PlaylistGroupInput, PlaylistGroup } from '../types';
+import { PlaylistGroupInputSchema, generateSlug, createPlaylistGroupFromInput } from '../types';
+import { listAllPlaylistGroups, savePlaylistGroup, getPlaylistGroupByIdOrSlug } from '../fileUtils';
 
 // Create playlist groups router
 const playlistGroups = new Hono<{ Bindings: Env }>();
@@ -38,7 +33,7 @@ async function validatePlaylistGroupBody(
 ): Promise<PlaylistGroupInput | { error: string; message: string; status: number }> {
   try {
     const body = await c.req.json();
-    const result = PlaylistGroupSchema.parse(body);
+    const result = PlaylistGroupInputSchema.parse(body);
     return result;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -140,26 +135,8 @@ playlistGroups.post('/', async c => {
       );
     }
 
-    // Check if playlist group already exists
-    if (await playlistGroupExists(validatedData.id, c.env)) {
-      return c.json(
-        {
-          error: 'conflict',
-          message: 'Playlist group with this ID already exists',
-        },
-        409
-      );
-    }
-
-    // Generate slug from title
-    const slug = generateSlug(validatedData.title);
-
-    // Create playlist group with server timestamp and generated slug
-    const playlistGroup = {
-      ...validatedData,
-      slug,
-      created: new Date().toISOString(),
-    };
+    // Create playlist group with server-generated ID, timestamp, and slug
+    const playlistGroup = createPlaylistGroupFromInput(validatedData);
 
     // Save playlist group
     const saved = await savePlaylistGroup(playlistGroup, c.env);
@@ -231,22 +208,16 @@ playlistGroups.put('/:id', async c => {
       );
     }
 
-    // Ensure the ID in the request body matches the found playlist group's UUID
-    if (validatedData.id !== existingGroup.id) {
-      return c.json(
-        {
-          error: 'id_mismatch',
-          message: 'Playlist group ID in request body must match the actual playlist group UUID',
-        },
-        400
-      );
-    }
-
-    // Create updated playlist group keeping original created timestamp
-    const updatedGroup = {
-      ...validatedData,
+    // Create updated playlist group keeping original ID and created timestamp
+    const updatedGroup: PlaylistGroup = {
+      id: existingGroup.id, // Keep original server-generated ID
       slug: generateSlug(validatedData.title),
-      created: existingGroup.created || new Date().toISOString(),
+      title: validatedData.title,
+      curator: validatedData.curator,
+      summary: validatedData.summary,
+      playlists: validatedData.playlists,
+      created: existingGroup.created,
+      coverImage: validatedData.coverImage,
     };
 
     // Save updated playlist group

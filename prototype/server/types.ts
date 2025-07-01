@@ -137,7 +137,62 @@ const PlaylistItemSchema = z.object({
   provenance: ProvenanceSchema,
 });
 
-// Playlist Schema
+// Base schemas without IDs for input validation
+export const PlaylistItemInputSchema = z.object({
+  title: z.string().max(256).optional(),
+  source: z
+    .string()
+    .regex(/^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$/)
+    .max(1024),
+  duration: z.number().min(1),
+  license: z.enum(['open', 'token', 'subscription']),
+  ref: z
+    .string()
+    .regex(/^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$/)
+    .max(1024)
+    .optional(),
+  override: z.record(z.any()).optional(),
+  display: DisplayPrefsSchema,
+  repro: ReproSchema,
+  provenance: ProvenanceSchema,
+});
+
+export const PlaylistInputSchema = z.object({
+  dpVersion: z
+    .string()
+    .regex(/^[0-9]+\.[0-9]+\.[0-9]+$/)
+    .max(16),
+  defaults: z
+    .object({
+      display: DisplayPrefsSchema,
+      license: z.enum(['open', 'token', 'subscription']).optional(),
+      duration: z.number().min(1).optional(),
+    })
+    .optional(),
+  items: z.array(PlaylistItemInputSchema).min(1).max(1024),
+});
+
+export const PlaylistGroupInputSchema = z.object({
+  title: z.string().max(256),
+  curator: z.string().max(128),
+  summary: z.string().max(4096).optional(),
+  playlists: z
+    .array(
+      z
+        .string()
+        .regex(/^https:\/\/[^\s]+\/playlist\.json$/)
+        .max(1024)
+    )
+    .min(1)
+    .max(1024),
+  coverImage: z
+    .string()
+    .regex(/^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$/)
+    .max(1024)
+    .optional(),
+});
+
+// Complete schemas with server-generated fields for output
 export const PlaylistSchema = z.object({
   dpVersion: z
     .string()
@@ -147,9 +202,8 @@ export const PlaylistSchema = z.object({
   slug: z
     .string()
     .regex(/^[a-zA-Z0-9-]+$/)
-    .max(64)
-    .optional(),
-  created: z.string().datetime().optional(),
+    .max(64),
+  created: z.string().datetime(),
   defaults: z
     .object({
       display: DisplayPrefsSchema,
@@ -165,14 +219,12 @@ export const PlaylistSchema = z.object({
     .optional(),
 });
 
-// Playlist Group Schema
 export const PlaylistGroupSchema = z.object({
   id: z.string().uuid(),
   slug: z
     .string()
     .regex(/^[a-zA-Z0-9-]+$/)
-    .max(64)
-    .optional(),
+    .max(64),
   title: z.string().max(256),
   curator: z.string().max(128),
   summary: z.string().max(4096).optional(),
@@ -185,7 +237,7 @@ export const PlaylistGroupSchema = z.object({
     )
     .min(1)
     .max(1024),
-  created: z.string().datetime().optional(),
+  created: z.string().datetime(),
   coverImage: z
     .string()
     .regex(/^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$/)
@@ -297,8 +349,9 @@ export const KV_KEYS = {
 } as const;
 
 // Inferred types from Zod schemas
-export type PlaylistInput = z.infer<typeof PlaylistSchema>;
-export type PlaylistGroupInput = z.infer<typeof PlaylistGroupSchema>;
+export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;
+export type PlaylistItemInput = z.infer<typeof PlaylistItemInputSchema>;
+export type PlaylistGroupInput = z.infer<typeof PlaylistGroupInputSchema>;
 
 // Utility function to generate slug from title
 export function generateSlug(title: string): string {
@@ -318,4 +371,47 @@ export function generateSlug(title: string): string {
     baseSlug.length > maxBaseLength ? baseSlug.substring(0, maxBaseLength) : baseSlug;
 
   return `${trimmedBase}-${randomSuffix}`;
+}
+
+// Utility function to transform input to complete playlist with server-generated fields
+export function createPlaylistFromInput(input: PlaylistInput): Playlist {
+  const playlistId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+
+  // Generate IDs for all playlist items and determine slug source
+  const itemsWithIds = input.items.map(item => ({
+    ...item,
+    id: crypto.randomUUID(),
+  }));
+
+  // Generate slug from first item title or playlist ID
+  const firstItemTitle = itemsWithIds[0]?.title;
+  const slug = generateSlug(firstItemTitle || playlistId);
+
+  return {
+    dpVersion: input.dpVersion,
+    id: playlistId,
+    slug,
+    created: timestamp,
+    defaults: input.defaults,
+    items: itemsWithIds,
+  };
+}
+
+// Utility function to transform input to complete playlist group with server-generated fields
+export function createPlaylistGroupFromInput(input: PlaylistGroupInput): PlaylistGroup {
+  const groupId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+  const slug = generateSlug(input.title);
+
+  return {
+    id: groupId,
+    slug,
+    title: input.title,
+    curator: input.curator,
+    summary: input.summary,
+    playlists: input.playlists,
+    created: timestamp,
+    coverImage: input.coverImage,
+  };
 }
