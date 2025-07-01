@@ -1,0 +1,76 @@
+name = "dp1-feed-operator-api"
+main = "index.ts"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Variables for all environments
+[vars]
+ENVIRONMENT = "development"
+
+# KV namespace bindings for storing JSON data
+[[kv_namespaces]]
+binding = "DP1_PLAYLISTS"
+id = "5ec152b8b53a40e7857ca68ae9754943"
+preview_id = "5ec152b8b53a40e7857ca68ae9754943"
+
+[[kv_namespaces]]
+binding = "DP1_PLAYLIST_GROUPS"
+id = "24a81f348b5040af864bae5358968c21"
+preview_id = "24a81f348b5040af864bae5358968c21"
+
+[[kv_namespaces]]
+binding = "DP1_METADATA"
+id = "a6464f5a98504e1c9124e3c253f77dfb"
+preview_id = "a6464f5a98504e1c9124e3c253f77dfb"
+
+# Production environment
+[env.production]
+name = "dp1-feed-operator-api-prod"
+route = { pattern = "api.feed.feralfile.com/*", zone_name = "feralfile.com" }
+[env.production.vars]
+ENVIRONMENT = "production"
+
+# Production KV namespaces
+[[env.production.kv_namespaces]]
+binding = "DP1_PLAYLISTS"
+id = "your-prod-playlists-kv-namespace-id"
+
+[[env.production.kv_namespaces]]
+binding = "DP1_PLAYLIST_GROUPS"
+id = "your-prod-playlist-groups-kv-namespace-id"
+
+[[env.production.kv_namespaces]]
+binding = "DP1_METADATA"
+id = "your-prod-metadata-kv-namespace-id"
+
+# Development configuration
+[env.development]
+name = "dp1-feed-operator-api-dev"
+[env.development.vars]
+ENVIRONMENT = "development"
+
+# Durable Objects (for real-time features - optional)
+# [[durable_objects.bindings]]
+# name = "PLAYLIST_SESSIONS"
+# class_name = "PlaylistSession"
+
+# AI binding (for future AI features - optional)
+# [ai]
+# binding = "AI"
+
+# Analytics Engine (for usage tracking - optional)
+# [[analytics_engine_datasets]]
+# binding = "DP1_ANALYTICS"
+
+# Rate limiting configuration
+[limits]
+cpu_ms = 30000
+
+# Build configuration
+[build]
+command = "npm run build:worker"
+
+# Secrets (set via wrangler secret put)
+# API_SECRET - Bearer token secret
+# ED25519_PRIVATE_KEY - Server signing key (REQUIRED)
+# IPFS_GATEWAY_TOKEN - IPFS access token (optional) 

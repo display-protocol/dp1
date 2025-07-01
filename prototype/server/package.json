@@ -1,0 +1,101 @@
+{
+  "name": "dp1-feed-operator-api",
+  "version": "0.9.0",
+  "description": "DP-1 Feed Operator API Server - OpenAPI 3.1.0 compliant server for managing blockchain-native digital art playlists and exhibitions",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:port": "wrangler dev --port 8787",
+    "dev:live": "wrangler dev --live-reload",
+    "build": "tsc && wrangler deploy --dry-run",
+    "build:worker": "tsc --noEmit",
+    "deploy": "npm run validate && wrangler deploy",
+    "deploy:production": "npm run validate && wrangler deploy --env production",
+    "setup:kv": "npm run setup:kv:dev",
+    "setup:kv:dev": "wrangler kv namespace create DP1_PLAYLISTS && wrangler kv namespace create DP1_PLAYLIST_GROUPS && wrangler kv namespace create DP1_METADATA",
+    "setup:kv:production": "wrangler kv namespace create DP1_PLAYLISTS --env production && wrangler kv namespace create DP1_PLAYLIST_GROUPS --env production && wrangler kv namespace create DP1_METADATA --env production",
+    "setup:secrets": "npm run setup:secrets:dev",
+    "setup:secrets:dev": "wrangler secret put API_SECRET && wrangler secret put ED25519_PRIVATE_KEY",
+    "setup:secrets:production": "wrangler secret put API_SECRET --env production && wrangler secret put ED25519_PRIVATE_KEY --env production",
+    "init:data": "node scripts/init-kv-data.js",
+    "init:data:production": "node scripts/init-kv-data.js --env production",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "test:headless": "node scripts/test-api.js http://localhost:8787",
+    "test:api": "node scripts/test-api.js",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "npm run type-check && npm run lint && npm run test",
+    "schema:validate": "ajv validate -s ../schemas/playlist-schema.json -d data/playlist.json",
+    "crypto:test": "node scripts/test-crypto.js",
+    "logs": "wrangler tail",
+    "logs:production": "wrangler tail --env production",
+    "kv:list": "wrangler kv namespace list",
+    "kv:get": "wrangler kv key get",
+    "kv:put": "wrangler kv key put",
+    "clean": "rm -rf dist coverage .wrangler",
+    "postinstall": "npm run type-check"
+  },
+  "keywords": [
+    "dp1",
+    "blockchain",
+    "digital-art",
+    "nft",
+    "playlist",
+    "openapi",
+    "cloudflare-workers",
+    "ed25519",
+    "typescript",
+    "serverless",
+    "kv-storage"
+  ],
+  "author": "Feral File",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feralfile/dp-1.git",
+    "directory": "prototype/server"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20240925.0",
+    "hono": "^4.8.3",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.1.0",
+    "miniflare": "^3.20231030.0",
+    "prettier": "^3.1.0",
+    "puppeteer": "^21.5.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "vitest-environment-miniflare": "^2.14.4",
+    "wrangler": "^4.22.0"
+  },
+  "workspaces": [
+    "."
+  ],
+  "files": [
+    "src/",
+    "data/",
+    "wrangler.toml",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
