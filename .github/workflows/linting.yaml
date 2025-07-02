@@ -13,11 +13,32 @@ on:
       - 'prototype/validator/**'
 
 jobs:
+  # Detect which components changed
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      validator: ${{ steps.filter.outputs.validator }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'prototype/server/**'
+            validator:
+              - 'prototype/validator/**'
+
   # Node.js/TypeScript linting for the server
   lint-server:
+    needs: changes
+    if: ${{ needs.changes.outputs.server == 'true' }}
     runs-on: ubuntu-latest
     name: Server Code Quality Checks
-    if: ${{ contains(join(github.event.commits.*.modified, ' '), 'prototype/server/') || contains(join(github.event.pull_request.changed_files.*.filename, ' '), 'prototype/server/') }}
 
     defaults:
       run:
@@ -48,9 +69,10 @@ jobs:
 
   # Go linting for the validator
   lint-validator:
+    needs: changes
+    if: ${{ needs.changes.outputs.validator == 'true' }}
     runs-on: ubuntu-latest
     name: Validator Code Quality Checks
-    if: contains(github.event.head_commit.modified, 'prototype/validator/') || contains(github.event.pull_request.changed_files, 'prototype/validator/')
 
     defaults:
       run:
