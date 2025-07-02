@@ -344,6 +344,84 @@ components:
           pattern: '^ed25519:0x[a-fA-F0-9]+$'
           maxLength: 150
           example: "ed25519:0x…"
+          readOnly: true
+      additionalProperties: false
+
+    ####################################################################
+    # 2.5.1 PlaylistCreate — for POST operations
+    ####################################################################
+    PlaylistCreate:
+      type: object
+      required: [dpVersion, items]
+      properties:
+        dpVersion:
+          type: string
+          description: DP-1 protocol version
+          pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+          example: "0.9.0"
+          maxLength: 16
+        defaults:
+          type: object
+          description: Default values inherited by playlist items (OPTIONAL)"
+          properties:
+            display:
+              $ref: '#/components/schemas/DisplayPrefs'
+            license:
+              type: string
+              enum: [open, token, subscription]
+            duration:
+              type: number
+              minimum: 1
+          example: {
+            "display": {
+              "scaling": "fit",
+              "background": "#000000", 
+              "margin": "5%"
+            },
+            "license": "open",
+            "duration": 300
+          }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            $ref: '#/components/schemas/PlaylistItem'
+      additionalProperties: false
+
+    ####################################################################
+    # 2.5.2 PlaylistUpdate — for PUT operations (excludes protected fields)
+    ####################################################################
+    PlaylistUpdate:
+      type: object
+      properties:
+        defaults:
+          type: object
+          description: Default values inherited by playlist items (OPTIONAL)"
+          properties:
+            display:
+              $ref: '#/components/schemas/DisplayPrefs'
+            license:
+              type: string
+              enum: [open, token, subscription]
+            duration:
+              type: number
+              minimum: 1
+          example: {
+            "display": {
+              "scaling": "fit",
+              "background": "#000000", 
+              "margin": "5%"
+            },
+            "license": "open",
+            "duration": 300
+          }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            $ref: '#/components/schemas/PlaylistItem'
       additionalProperties: false
 
     ####################################################################
@@ -407,6 +485,87 @@ components:
       additionalProperties: false
 
     ####################################################################
+    # 2.6.1 PlaylistGroupCreate — for POST operations
+    ####################################################################
+    PlaylistGroupCreate:
+      type: object
+      required: [title, curator, playlists]
+      properties:
+        title:
+          type: string
+          maxLength: 256
+          example: "Generative Geometry"
+        curator:
+          type: string
+          maxLength: 128
+          example: "Alice Example"
+        summary:
+          type: string
+          description: Description of the playlist group (OPTIONAL)
+          maxLength: 4096
+          example: "Exploring procedural form…"
+        playlists:
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            type: string
+            maxLength: 1024
+            description: Full URL to playlist JSON
+            pattern: '^https://[^\s]+/playlist\.json$'
+          example: [
+            "https://feed.feralfile.com/geom-p1/playlist.json",
+            "https://feed.feralfile.com/geom-p2/playlist.json"
+          ]
+        coverImage:
+          type: string
+          description: IPFS or HTTPS URL to cover image (OPTIONAL)
+          pattern: '^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$'
+          example: "ipfs://bafyb…/cover.jpg"
+          maxLength: 1024
+      additionalProperties: false
+
+    ####################################################################
+    # 2.6.2 PlaylistGroupUpdate — for PUT operations (excludes protected fields)
+    ####################################################################
+    PlaylistGroupUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 256
+          example: "Generative Geometry"
+        curator:
+          type: string
+          maxLength: 128
+          example: "Alice Example"
+        summary:
+          type: string
+          description: Description of the playlist group (OPTIONAL)
+          maxLength: 4096
+          example: "Exploring procedural form…"
+        playlists:
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            type: string
+            maxLength: 1024
+            description: Full URL to playlist JSON
+            pattern: '^https://[^\s]+/playlist\.json$'
+          example: [
+            "https://feed.feralfile.com/geom-p1/playlist.json",
+            "https://feed.feralfile.com/geom-p2/playlist.json"
+          ]
+        coverImage:
+          type: string
+          description: IPFS or HTTPS URL to cover image (OPTIONAL)
+          pattern: '^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$'
+          example: "ipfs://bafyb…/cover.jpg"
+          maxLength: 1024
+      additionalProperties: false
+
+    ####################################################################
     # 2.7 Error response
     ####################################################################
     ErrorResponse:
@@ -450,7 +609,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Playlist' }
+            schema: { $ref: '#/components/schemas/PlaylistCreate' }
       responses:
         '201':
           description: Playlist created successfully
@@ -507,7 +666,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Playlist' }
+            schema: { $ref: '#/components/schemas/PlaylistUpdate' }
       responses:
         '200':
           description: Playlist updated successfully
@@ -539,7 +698,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PlaylistGroup' }
+            schema: { $ref: '#/components/schemas/PlaylistGroupCreate' }
       responses:
         '201':
           description: Playlist group created successfully
@@ -596,7 +755,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PlaylistGroup' }
+            schema: { $ref: '#/components/schemas/PlaylistGroupUpdate' }
       responses:
         '200':
           description: Playlist group updated successfully
