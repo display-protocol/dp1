@@ -1,11 +1,11 @@
 import { Hono, Context } from 'hono';
 import { z } from 'zod';
-import type { Env, PlaylistInput, Playlist } from '../types';
+import type { Env, PlaylistInput, PlaylistUpdate, Playlist } from '../types';
 import {
   PlaylistInputSchema,
-  generateSlug,
+  PlaylistUpdateSchema,
   createPlaylistFromInput,
-  CURRENT_DP_VERSION,
+  validateNoProtectedFields,
 } from '../types';
 import { signPlaylist, getServerKeyPair } from '../crypto';
 import { listAllPlaylists, savePlaylist, getPlaylistByIdOrSlug } from '../fileUtils';
@@ -47,6 +47,45 @@ async function validatePlaylistBody(
       return {
         error: 'validation_error',
         message: `Invalid playlist data: ${errorMessage}`,
+        status: 400,
+      };
+    } else {
+      return {
+        error: 'invalid_json',
+        message: 'Request body must be valid JSON',
+        status: 400,
+      };
+    }
+  }
+}
+
+/**
+ * Validate request body for playlist updates (excludes protected fields)
+ */
+async function validatePlaylistUpdateBody(
+  c: Context
+): Promise<PlaylistUpdate | { error: string; message: string; status: number }> {
+  try {
+    const body = await c.req.json();
+
+    // Check for protected fields first
+    const protectedValidation = validateNoProtectedFields(body, 'playlist');
+    if (!protectedValidation.isValid) {
+      return {
+        error: 'protected_fields',
+        message: `Cannot update protected fields: ${protectedValidation.protectedFields?.join(', ')}. Protected fields are read-only.`,
+        status: 400,
+      };
+    }
+
+    const result = PlaylistUpdateSchema.parse(body);
+    return result;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+      return {
+        error: 'validation_error',
+        message: `Invalid playlist update data: ${errorMessage}`,
         status: 400,
       };
     } else {
@@ -195,7 +234,7 @@ playlists.put('/:id', async c => {
       );
     }
 
-    const validatedData = await validatePlaylistBody(c);
+    const validatedData = await validatePlaylistUpdateBody(c);
 
     // Check if validation returned an error
     if ('error' in validatedData) {
@@ -226,15 +265,11 @@ playlists.put('/:id', async c => {
       id: crypto.randomUUID(),
     }));
 
-    // Generate new slug from updated content
-    const firstItemTitle = itemsWithIds[0]?.title;
-    const newSlug = generateSlug(firstItemTitle || existingPlaylist.id);
-
-    // Create updated playlist keeping original ID and created timestamp
+    // Create updated playlist, just allow to update defaults and items
     const updatedPlaylist: Playlist = {
-      dpVersion: CURRENT_DP_VERSION,
+      dpVersion: existingPlaylist.dpVersion,
       id: existingPlaylist.id, // Keep original server-generated ID
-      slug: newSlug,
+      slug: existingPlaylist.slug,
       created: existingPlaylist.created,
       defaults: validatedData.defaults,
       items: itemsWithIds,

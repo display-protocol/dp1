@@ -1,7 +1,57 @@
 import { z } from 'zod';
+import semver from 'semver';
 
-// Current DP-1 protocol version supported by this server
-export const CURRENT_DP_VERSION = '0.9.0';
+// Minimum DP-1 protocol version supported by this server
+export const MIN_DP_VERSION = '0.9.0';
+
+/**
+ * Validates that a dpVersion is valid semver and greater than or equal to MIN_DP_VERSION
+ */
+export function validateDpVersion(dpVersion: string): {
+  isValid: boolean;
+  error?: string;
+} {
+  // First check if it's valid semver
+  if (!semver.valid(dpVersion)) {
+    return {
+      isValid: false,
+      error: `Invalid semantic version format: ${dpVersion}`,
+    };
+  }
+
+  // Check if it meets minimum version requirement
+  if (semver.lt(dpVersion, MIN_DP_VERSION)) {
+    return {
+      isValid: false,
+      error: `dpVersion ${dpVersion} is below minimum required version ${MIN_DP_VERSION}`,
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validates that update request doesn't contain protected fields
+ */
+export function validateNoProtectedFields(
+  body: any,
+  operation: 'playlist' | 'playlistGroup'
+): { isValid: boolean; protectedFields?: string[] } {
+  const protectedPlaylistFields = ['dpVersion', 'id', 'slug', 'created', 'signature'];
+  const protectedGroupFields = ['id', 'slug', 'created'];
+
+  const protectedFields = operation === 'playlist' ? protectedPlaylistFields : protectedGroupFields;
+  const foundProtectedFields = protectedFields.filter(field => field in body);
+
+  if (foundProtectedFields.length > 0) {
+    return {
+      isValid: false,
+      protectedFields: foundProtectedFields,
+    };
+  }
+
+  return { isValid: true };
+}
 
 export interface Env {
   API_SECRET: string;
@@ -160,6 +210,21 @@ export const PlaylistItemInputSchema = z.object({
 });
 
 export const PlaylistInputSchema = z.object({
+  dpVersion: z
+    .string()
+    .max(16)
+    .refine(
+      version => {
+        const validation = validateDpVersion(version);
+        return validation.isValid;
+      },
+      version => {
+        const validation = validateDpVersion(version);
+        return {
+          message: validation.error || 'Invalid dpVersion',
+        };
+      }
+    ),
   defaults: z
     .object({
       display: DisplayPrefsSchema,
@@ -190,12 +255,55 @@ export const PlaylistGroupInputSchema = z.object({
     .optional(),
 });
 
+// Update schemas that exclude protected fields
+export const PlaylistUpdateSchema = z.object({
+  defaults: z
+    .object({
+      display: DisplayPrefsSchema,
+      license: z.enum(['open', 'token', 'subscription']).optional(),
+      duration: z.number().min(1).optional(),
+    })
+    .optional(),
+  items: z.array(PlaylistItemInputSchema).min(1).max(1024),
+});
+
+export const PlaylistGroupUpdateSchema = z.object({
+  title: z.string().max(256),
+  curator: z.string().max(128),
+  summary: z.string().max(4096).optional(),
+  playlists: z
+    .array(
+      z
+        .string()
+        .regex(/^https:\/\/[^\s]+\/playlist\.json$/)
+        .max(1024)
+    )
+    .min(1)
+    .max(1024),
+  coverImage: z
+    .string()
+    .regex(/^[a-zA-Z][a-zA-Z0-9+.-]*:[^\s]*$/)
+    .max(1024)
+    .optional(),
+});
+
 // Complete schemas with server-generated fields for output
 export const PlaylistSchema = z.object({
   dpVersion: z
     .string()
-    .regex(/^[0-9]+\.[0-9]+\.[0-9]+$/)
-    .max(16),
+    .max(16)
+    .refine(
+      version => {
+        const validation = validateDpVersion(version);
+        return validation.isValid;
+      },
+      version => {
+        const validation = validateDpVersion(version);
+        return {
+          message: validation.error || 'Invalid dpVersion',
+        };
+      }
+    ),
   id: z.string().uuid(),
   slug: z
     .string()
@@ -350,6 +458,8 @@ export const KV_KEYS = {
 export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;
 export type PlaylistItemInput = z.infer<typeof PlaylistItemInputSchema>;
 export type PlaylistGroupInput = z.infer<typeof PlaylistGroupInputSchema>;
+export type PlaylistUpdate = z.infer<typeof PlaylistUpdateSchema>;
+export type PlaylistGroupUpdate = z.infer<typeof PlaylistGroupUpdateSchema>;
 
 // Utility function to generate slug from title
 export function generateSlug(title: string): string {
@@ -387,7 +497,7 @@ export function createPlaylistFromInput(input: PlaylistInput): Playlist {
   const slug = generateSlug(firstItemTitle || playlistId);
 
   return {
-    dpVersion: CURRENT_DP_VERSION,
+    dpVersion: input.dpVersion,
     id: playlistId,
     slug,
     created: timestamp,

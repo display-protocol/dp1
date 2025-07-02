@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import app from './index';
 import type { Env } from './types';
-import { generateSlug } from './types';
+import { generateSlug, validateDpVersion, MIN_DP_VERSION } from './types';
 
 // Mock the crypto module to avoid ED25519 key issues in tests
 vi.mock('./crypto', () => ({
@@ -49,6 +49,7 @@ const testPlaylistItemUUID = '550e8400-e29b-41d4-a716-446655440000';
 const testPlaylistGroupUUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 const validPlaylist = {
+  dpVersion: '1.0.0',
   items: [
     {
       title: 'Test Artwork',
@@ -128,6 +129,146 @@ describe('DP-1 Feed Operator API', () => {
       expect(slug1).not.toBe(slug2);
       expect(slug1).toMatch(/^identical-title-\d{4}$/);
       expect(slug2).toMatch(/^identical-title-\d{4}$/);
+    });
+  });
+
+  describe('dpVersion Validation', () => {
+    it(`should validate minimum version requirement (${MIN_DP_VERSION})`, () => {
+      // Valid versions (>= MIN_DP_VERSION)
+      const validVersions = ['0.9.0', '0.9.1', '1.0.0', '1.2.3', '2.0.0'];
+
+      validVersions.forEach(version => {
+        const result = validateDpVersion(version);
+        expect(result.isValid).toBe(true);
+        expect(result.error).toBeUndefined();
+      });
+
+      // Invalid versions (< MIN_DP_VERSION)
+      const invalidVersions = ['0.8.9', '0.8.0', '0.1.0'];
+
+      invalidVersions.forEach(version => {
+        const result = validateDpVersion(version);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toContain(`below minimum required version ${MIN_DP_VERSION}`);
+      });
+    });
+
+    it('should validate semantic version format', () => {
+      // Invalid semver formats (what semver library actually considers invalid)
+      const invalidFormats = ['invalid', '1.0', '', 'not-a-version', '1.0.x', 'x.y.z'];
+
+      invalidFormats.forEach(version => {
+        const result = validateDpVersion(version);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toContain('Invalid semantic version format');
+      });
+    });
+
+    it('should accept valid semantic versions', () => {
+      // Test versions that pass both format and minimum version requirements
+      const validVersions = ['1.0.0', '0.9.0', '10.20.30'];
+
+      validVersions.forEach(version => {
+        const result = validateDpVersion(version);
+        expect(result.isValid).toBe(true);
+        expect(result.error).toBeUndefined();
+      });
+    });
+  });
+
+  describe('Protected Fields Validation', () => {
+    const validAuth = {
+      Authorization: 'Bearer test-secret-key',
+      'Content-Type': 'application/json',
+    };
+
+    it('should reject playlist updates with protected fields', async () => {
+      const invalidUpdateData = {
+        dpVersion: '2.0.0', // Protected field
+        id: 'custom-id', // Protected field
+        slug: 'custom-slug', // Protected field
+        items: [
+          {
+            title: 'Test Artwork',
+            source: 'https://example.com/artwork.html',
+            duration: 300,
+            license: 'open' as const,
+          },
+        ],
+      };
+
+      const req = new Request('http://localhost/playlists/test-id', {
+        method: 'PUT',
+        headers: validAuth,
+        body: JSON.stringify(invalidUpdateData),
+      });
+      const response = await app.fetch(req, testEnv);
+      expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.error).toBe('protected_fields');
+      expect(data.message).toContain('dpVersion, id, slug');
+    });
+
+    it('should reject playlist group updates with protected fields', async () => {
+      const invalidUpdateData = {
+        id: 'custom-id', // Protected field
+        slug: 'custom-slug', // Protected field
+        title: 'Updated Exhibition',
+        curator: 'Test Curator',
+        playlists: ['https://example.com/playlist.json'],
+      };
+
+      const req = new Request('http://localhost/playlist-groups/test-id', {
+        method: 'PUT',
+        headers: validAuth,
+        body: JSON.stringify(invalidUpdateData),
+      });
+      const response = await app.fetch(req, testEnv);
+      expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.error).toBe('protected_fields');
+      expect(data.message).toContain('id, slug');
+    });
+
+    it('should allow valid playlist updates without protected fields', async () => {
+      // First create a playlist
+      const createReq = new Request('http://localhost/playlists', {
+        method: 'POST',
+        headers: validAuth,
+        body: JSON.stringify(validPlaylist),
+      });
+      const createResponse = await app.fetch(createReq, testEnv);
+      expect(createResponse.status).toBe(201);
+      const createdPlaylist = await createResponse.json();
+
+      // Then update it with valid data
+      const validUpdateData = {
+        defaults: { license: 'token' as const },
+        items: [
+          {
+            title: 'Updated Artwork',
+            source: 'https://example.com/updated-artwork.html',
+            duration: 400,
+            license: 'subscription' as const,
+          },
+        ],
+      };
+
+      const updateReq = new Request(`http://localhost/playlists/${createdPlaylist.id}`, {
+        method: 'PUT',
+        headers: validAuth,
+        body: JSON.stringify(validUpdateData),
+      });
+      const updateResponse = await app.fetch(updateReq, testEnv);
+      expect(updateResponse.status).toBe(200);
+
+      const updatedData = await updateResponse.json();
+      expect(updatedData.id).toBe(createdPlaylist.id); // Should preserve ID
+      expect(updatedData.slug).toBe(createdPlaylist.slug); // Should preserve slug
+      expect(updatedData.dpVersion).toBe(createdPlaylist.dpVersion); // Should preserve dpVersion
+      expect(updatedData.items[0].title).toBe('Updated Artwork');
     });
   });
 
@@ -297,7 +438,7 @@ describe('DP-1 Feed Operator API', () => {
 
       const data = await response.json();
       expect(data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-      expect(data.dpVersion).toBe('0.9.0'); // Server should set current DP version
+      expect(data.dpVersion).toBe('1.0.0'); // Server should preserve client's dpVersion
       expect(data.slug).toMatch(/^test-artwork-\d{4}$/);
       expect(data.created).toBeTruthy();
       expect(data.signature).toBeTruthy();
@@ -306,7 +447,7 @@ describe('DP-1 Feed Operator API', () => {
       );
     });
 
-    it('PUT /playlists/:id should update playlist and regenerate slug', async () => {
+    it('PUT /playlists/:id should update playlist and preserve protected fields', async () => {
       // First create a playlist
       const createReq = new Request('http://localhost/playlists', {
         method: 'POST',
@@ -319,13 +460,15 @@ describe('DP-1 Feed Operator API', () => {
       const createdPlaylist = await createResponse.json();
       const playlistId = createdPlaylist.id;
 
-      // Then update it with new title
+      // Then update it with new title (only send updateable fields)
       const updatedPlaylist = {
-        ...validPlaylist,
+        defaults: { license: 'token' as const },
         items: [
           {
-            ...validPlaylist.items[0],
             title: 'Updated Artwork Title',
+            source: 'https://example.com/updated-artwork.html',
+            duration: 400,
+            license: 'subscription' as const,
           },
         ],
       };
@@ -340,8 +483,8 @@ describe('DP-1 Feed Operator API', () => {
 
       const data = await updateResponse.json();
       expect(data.id).toBe(playlistId); // ID should remain the same
-      expect(data.dpVersion).toBe('0.9.0'); // Server should maintain current DP version
-      expect(data.slug).toMatch(/^updated-artwork-title-\d{4}$/);
+      expect(data.dpVersion).toBe('1.0.0'); // Server should preserve client's dpVersion
+      expect(data.slug).toBe(createdPlaylist.slug);
       expect(data.items[0].id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
       );
@@ -391,7 +534,7 @@ describe('DP-1 Feed Operator API', () => {
       expect(data.created).toBeTruthy();
     });
 
-    it('PUT /playlist-groups/:id should update group and regenerate slug', async () => {
+    it('PUT /playlist-groups/:id should update group and preserve slug', async () => {
       // First create a playlist group
       const createReq = new Request('http://localhost/playlist-groups', {
         method: 'POST',
@@ -420,7 +563,8 @@ describe('DP-1 Feed Operator API', () => {
 
       const data = await updateResponse.json();
       expect(data.id).toBe(groupId); // ID should remain the same
-      expect(data.slug).toMatch(/^updated-exhibition-title-\d{4}$/);
+      expect(data.slug).toBe(createdGroup.slug); // Slug should be preserved, not regenerated
+      expect(data.title).toBe('Updated Exhibition Title'); // Title should be updated
     });
   });
 

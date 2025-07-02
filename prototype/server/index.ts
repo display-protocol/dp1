@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { CURRENT_DP_VERSION, type Env } from './types';
+import { MIN_DP_VERSION, type Env } from './types';
 import {
   authMiddleware,
   corsMiddleware,
@@ -37,7 +37,7 @@ app.get('/health', c => {
   return c.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    version: CURRENT_DP_VERSION,
+    version: MIN_DP_VERSION,
     environment: c.env.ENVIRONMENT || 'development',
   });
 });
@@ -46,7 +46,7 @@ app.get('/health', c => {
 app.get('/', c => {
   return c.json({
     name: 'DP-1 Feed Operator API',
-    version: CURRENT_DP_VERSION,
+    version: MIN_DP_VERSION,
     description:
       'REST interface for creating, updating, and retrieving DP-1 playlists and playlist-groups',
     specification: 'DP-1 v0.9-alpha',

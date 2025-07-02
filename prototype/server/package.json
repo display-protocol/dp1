@@ -66,11 +66,13 @@
   "dependencies": {
     "@cloudflare/workers-types": "^4.20240925.0",
     "hono": "^4.8.3",
+    "semver": "^7.7.2",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@types/node": "^24.0.8",
+    "@types/semver": "^7.7.0",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
     "@typescript-eslint/parser": "^8.35.1",
     "@vitest/coverage-v8": "^3.2.4",

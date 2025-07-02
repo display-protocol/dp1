@@ -1,7 +1,12 @@
 import { Hono, Context } from 'hono';
 import { z } from 'zod';
-import type { Env, PlaylistGroupInput, PlaylistGroup } from '../types';
-import { PlaylistGroupInputSchema, generateSlug, createPlaylistGroupFromInput } from '../types';
+import type { Env, PlaylistGroupInput, PlaylistGroupUpdate, PlaylistGroup } from '../types';
+import {
+  PlaylistGroupInputSchema,
+  PlaylistGroupUpdateSchema,
+  createPlaylistGroupFromInput,
+  validateNoProtectedFields,
+} from '../types';
 import { listAllPlaylistGroups, savePlaylistGroup, getPlaylistGroupByIdOrSlug } from '../fileUtils';
 
 // Create playlist groups router
@@ -41,6 +46,45 @@ async function validatePlaylistGroupBody(
       return {
         error: 'validation_error',
         message: `Invalid playlist group data: ${errorMessage}`,
+        status: 400,
+      };
+    } else {
+      return {
+        error: 'invalid_json',
+        message: 'Request body must be valid JSON',
+        status: 400,
+      };
+    }
+  }
+}
+
+/**
+ * Validate request body for playlist group updates (excludes protected fields)
+ */
+async function validatePlaylistGroupUpdateBody(
+  c: Context
+): Promise<PlaylistGroupUpdate | { error: string; message: string; status: number }> {
+  try {
+    const body = await c.req.json();
+
+    // Check for protected fields first
+    const protectedValidation = validateNoProtectedFields(body, 'playlistGroup');
+    if (!protectedValidation.isValid) {
+      return {
+        error: 'protected_fields',
+        message: `Cannot update protected fields: ${protectedValidation.protectedFields?.join(', ')}. Protected fields are read-only.`,
+        status: 400,
+      };
+    }
+
+    const result = PlaylistGroupUpdateSchema.parse(body);
+    return result;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+      return {
+        error: 'validation_error',
+        message: `Invalid playlist group update data: ${errorMessage}`,
         status: 400,
       };
     } else {
@@ -183,7 +227,7 @@ playlistGroups.put('/:id', async c => {
       );
     }
 
-    const validatedData = await validatePlaylistGroupBody(c);
+    const validatedData = await validatePlaylistGroupUpdateBody(c);
 
     // Check if validation returned an error
     if ('error' in validatedData) {
@@ -208,10 +252,10 @@ playlistGroups.put('/:id', async c => {
       );
     }
 
-    // Create updated playlist group keeping original ID and created timestamp
+    // Create updated playlist group keeping original ID, slug, and created timestamp
     const updatedGroup: PlaylistGroup = {
       id: existingGroup.id, // Keep original server-generated ID
-      slug: generateSlug(validatedData.title),
+      slug: existingGroup.slug, // Keep original slug (don't regenerate)
       title: validatedData.title,
       curator: validatedData.curator,
       summary: validatedData.summary,
