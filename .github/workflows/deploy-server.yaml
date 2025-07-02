@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: 'prototype/server/pacgkage-lock.json'
+          cache-dependency-path: 'prototype/server/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
