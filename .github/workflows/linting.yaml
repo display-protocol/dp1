@@ -3,15 +3,21 @@ name: Linting
 on:
   push:
     branches: [main]
-    paths: ['prototype/server/**']
+    paths:
+      - 'prototype/server/**'
+      - 'prototype/validator/**'
   pull_request:
     branches: [main]
-    paths: ['prototype/server/**']
+    paths:
+      - 'prototype/server/**'
+      - 'prototype/validator/**'
 
 jobs:
-  lint:
+  # Node.js/TypeScript linting for the server
+  lint-server:
     runs-on: ubuntu-latest
-    name: Code Quality Checks
+    name: Server Code Quality Checks
+    if: ${{ contains(join(github.event.commits.*.modified, ' '), 'prototype/server/') || contains(join(github.event.pull_request.changed_files.*.filename, ' '), 'prototype/server/') }}
 
     defaults:
       run:
@@ -39,3 +45,46 @@ jobs:
 
       - name: Check Prettier formatting
         run: npm run format:check
+
+  # Go linting for the validator
+  lint-validator:
+    runs-on: ubuntu-latest
+    name: Validator Code Quality Checks
+    if: contains(github.event.head_commit.modified, 'prototype/validator/') || contains(github.event.pull_request.changed_files, 'prototype/validator/')
+
+    defaults:
+      run:
+        working-directory: ./prototype/validator
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: 'prototype/validator/go.sum'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1.6
+          working-directory: ./prototype/validator
+          args: --timeout=5m
+
+      - name: Check Go formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files are not formatted:"
+            gofmt -s -l .
+            exit 1
+          fi
