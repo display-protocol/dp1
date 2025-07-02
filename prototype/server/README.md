@@ -5,26 +5,30 @@ A modern, serverless API server built for Cloudflare Workers using the **Hono fr
 ## 🚀 Features
 
 ### Modern Architecture
+
 - **Hono Framework**: Express-like routing and middleware for Cloudflare Workers
 - **Zod Schema Validation**: Runtime type-safe request validation
 - **Modular Design**: Organized routes, middleware, and utilities
 - **TypeScript First**: Full type safety and excellent DX
 
-### DP-1 Compliance  
+### DP-1 Compliance
+
 - **OpenAPI 3.1.0 Compliant**: Full REST interface matching the DP-1 Feed Operator API specification
 - **DP-1 Specification**: Complete implementation of DP-1 v0.9-alpha for blockchain-native digital art
 - **Ed25519 Signatures**: Cryptographic playlist signing as per DP-1 specification
 - **Schema Validation**: Comprehensive validation against DP-1 JSON schemas
 
 ### Production Ready
+
 - **Cloudflare Workers**: Serverless deployment with global edge performance
-- **KV Storage**: Distributed key-value storage for playlists and metadata  
+- **KV Storage**: Distributed key-value storage for playlists and metadata
 - **Authentication Middleware**: Bearer token authentication for write operations
 - **CORS Middleware**: Cross-origin resource sharing for web applications
 - **Request Logging**: Structured logging with performance metrics
 - **Error Handling**: Comprehensive error handling with proper HTTP status codes
 
 ### Developer Experience
+
 - **Hot Reload**: Fast development with live reloading
 - **Type Safety**: End-to-end TypeScript with Zod validation
 - **ESLint + Prettier**: Code quality and consistent formatting
@@ -34,7 +38,7 @@ A modern, serverless API server built for Cloudflare Workers using the **Hono fr
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - Cloudflare account
 - Wrangler CLI (`npm install -g wrangler`)
@@ -66,7 +70,7 @@ id = "YOUR_PLAYLISTS_KV_ID_HERE"
 preview_id = "YOUR_PLAYLISTS_PREVIEW_KV_ID_HERE"
 
 [[kv_namespaces]]
-binding = "DP1_PLAYLIST_GROUPS"  
+binding = "DP1_PLAYLIST_GROUPS"
 id = "YOUR_PLAYLIST_GROUPS_KV_ID_HERE"
 preview_id = "YOUR_PLAYLIST_GROUPS_PREVIEW_KV_ID_HERE"
 ```
@@ -78,10 +82,12 @@ npm run setup:secrets
 ```
 
 When prompted, enter:
+
 1. **API_SECRET**: A secure API key (generate with `openssl rand -hex 32`)
 2. **ED25519_PRIVATE_KEY**: Ed25519 private key for playlist signing
 
 Generate an Ed25519 private key with:
+
 ```bash
 # Method 1: PKCS#8 format (recommended)
 openssl genpkey -algorithm Ed25519 -out private.pem && openssl pkey -in private.pem -outform DER | xxd -p -c 256
@@ -187,7 +193,7 @@ src/
 │   └── auth.ts             # Authentication, CORS, logging
 ├── routes/
 │   ├── playlists.ts        # Playlist CRUD operations
-│   └── playlistGroups.ts   # Playlist group operations  
+│   └── playlistGroups.ts   # Playlist group operations
 ├── fileUtils.ts            # KV storage operations
 ├── crypto.ts               # Ed25519 signing utilities
 └── scripts/                # Deployment and testing scripts
@@ -224,7 +230,7 @@ npm run setup:kv:production
 # Set production secrets
 npm run setup:secrets:production
 
-# Initialize production data  
+# Initialize production data
 npm run init:data:production
 
 # Deploy to production
@@ -236,6 +242,7 @@ npm run deploy:production
 ### API Behavior
 
 The API follows REST principles with comprehensive validation:
+
 - **Schema Validation**: All requests validated against Zod schemas
 - **Type Safety**: Full TypeScript support end-to-end
 - **Error Handling**: Detailed error messages with proper HTTP status codes
@@ -267,7 +274,7 @@ GET  /playlists/{id}                    # Get specific playlist
 POST /playlists                         # Create playlist (requires auth + validation)
 PUT  /playlists/{id}                    # Update playlist (requires auth + validation)
 
-# Playlist Groups (with full Zod validation)  
+# Playlist Groups (with full Zod validation)
 GET  /playlist-groups                   # List all groups (array)
 GET  /playlist-groups/{id}              # Get specific group
 POST /playlist-groups                   # Create group (requires auth + validation)
@@ -345,9 +352,11 @@ The `wrangler.toml` file configures:
 ### KV Namespace Structure
 
 **DP1_PLAYLISTS:**
+
 - `playlist:{id}` - Individual playlists
 
-**DP1_PLAYLIST_GROUPS:**  
+**DP1_PLAYLIST_GROUPS:**
+
 - `playlist-group:{id}` - Individual groups
 
 ### Data Persistence
@@ -400,7 +409,7 @@ curl https://your-api.workers.dev/health
 {
   "status": "healthy",
   "timestamp": "2024-01-15T14:30:00.000Z",
-  "version": "0.4.0", 
+  "version": "0.4.0",
   "environment": "production"
 }
 ```
@@ -486,12 +495,14 @@ const PlaylistSchema = z.object({
 ### Common Issues
 
 **Schema validation errors:**
+
 ```bash
 # Check the specific validation error message
 # Zod provides detailed field-level feedback
 ```
 
 **KV namespace not found:**
+
 ```bash
 # Recreate namespaces
 npm run setup:kv
@@ -499,12 +510,14 @@ npm run setup:kv
 ```
 
 **Authentication failed:**
+
 ```bash
 # Reset API secret and ED25519 private key
 npm run setup:secrets
 ```
 
 **Missing ED25519_PRIVATE_KEY:**
+
 ```bash
 # Generate and set ED25519 private key
 openssl genpkey -algorithm Ed25519 -out private.pem && \
@@ -513,6 +526,7 @@ wrangler secret put ED25519_PRIVATE_KEY
 ```
 
 **TypeScript errors:**
+
 ```bash
 # Check types and schemas
 npm run type-check
@@ -531,4 +545,4 @@ MIT License - see [LICENSE](../../LICENSE) for details.
 
 ---
 
-**Built with ❤️ by Feral File for the DP-1 ecosystem using modern web standards.** 
+**Built with ❤️ by Feral File for the DP-1 ecosystem using modern web standards.**

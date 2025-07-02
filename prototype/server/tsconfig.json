@@ -29,19 +29,9 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["@cloudflare/workers-types", "@types/node"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.js",
-    "**/*.json"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
+  "include": ["**/*.ts", "**/*.js", "**/*.json"],
+  "exclude": ["node_modules", "dist", "coverage", "**/*.test.ts", "**/*.spec.ts"],
   "ts-node": {
     "esm": true
   }
-} 
+}
