@@ -1,4 +1,4 @@
-name = "dp1-feed-operator-api"
+name = "dp1-feed-operator-api-dev"
 main = "index.ts"
 compatibility_date = "2024-01-15"
 compatibility_flags = ["nodejs_compat"]
@@ -33,12 +33,6 @@ id = "626b74ca2b5b4606904cac7c4bbfd454"
 [[env.production.kv_namespaces]]
 binding = "DP1_PLAYLIST_GROUPS"
 id = "df9f99f5d73d43f9a941859819cf0f29"
-
-# Development configuration
-[env.development]
-name = "dp1-feed-operator-api-dev"
-[env.development.vars]
-ENVIRONMENT = "development"
 
 # Durable Objects (for real-time features - optional)
 # [[durable_objects.bindings]]
