@@ -37,12 +37,12 @@ jobs:
       - name: Start development server for integration tests
         run: |
           npm run dev:port &
-          sleep 10
+          sleep 5
 
       - name: Run integration tests
         run: npm run test:api
         env:
-          API_SECRET: test-secret-key
+          API_SECRET: test-api-secret
 
       - name: Stop development server
         run: pkill -f "wrangler dev" || true
