@@ -22,6 +22,7 @@ if (!apiSecret) {
 
 // Test data without IDs or dpVersion (server will generate them)
 const testPlaylist = {
+  dpVersion: '0.9.0',
   defaults: {
     display: {
       scaling: 'fit',
@@ -228,8 +229,10 @@ async function testUpdatePlaylist() {
   }
 
   console.log('\n📝 Testing PUT /playlists/{id} (slug regeneration and new item IDs)...');
+  // remove the dpVersion from the testPlaylist
+  const { dpVersion, ...rest } = testPlaylist;
   const updatedPlaylist = {
-    ...testPlaylist,
+    ...rest,
     items: [
       {
         ...testPlaylist.items[0],
@@ -251,18 +254,12 @@ async function testUpdatePlaylist() {
     console.log(`   Items: ${response.data.items?.length || 0}`);
     console.log(`   New slug: ${response.data.slug}`);
 
-    // Verify slug was regenerated from new title
+    // Verify slug was not regenerated
     if (response.data.slug !== createdPlaylistSlug) {
-      console.log('✅ Slug regenerated after title change');
-      if (/^updated-amazing-digital-artwork-\d{4}$/.test(response.data.slug)) {
-        console.log('✅ New slug format matches updated title');
-      } else {
-        console.log('❌ New slug format does not match expected pattern');
-        return false;
-      }
-    } else {
-      console.log('❌ Slug was not regenerated after title change');
+      console.log('❌ Slug was regenerated after title change');
       return false;
+    } else {
+      console.log('✅ Slug was not regenerated after title change');
     }
   } else {
     console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);

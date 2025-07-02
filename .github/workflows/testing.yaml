@@ -38,9 +38,6 @@ jobs:
         run: |
           npm run dev:port &
           sleep 10
-        env:
-          API_SECRET: test-secret-key
-          ED25519_PRIVATE_KEY: test-ed25519-private-key
 
       - name: Run integration tests
         run: npm run test:api
