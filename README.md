@@ -16,14 +16,13 @@ The near‑term goal is a stable v 1.0 with a public badge program; the longer�
 
 ```
 docs/
-├── DP‑1‑spec‑v0.9‑alpha.md           # DP-1 Protocol Specification
+├── spec.md                     # DP-1 Protocol Specification
 ├── api/
-│   └── openapi.yaml                   # OpenAPI 3.1.0 API specification
-└── FF1 Mobile Controller_*.md         # FF1 device design documentation
+    └── openapi.yaml            # OpenAPI 3.1.0 API specification
 
 prototype/
-└── server/                            # Cloudflare Workers API implementation
-    ├── README.md                      # Server setup and deployment guide
+└── server/                           # Cloudflare Workers API implementation
+    ├── README.md                     # Server setup and deployment guide
     ├── src/                          # TypeScript source code
     ├── tests/                        # Unit and integration tests
     └── wrangler.toml                 # Cloudflare Workers configuration
@@ -32,7 +31,7 @@ prototype/
 ## Getting Started
 
 ### 📖 **Protocol Documentation**
-Start with `docs/DP‑1‑spec‑v0.9‑alpha.md` for the complete DP-1 protocol specification and design principles.
+Start with `docs/spec.md` for the complete DP-1 protocol specification and design principles.
 
 ### 🚀 **Server Implementation**
 See `prototype/server/README.md` for detailed setup instructions for the Cloudflare Workers API server, including:
