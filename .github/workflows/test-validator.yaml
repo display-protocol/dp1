@@ -48,7 +48,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: ./prototype/validator/coverage.out
-          slug: feral-file/dp1-validator
+          slug: feral-file/dp-1/validator
           flags: validator
           name: dp1-validator-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
