@@ -232,6 +232,7 @@ func TestPlaylistCommandFlags(t *testing.T) {
 func TestCapsuleCommandFlags(t *testing.T) {
 	// Test capsule command flags
 	playlistFlag := capsuleCmd.Flags().Lookup("playlist")
+	//nolint:staticcheck
 	if playlistFlag == nil {
 		t.Error("capsule command should have --playlist flag")
 	}
@@ -247,6 +248,7 @@ func TestCapsuleCommandFlags(t *testing.T) {
 	}
 
 	// Check that playlist is NOT required (should be optional now)
+	//nolint:staticcheck
 	playlistAnnotations := playlistFlag.Annotations
 	if playlistAnnotations != nil && playlistAnnotations[cobra.BashCompOneRequiredFlag] != nil {
 		t.Error("playlist flag should be optional for capsule command")
