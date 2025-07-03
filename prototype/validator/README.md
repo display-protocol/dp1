@@ -1,5 +1,9 @@
 # DP-1 Validator
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/test-validator.yaml?branch=main&label=build%20status&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/test-validator.yaml)
+[![Linter](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/lint-validator.yaml?branch=main&label=linter&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/lint-validator.yaml)
+[![Code Coverage](https://img.shields.io/codecov/c/github/feral-file/dp-1/main?label=code%20coverage&logo=codecov)](https://codecov.io/gh/feral-file/dp-1)
+
 A command-line validator for DP-1 playlists and capsules that can verify Ed25519 signatures and SHA256 asset integrity according to the DP-1 specification.
 
 ## Features

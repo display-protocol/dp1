@@ -1,11 +1,11 @@
 # DP-1 Protocol
 
-### Validator
+### DP-1 Validator
 [![Build Status](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/test-validator.yaml?branch=main&label=build%20status&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/test-validator.yaml)
 [![Linter](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/lint-validator.yaml?branch=main&label=linter&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/lint-validator.yaml)
 [![Code Coverage](https://img.shields.io/codecov/c/github/feral-file/dp-1/main?label=code%20coverage&logo=codecov)](https://codecov.io/gh/feral-file/dp-1)
 
-### Server
+### DP-1 Feed Server
 [![Build Status](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/test-server.yaml?branch=main&label=build%20status&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/test-server.yaml)
 [![Linter](https://img.shields.io/github/actions/workflow/status/feral-file/dp-1/lint-server.yaml?branch=main&label=linter&logo=github)](https://github.com/feral-file/dp-1/actions/workflows/lint-server.yaml)
 
