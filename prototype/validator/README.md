@@ -202,3 +202,4 @@ The validator provides detailed error messages for common issues:
 ## License
 
 This project follows the DP-1 specification governance model.
+
