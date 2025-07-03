@@ -142,7 +142,17 @@ func CanonicalizePlaylist(playlist *Playlist) ([]byte, error) {
 		return nil, err
 	}
 
-	return canonicalizeJSON(obj)
+	canonical, err := canonicalizeJSON(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add LF terminator if not already present
+	if len(canonical) > 0 && canonical[len(canonical)-1] != '\n' {
+		canonical = append(canonical, '\n')
+	}
+
+	return canonical, nil
 }
 
 // canonicalizeJSON recursively sorts JSON objects by keys to ensure deterministic output

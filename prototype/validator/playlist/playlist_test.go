@@ -238,6 +238,11 @@ func TestCanonicalizePlaylist(t *testing.T) {
 	if !reflect.DeepEqual(canonical, canonical2) {
 		t.Errorf("Canonicalization is not deterministic")
 	}
+
+	// Check that canonical form ends with LF terminator
+	if len(canonical) == 0 || canonical[len(canonical)-1] != '\n' {
+		t.Errorf("Canonical form should end with LF terminator")
+	}
 }
 
 func TestGetPlaylistHash(t *testing.T) {
