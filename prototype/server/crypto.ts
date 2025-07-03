@@ -91,11 +91,36 @@ export async function getServerKeyPair(env: Env): Promise<KeyPair> {
 
 /**
  * Create canonical form of playlist for signing (UTF-8, LF terminators)
+ * Ensures deterministic output by sorting object keys
  */
-function createCanonicalForm(playlist: Omit<Playlist, 'signature'>): string {
-  const canonical = JSON.stringify(playlist, null, 2);
-  // Ensure LF line endings (not CRLF)
-  return canonical.replace(/\r\n/g, '\n');
+export function createCanonicalForm(playlist: Omit<Playlist, 'signature'>): string {
+  // Helper function to recursively sort all object keys
+  function sortObjectKeys(obj: any): any {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(sortObjectKeys);
+    }
+
+    const sorted: any = {};
+    const keys = Object.keys(obj).sort();
+    for (const key of keys) {
+      sorted[key] = sortObjectKeys(obj[key]);
+    }
+    return sorted;
+  }
+
+  // Sort all nested objects for deterministic output
+  const sortedPlaylist = sortObjectKeys(playlist);
+  const canonical = JSON.stringify(sortedPlaylist, null, 2);
+
+  // Ensure LF line endings (not CRLF) and add LF terminator
+  const normalized = canonical.replace(/\r\n/g, '\n');
+
+  // Add LF terminator if not already present
+  return normalized.endsWith('\n') ? normalized : normalized + '\n';
 }
 
 /**

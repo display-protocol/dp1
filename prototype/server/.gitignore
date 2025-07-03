@@ -126,3 +126,4 @@ temp/
 
 # ed25519 private key
 *.pem
+*.der
