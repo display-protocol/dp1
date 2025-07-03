@@ -1,0 +1,50 @@
+name: Test Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prototype/server/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prototype/server/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Server Tests
+
+    defaults:
+      run:
+        working-directory: ./prototype/server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'prototype/server/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Start development server for integration tests
+        run: |
+          npm run dev:port &
+          sleep 5
+
+      - name: Run integration tests
+        run: npm run test:api
+        env:
+          API_SECRET: test-api-secret
+
+      - name: Stop development server
+        run: pkill -f "wrangler dev" || true
