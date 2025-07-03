@@ -223,7 +223,7 @@ func TestCanonicalizePlaylist(t *testing.T) {
 	}
 
 	// Check that result is valid JSON
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(canonical, &obj); err != nil {
 		t.Errorf("Canonical output is not valid JSON: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestGetSignableContent(t *testing.T) {
 	}
 
 	// Parse the result to verify signature was removed
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(content, &obj); err != nil {
 		t.Errorf("Signable content is not valid JSON: %v", err)
 		return
@@ -610,68 +610,15 @@ func TestExtractAssetHashes(t *testing.T) {
 	}
 }
 
-func TestParseHashesString(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected []string
-	}{
-		{
-			name:     "Comma separated",
-			input:    "hash1,hash2,hash3",
-			expected: []string{"hash1", "hash2", "hash3"},
-		},
-		{
-			name:     "Colon separated",
-			input:    "hash1:hash2:hash3",
-			expected: []string{"hash1", "hash2", "hash3"},
-		},
-		{
-			name:     "Bracket format",
-			input:    "[hash1,hash2,hash3]",
-			expected: []string{"hash1", "hash2", "hash3"},
-		},
-		{
-			name:     "With whitespace",
-			input:    " hash1 , hash2 , hash3 ",
-			expected: []string{"hash1", "hash2", "hash3"},
-		},
-		{
-			name:     "Single hash",
-			input:    "single-hash",
-			expected: []string{"single-hash"},
-		},
-		{
-			name:     "Empty string",
-			input:    "",
-			expected: nil,
-		},
-		{
-			name:     "Only brackets",
-			input:    "[]",
-			expected: []string{""},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ParseHashesString(tt.input)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("ParseHashesString(%q) = %v, want %v", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestCanonicalizeJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected string
 	}{
 		{
 			name: "Simple object",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"b": "value2",
 				"a": "value1",
 			},
@@ -679,8 +626,8 @@ func TestCanonicalizeJSON(t *testing.T) {
 		},
 		{
 			name: "Nested object",
-			input: map[string]interface{}{
-				"outer": map[string]interface{}{
+			input: map[string]any{
+				"outer": map[string]any{
 					"z": "last",
 					"a": "first",
 				},
@@ -689,7 +636,7 @@ func TestCanonicalizeJSON(t *testing.T) {
 		},
 		{
 			name:     "Array",
-			input:    []interface{}{"c", "a", "b"},
+			input:    []any{"c", "a", "b"},
 			expected: `["c","a","b"]`,
 		},
 		{
@@ -726,7 +673,7 @@ func TestCanonicalizeJSON(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkParsePlaylist(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = ParsePlaylist(validPlaylistJSON)
 	}
 }
@@ -742,7 +689,7 @@ func BenchmarkCanonicalizePlaylist(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = CanonicalizePlaylist(playlist)
 	}
 }
@@ -758,7 +705,7 @@ func BenchmarkGetPlaylistHash(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = GetPlaylistHash(playlist)
 	}
 }

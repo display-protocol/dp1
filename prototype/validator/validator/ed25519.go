@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-// VerifyPlaylistSignature verifies the Ed25519 signature of a playlist
+// VerifySignature verifies the Ed25519 signature of raw content
 // pubkeyHex: Ed25519 public key as hex string
-// signableContent: The content that was signed (playlist without signature field)
+// raw: The content that was signed
 // signature: The signature from the playlist in format "ed25519:<hex>"
-func VerifyPlaylistSignature(pubkeyHex string, signableContent []byte, signature string) error {
+func VerifySignature(pubkeyHex string, raw []byte, signature string) error {
 	// Parse public key
 	pubkey, err := parsePublicKey(pubkeyHex)
 	if err != nil {
@@ -26,7 +26,7 @@ func VerifyPlaylistSignature(pubkeyHex string, signableContent []byte, signature
 	}
 
 	// Hash the content using SHA-256
-	hash := sha256.Sum256(signableContent)
+	hash := sha256.Sum256(raw)
 
 	// Verify the signature
 	if !ed25519.Verify(pubkey, hash[:], sigBytes) {
@@ -96,7 +96,7 @@ func ValidateSignatureFormat(signature string) error {
 	return err
 }
 
-// GenerateKeyPair generates a new Ed25519 key pair for testing purposes
+// GenerateKeyPair generates a new Ed25519 key pair
 // Returns (privateKeyHex, publicKeyHex, error)
 func GenerateKeyPair() (string, string, error) {
 	pubkey, privkey, err := ed25519.GenerateKey(nil)
@@ -110,9 +110,9 @@ func GenerateKeyPair() (string, string, error) {
 	return privkeyHex, pubkeyHex, nil
 }
 
-// SignContent signs content with a private key for testing purposes
+// Sign hashes the raw content and signs it with a private key
 // Returns signature in DP-1 format "ed25519:<hex>"
-func SignContent(privkeyHex string, content []byte) (string, error) {
+func Sign(privkeyHex string, raw []byte) (string, error) {
 	// Parse private key
 	privkeyBytes, err := hex.DecodeString(strings.TrimPrefix(privkeyHex, "0x"))
 	if err != nil {
@@ -127,7 +127,7 @@ func SignContent(privkeyHex string, content []byte) (string, error) {
 	privkey := ed25519.PrivateKey(privkeyBytes)
 
 	// Hash the content
-	hash := sha256.Sum256(content)
+	hash := sha256.Sum256(raw)
 
 	// Sign the hash
 	signature := ed25519.Sign(privkey, hash[:])

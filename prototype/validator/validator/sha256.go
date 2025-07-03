@@ -2,18 +2,15 @@ package validator
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
-	"time"
 )
 
 // HashResult represents the hash of a single file
@@ -105,13 +102,10 @@ func processFilesConcurrently(fileJobs []FileJob) []HashResult {
 	}
 
 	// Determine number of workers (CPU cores, but capped for reasonable concurrency)
-	numWorkers := runtime.NumCPU()
-	if numWorkers > 8 {
-		numWorkers = 8 // Cap at 8 to avoid too many file handles
-	}
-	if len(fileJobs) < numWorkers {
-		numWorkers = len(fileJobs)
-	}
+	numWorkers := min(
+		len(fileJobs),
+		min(runtime.NumCPU(), 8),
+	)
 
 	// Create channels
 	jobChan := make(chan FileJob, len(fileJobs))
@@ -119,7 +113,7 @@ func processFilesConcurrently(fileJobs []FileJob) []HashResult {
 
 	// Start workers
 	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
+	for range numWorkers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -213,7 +207,7 @@ func VerifyDirectoryHashes(dirPath string, expectedHashes []string) (*Verificati
 	}
 
 	// Compare hashes
-	matched, missing, extra := compareHashLists(expectedHashes, computedHashes)
+	matched, missing, extra := CompareHashLists(expectedHashes, computedHashes)
 
 	success := len(missing) == 0 && len(extra) == 0
 
@@ -227,8 +221,8 @@ func VerifyDirectoryHashes(dirPath string, expectedHashes []string) (*Verificati
 	}, nil
 }
 
-// compareHashLists compares two lists of hashes and returns matched, missing, and extra hashes
-func compareHashLists(expected, actual []string) (matched, missing, extra []string) {
+// CompareHashLists compares two lists of hashes and returns matched, missing, and extra hashes
+func CompareHashLists(expected, actual []string) (matched, missing, extra []string) {
 	expectedMap := make(map[string]bool)
 	actualMap := make(map[string]bool)
 
@@ -263,39 +257,6 @@ func compareHashLists(expected, actual []string) (matched, missing, extra []stri
 	return matched, missing, extra
 }
 
-// VerifyPlaylistAssets verifies assets from a playlist URL or base64 payload
-func VerifyPlaylistAssets(playlistInput string) (*VerificationResult, error) {
-	// This would need the playlist parsing logic
-	// For now, return an error indicating this needs playlist integration
-	return nil, fmt.Errorf("playlist asset verification requires playlist parsing integration")
-}
-
-// FetchAndHashURL fetches content from a URL and returns its SHA256 hash
-func FetchAndHashURL(url string) (string, error) {
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	resp, err := client.Get(url)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch URL: %w", err)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, resp.Body); err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
-}
-
 // HashString computes SHA256 hash of a string
 func HashString(input string) string {
 	hash := sha256.Sum256([]byte(input))
@@ -326,24 +287,6 @@ func ValidateHashFormat(hash string) error {
 	}
 
 	return nil
-}
-
-// HashBase64Content computes SHA256 hash of base64 encoded content
-func HashBase64Content(base64Content string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(base64Content)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode base64: %w", err)
-	}
-
-	return HashBytes(data), nil
-}
-
-// FormatHashList formats a list of hashes for display
-func FormatHashList(hashes []string) string {
-	if len(hashes) == 0 {
-		return "none"
-	}
-	return strings.Join(hashes, ", ")
 }
 
 // ExtractHashesFromString extracts valid SHA256 hashes from a string

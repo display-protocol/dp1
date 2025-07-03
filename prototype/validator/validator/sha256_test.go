@@ -2,16 +2,19 @@ package validator
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+// Helper function to generate deterministic hash-like strings from integers
+func hashFromInt(i int) string {
+	// Generate a 64-character hex string (like SHA256)
+	return fmt.Sprintf("%064x", i)
+}
 
 func createTempDir(t *testing.T) string {
 	dir, err := os.MkdirTemp("", "dp1-validator-test")
@@ -289,7 +292,7 @@ func TestCompareHashLists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matched, missing, extra := compareHashLists(tt.expected, tt.actual)
+			matched, missing, extra := CompareHashLists(tt.expected, tt.actual)
 
 			if !reflect.DeepEqual(matched, tt.wantMatched) {
 				t.Errorf("Matched hashes = %v, want %v", matched, tt.wantMatched)
@@ -301,50 +304,6 @@ func TestCompareHashLists(t *testing.T) {
 				t.Errorf("Extra hashes = %v, want %v", extra, tt.wantExtra)
 			}
 		})
-	}
-}
-
-func TestFetchAndHashURL(t *testing.T) {
-	// Create test server
-	testContent := "test content for hashing"
-	expectedHash := HashString(testContent)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(testContent))
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	hash, err := FetchAndHashURL(server.URL)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	if hash != expectedHash {
-		t.Errorf("Expected hash %s, got %s", expectedHash, hash)
-	}
-}
-
-func TestFetchAndHashURLError(t *testing.T) {
-	// Test with non-existent URL
-	_, err := FetchAndHashURL("http://localhost:99999/nonexistent")
-	if err == nil {
-		t.Errorf("Expected error for non-existent URL")
-	}
-
-	// Test with server error
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	_, err = FetchAndHashURL(server.URL)
-	if err == nil {
-		t.Errorf("Expected error for 500 response")
 	}
 }
 
@@ -471,67 +430,6 @@ func TestValidateHashFormat(t *testing.T) {
 	}
 }
 
-func TestHashBase64Content(t *testing.T) {
-	// Test valid base64 content
-	originalContent := "test content"
-	base64Content := base64.StdEncoding.EncodeToString([]byte(originalContent))
-	expectedHash := HashString(originalContent)
-
-	hash, err := HashBase64Content(base64Content)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	if hash != expectedHash {
-		t.Errorf("Expected hash %s, got %s", expectedHash, hash)
-	}
-
-	// Test invalid base64
-	_, err = HashBase64Content("invalid-base64!@#")
-	if err == nil {
-		t.Errorf("Expected error for invalid base64")
-	}
-}
-
-func TestFormatHashList(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []string
-		expected string
-	}{
-		{
-			name:     "Empty list",
-			input:    []string{},
-			expected: "none",
-		},
-		{
-			name:     "Single hash",
-			input:    []string{"hash1"},
-			expected: "hash1",
-		},
-		{
-			name:     "Multiple hashes",
-			input:    []string{"hash1", "hash2", "hash3"},
-			expected: "hash1, hash2, hash3",
-		},
-		{
-			name:     "Nil slice",
-			input:    nil,
-			expected: "none",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := FormatHashList(tt.input)
-			if result != tt.expected {
-				t.Errorf("FormatHashList() = %s, want %s", result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestExtractHashesFromString(t *testing.T) {
 	// Create valid SHA256 hashes for testing
 	validHash1 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -599,25 +497,12 @@ func TestExtractHashesFromString(t *testing.T) {
 	}
 }
 
-func TestVerifyPlaylistAssets(t *testing.T) {
-	// This function is currently not implemented
-	_, err := VerifyPlaylistAssets("test-input")
-	if err == nil {
-		t.Errorf("Expected error for unimplemented function")
-	}
-
-	expectedMsg := "playlist asset verification requires playlist parsing integration"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message containing %q, got %q", expectedMsg, err.Error())
-	}
-}
-
 // Benchmark tests
 func BenchmarkHashString(b *testing.B) {
 	testString := "benchmark test string for hashing performance"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = HashString(testString)
 	}
 }
@@ -626,7 +511,7 @@ func BenchmarkHashBytes(b *testing.B) {
 	testBytes := []byte("benchmark test bytes for hashing performance")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = HashBytes(testBytes)
 	}
 }
@@ -635,7 +520,7 @@ func BenchmarkValidateHashFormat(b *testing.B) {
 	validHash := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = ValidateHashFormat(validHash)
 	}
 }
@@ -653,7 +538,7 @@ func BenchmarkComputeDirectoryHashes(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = ComputeDirectoryHashes(tempDir)
 	}
 }
@@ -663,15 +548,30 @@ func BenchmarkCompareHashLists(b *testing.B) {
 	expected := make([]string, 100)
 	actual := make([]string, 100)
 
-	for i := 0; i < 100; i++ {
-		hash := HashString(fmt.Sprintf("test hash %d", i))
-		expected[i] = hash
-		actual[i] = hash
+	for i := range 100 {
+		expected[i] = hashFromInt(i)
+		actual[i] = hashFromInt(i)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _, _ = compareHashLists(expected, actual)
+	for range b.N {
+		_, _, _ = CompareHashLists(expected, actual)
+	}
+}
+
+func BenchmarkCompareHashListsWorstCase(b *testing.B) {
+	// Create test hash lists
+	expected := make([]string, 1000)
+	actual := make([]string, 1000)
+
+	for i := range 1000 {
+		expected[i] = hashFromInt(i)
+		actual[i] = hashFromInt(i + 1000)
+	}
+
+	b.ResetTimer()
+	for range b.N {
+		_, _, _ = CompareHashLists(expected, actual)
 	}
 }
 
@@ -681,7 +581,7 @@ func BenchmarkExtractHashesFromString(b *testing.B) {
 	hashString := strings.Repeat(validHash+",", 50)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = ExtractHashesFromString(hashString)
 	}
 }

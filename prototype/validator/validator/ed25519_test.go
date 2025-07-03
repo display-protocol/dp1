@@ -14,7 +14,7 @@ var (
 	testContent       = []byte("test content for signing")
 )
 
-func TestVerifyPlaylistSignature(t *testing.T) {
+func TestVerifySignature(t *testing.T) {
 	// Generate a real key pair for testing
 	privKey, pubKey, err := GenerateKeyPair()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestVerifyPlaylistSignature(t *testing.T) {
 	}
 
 	// Sign test content
-	signature, err := SignContent(privKey, testContent)
+	signature, err := Sign(privKey, testContent)
 	if err != nil {
 		t.Fatalf("Failed to sign content: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestVerifyPlaylistSignature(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyPlaylistSignature(tt.pubkey, tt.content, tt.signature)
+			err := VerifySignature(tt.pubkey, tt.content, tt.signature)
 
 			if tt.expectError {
 				if err == nil {
@@ -373,18 +373,18 @@ func TestGenerateKeyPair(t *testing.T) {
 
 	// Test that generated keys can be used for signing and verification
 	testData := []byte("test data")
-	signature, err := SignContent(privKey, testData)
+	signature, err := Sign(privKey, testData)
 	if err != nil {
 		t.Errorf("Failed to sign with generated key: %v", err)
 		return
 	}
 
-	if err := VerifyPlaylistSignature(pubKey, testData, signature); err != nil {
+	if err := VerifySignature(pubKey, testData, signature); err != nil {
 		t.Errorf("Failed to verify with generated key: %v", err)
 	}
 }
 
-func TestSignContent(t *testing.T) {
+func TestSign(t *testing.T) {
 	// Generate key pair for testing
 	privKey, pubKey, err := GenerateKeyPair()
 	if err != nil {
@@ -428,7 +428,7 @@ func TestSignContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signature, err := SignContent(tt.privKey, tt.content)
+			signature, err := Sign(tt.privKey, tt.content)
 
 			if tt.expectError {
 				if err == nil {
@@ -450,7 +450,7 @@ func TestSignContent(t *testing.T) {
 				}
 
 				// Verify the signature works
-				if err := VerifyPlaylistSignature(pubKey, tt.content, signature); err != nil {
+				if err := VerifySignature(pubKey, tt.content, signature); err != nil {
 					t.Errorf("Generated signature failed verification: %v", err)
 				}
 			}
@@ -460,7 +460,7 @@ func TestSignContent(t *testing.T) {
 
 func TestSignAndVerifyEndToEnd(t *testing.T) {
 	// Test multiple rounds of signing and verification
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		// Generate new key pair
 		privKey, pubKey, err := GenerateKeyPair()
 		if err != nil {
@@ -472,19 +472,19 @@ func TestSignAndVerifyEndToEnd(t *testing.T) {
 		content := []byte("test content round " + string(rune(i)))
 
 		// Sign content
-		signature, err := SignContent(privKey, content)
+		signature, err := Sign(privKey, content)
 		if err != nil {
 			t.Errorf("Round %d: Failed to sign content: %v", i, err)
 			continue
 		}
 
 		// Verify signature
-		if err := VerifyPlaylistSignature(pubKey, content, signature); err != nil {
+		if err := VerifySignature(pubKey, content, signature); err != nil {
 			t.Errorf("Round %d: Failed to verify signature: %v", i, err)
 		}
 
 		// Verify that different content fails
-		if err := VerifyPlaylistSignature(pubKey, []byte("different content"), signature); err == nil {
+		if err := VerifySignature(pubKey, []byte("different content"), signature); err == nil {
 			t.Errorf("Round %d: Verification should have failed for different content", i)
 		}
 	}
@@ -502,8 +502,8 @@ func TestHashingConsistency(t *testing.T) {
 
 	// Sign the same content multiple times
 	signatures := make([]string, 5)
-	for i := 0; i < 5; i++ {
-		sig, err := SignContent(privKey, content)
+	for i := range len(signatures) {
+		sig, err := Sign(privKey, content)
 		if err != nil {
 			t.Errorf("Failed to sign content round %d: %v", i, err)
 			continue
@@ -512,7 +512,7 @@ func TestHashingConsistency(t *testing.T) {
 	}
 
 	// All signatures should be identical (deterministic signing)
-	for i := 1; i < len(signatures); i++ {
+	for i := range len(signatures) {
 		if signatures[0] != signatures[i] {
 			t.Errorf("Signatures should be deterministic, but got different results")
 			break
@@ -522,12 +522,12 @@ func TestHashingConsistency(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkGenerateKeyPair(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = GenerateKeyPair()
 	}
 }
 
-func BenchmarkSignContent(b *testing.B) {
+func BenchmarkSign(b *testing.B) {
 	privKey, _, err := GenerateKeyPair()
 	if err != nil {
 		b.Fatalf("Failed to generate key pair: %v", err)
@@ -536,26 +536,26 @@ func BenchmarkSignContent(b *testing.B) {
 	content := []byte("benchmark test content")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = SignContent(privKey, content)
+	for range b.N {
+		_, _ = Sign(privKey, content)
 	}
 }
 
-func BenchmarkVerifyPlaylistSignature(b *testing.B) {
+func BenchmarkVerifySignature(b *testing.B) {
 	privKey, pubKey, err := GenerateKeyPair()
 	if err != nil {
 		b.Fatalf("Failed to generate key pair: %v", err)
 	}
 
 	content := []byte("benchmark test content")
-	signature, err := SignContent(privKey, content)
+	signature, err := Sign(privKey, content)
 	if err != nil {
 		b.Fatalf("Failed to sign content: %v", err)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = VerifyPlaylistSignature(pubKey, content, signature)
+	for range b.N {
+		_ = VerifySignature(pubKey, content, signature)
 	}
 }
 
@@ -566,7 +566,7 @@ func BenchmarkParsePublicKey(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = parsePublicKey(pubKey)
 	}
 }
@@ -575,7 +575,7 @@ func BenchmarkParseSignature(b *testing.B) {
 	signature := "ed25519:" + validSignatureHex
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = parseSignature(signature)
 	}
 }

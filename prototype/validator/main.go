@@ -132,7 +132,7 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 
 	// Verify signature
 	fmt.Printf("\n✍️  Verifying Ed25519 signature...\n")
-	if err := validator.VerifyPlaylistSignature(pubkeyHex, signableContent, p.Signature); err != nil {
+	if err := validator.VerifySignature(pubkeyHex, signableContent, p.Signature); err != nil {
 		return fmt.Errorf("signature verification failed: %w", err)
 	}
 
@@ -196,7 +196,7 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 	// Override with provided hashes if path is specified and hashes are provided
 	if directoryPath != "" && hashesInput != "" {
 		fmt.Printf("\n🔄 Overriding playlist hashes with provided hashes...\n")
-		providedHashes := playlist.ParseHashesString(hashesInput)
+		providedHashes := validator.ExtractHashesFromString(hashesInput)
 		if len(providedHashes) == 0 {
 			return fmt.Errorf("no valid hashes found in --hashes input")
 		}
@@ -231,7 +231,7 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 	} else if hashesInput != "" {
 		// Verify against provided hashes (when no directory path is given)
 		fmt.Printf("\n🔢 Comparing playlist hashes with provided hashes...\n")
-		providedHashes := playlist.ParseHashesString(hashesInput)
+		providedHashes := validator.ExtractHashesFromString(hashesInput)
 		if len(providedHashes) == 0 {
 			return fmt.Errorf("no valid hashes found in --hashes input")
 		}
@@ -239,7 +239,7 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 		fmt.Printf("✅ Found %d hashes in input\n", len(providedHashes))
 
 		// Compare the hash lists
-		matched, missing, extra := compareHashLists(expectedHashes, providedHashes)
+		matched, missing, extra := validator.CompareHashLists(expectedHashes, providedHashes)
 
 		success := len(missing) == 0 && len(extra) == 0
 		verificationResult = &validator.VerificationResult{
@@ -303,36 +303,4 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// Helper function for comparing hash lists (copied from validator package for CLI use)
-func compareHashLists(expected, actual []string) (matched, missing, extra []string) {
-	expectedMap := make(map[string]bool)
-	actualMap := make(map[string]bool)
-
-	// Build maps for efficient lookup
-	for _, hash := range expected {
-		expectedMap[hash] = true
-	}
-	for _, hash := range actual {
-		actualMap[hash] = true
-	}
-
-	// Find matches and missing hashes
-	for hash := range expectedMap {
-		if actualMap[hash] {
-			matched = append(matched, hash)
-		} else {
-			missing = append(missing, hash)
-		}
-	}
-
-	// Find extra hashes
-	for hash := range actualMap {
-		if !expectedMap[hash] {
-			extra = append(extra, hash)
-		}
-	}
-
-	return matched, missing, extra
 }

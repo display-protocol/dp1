@@ -26,17 +26,17 @@ func init() {
 
 // PlaylistItem represents a single item in a DP-1 playlist
 type PlaylistItem struct {
-	ID         string                 `json:"id" validate:"required,uuid4"`
-	Slug       string                 `json:"slug,omitempty" validate:"omitempty,max=100"`
-	Title      string                 `json:"title,omitempty" validate:"omitempty,max=500"`
-	Source     string                 `json:"source" validate:"required,url"`
-	Duration   int                    `json:"duration,omitempty" validate:"omitempty,min=0"`
-	License    string                 `json:"license,omitempty" validate:"omitempty,oneof=open token subscription"`
-	Ref        string                 `json:"ref,omitempty" validate:"omitempty,url"`
-	Override   map[string]interface{} `json:"override,omitempty"`
-	Display    map[string]interface{} `json:"display,omitempty"`
-	Repro      *ReproBlock            `json:"repro,omitempty" validate:"omitempty"`
-	Provenance *ProvenanceBlock       `json:"provenance,omitempty" validate:"omitempty"`
+	ID         string           `json:"id" validate:"required,uuid4"`
+	Slug       string           `json:"slug,omitempty" validate:"omitempty,max=100"`
+	Title      string           `json:"title,omitempty" validate:"omitempty,max=500"`
+	Source     string           `json:"source" validate:"required,url"`
+	Duration   int              `json:"duration,omitempty" validate:"omitempty,min=0"`
+	License    string           `json:"license,omitempty" validate:"omitempty,oneof=open token subscription"`
+	Ref        string           `json:"ref,omitempty" validate:"omitempty,url"`
+	Override   map[string]any   `json:"override,omitempty"`
+	Display    map[string]any   `json:"display,omitempty"`
+	Repro      *ReproBlock      `json:"repro,omitempty" validate:"omitempty"`
+	Provenance *ProvenanceBlock `json:"provenance,omitempty" validate:"omitempty"`
 }
 
 // ReproBlock represents reproduction verification data
@@ -49,20 +49,20 @@ type ReproBlock struct {
 
 // ProvenanceBlock represents provenance information
 type ProvenanceBlock struct {
-	Type         string                   `json:"type" validate:"required,oneof=onChain seriesRegistry offChainURI"`
-	Contract     map[string]interface{}   `json:"contract,omitempty"`
-	Dependencies []map[string]interface{} `json:"dependencies,omitempty"`
+	Type         string           `json:"type" validate:"required,oneof=onChain seriesRegistry offChainURI"`
+	Contract     map[string]any   `json:"contract,omitempty"`
+	Dependencies []map[string]any `json:"dependencies,omitempty"`
 }
 
 // Playlist represents a DP-1 playlist
 type Playlist struct {
-	DPVersion string                 `json:"dpVersion" validate:"required,semver"`
-	ID        string                 `json:"id" validate:"required,uuid4"`
-	Slug      string                 `json:"slug,omitempty" validate:"omitempty,max=100,alphanum|contains=-|contains=_"`
-	Created   string                 `json:"created" validate:"required,datetime=2006-01-02T15:04:05Z"`
-	Defaults  map[string]interface{} `json:"defaults,omitempty"`
-	Items     []PlaylistItem         `json:"items" validate:"required,min=1,dive"`
-	Signature string                 `json:"signature,omitempty" validate:"omitempty,startswith=ed25519:"`
+	DPVersion string         `json:"dpVersion" validate:"required,semver"`
+	ID        string         `json:"id" validate:"required,uuid4"`
+	Slug      string         `json:"slug,omitempty" validate:"omitempty,max=100,alphanum|contains=-|contains=_"`
+	Created   string         `json:"created" validate:"required,datetime=2006-01-02T15:04:05Z"`
+	Defaults  map[string]any `json:"defaults,omitempty"`
+	Items     []PlaylistItem `json:"items" validate:"required,min=1,dive"`
+	Signature string         `json:"signature,omitempty" validate:"omitempty,startswith=ed25519:"`
 }
 
 // ParsePlaylist parses a playlist from either a URL or base64 encoded payload
@@ -137,7 +137,7 @@ func CanonicalizePlaylist(playlist *Playlist) ([]byte, error) {
 		return nil, err
 	}
 
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(data, &obj); err != nil {
 		return nil, err
 	}
@@ -146,9 +146,9 @@ func CanonicalizePlaylist(playlist *Playlist) ([]byte, error) {
 }
 
 // canonicalizeJSON recursively sorts JSON objects by keys to ensure deterministic output
-func canonicalizeJSON(obj interface{}) ([]byte, error) {
+func canonicalizeJSON(obj any) ([]byte, error) {
 	switch v := obj.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		// Sort keys for deterministic output
 		keys := make([]string, 0, len(v))
 		for k := range v {
@@ -174,7 +174,7 @@ func canonicalizeJSON(obj interface{}) ([]byte, error) {
 		buf.WriteByte('}')
 		return buf.Bytes(), nil
 
-	case []interface{}:
+	case []any:
 		var buf bytes.Buffer
 		buf.WriteByte('[')
 		for i, item := range v {
@@ -209,7 +209,7 @@ func GetPlaylistHash(playlist *Playlist) (string, error) {
 
 // GetSignableContent returns the content that should be signed (without signature field)
 func GetSignableContent(rawData []byte) ([]byte, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(rawData, &obj); err != nil {
 		return nil, err
 	}
@@ -286,33 +286,4 @@ func ExtractAssetHashes(playlist *Playlist) []string {
 	}
 
 	return allHashes
-}
-
-// ParseHashesString parses a string of hashes in various formats
-// Supports: "hash1,hash2,hash3", "[hash1,hash2,hash3]", "hash1:hash2:hash3"
-func ParseHashesString(hashesStr string) []string {
-	if hashesStr == "" {
-		return nil
-	}
-
-	// Remove brackets if present
-	hashesStr = strings.Trim(hashesStr, "[]")
-
-	// Split by comma or colon
-	var hashes []string
-	if strings.Contains(hashesStr, ",") {
-		hashes = strings.Split(hashesStr, ",")
-	} else if strings.Contains(hashesStr, ":") {
-		hashes = strings.Split(hashesStr, ":")
-	} else {
-		// Single hash
-		hashes = []string{hashesStr}
-	}
-
-	// Trim whitespace from each hash
-	for i, hash := range hashes {
-		hashes[i] = strings.TrimSpace(hash)
-	}
-
-	return hashes
 }
