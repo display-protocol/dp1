@@ -30,7 +30,16 @@ var capsuleCmd = &cobra.Command{
 	Use:   "capsule",
 	Short: "Validate a DP-1 capsule",
 	Long: `Validate a DP-1 capsule by verifying asset integrity using SHA256 hashes.
-The capsule playlist must contain repro.assetsSHA256 array for verification.`,
+
+Usage modes:
+1. Playlist only: --playlist (validates playlist, shows asset hashes if present)
+2. Directory + Playlist: --playlist --path (uses playlist hashes to verify directory)
+3. Directory + Hashes: --path --hashes (uses provided hashes to verify directory)
+4. Directory + Both: --playlist --path --hashes (hashes override playlist hashes)
+5. Hash comparison: --playlist --hashes (compares playlist vs provided hashes)
+
+Either --playlist or --path must be provided. When --path is used with --hashes,
+the provided hashes will override any hashes from the playlist's repro.assetsSHA256.`,
 	RunE: validateCapsule,
 }
 
@@ -54,11 +63,11 @@ func init() {
 	_ = playlistCmd.MarkFlagRequired("playlist")
 	_ = playlistCmd.MarkFlagRequired("pubkey")
 
-	// Capsule command flags
-	capsuleCmd.Flags().StringVar(&capsulePlaylist, "playlist", "", "Capsule playlist URL or base64 encoded payload (required)")
-	capsuleCmd.Flags().StringVar(&directoryPath, "path", "", "Local directory path to verify against playlist hashes")
-	capsuleCmd.Flags().StringVar(&hashesInput, "hashes", "", "Array of hashes to compare (format: [a,b,c] or a:b:c or a,b,c)")
-	_ = capsuleCmd.MarkFlagRequired("playlist")
+	// Capsule command flags - playlist is now optional
+	capsuleCmd.Flags().StringVar(&capsulePlaylist, "playlist", "", "Capsule playlist URL or base64 encoded payload (optional)")
+	capsuleCmd.Flags().StringVar(&directoryPath, "path", "", "Local directory path to verify against hashes")
+	capsuleCmd.Flags().StringVar(&hashesInput, "hashes", "", "Array of hashes to compare (format: [a,b,c] or a:b:c or a,b,c) - overrides playlist hashes when path is provided")
+	// Note: Either playlist or path is required, validated in the command function
 
 	// Add commands to root
 	rootCmd.AddCommand(playlistCmd)
@@ -138,31 +147,75 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// safeHashPreview returns a preview of the hash, handling short hashes gracefully
+func safeHashPreview(hash string) string {
+	if len(hash) <= 16 {
+		return hash
+	}
+	return hash[:16] + "..."
+}
+
 func validateCapsule(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🗂️  Validating DP-1 capsule...\n\n")
 
-	// Parse the playlist
-	fmt.Printf("📋 Parsing capsule playlist from input...\n")
-	p, _, err := playlist.ParsePlaylist(capsulePlaylist)
-	if err != nil {
-		return fmt.Errorf("failed to parse capsule playlist: %w", err)
+	// Validate that either playlist or path is provided
+	if capsulePlaylist == "" && directoryPath == "" {
+		return fmt.Errorf("either --playlist or --path must be provided for capsule validation")
 	}
 
-	fmt.Printf("✅ Capsule playlist parsed successfully\n")
-	fmt.Printf("   - ID: %s\n", p.ID)
-	fmt.Printf("   - Version: %s\n", p.DPVersion)
-	fmt.Printf("   - Items: %d\n", len(p.Items))
+	var expectedHashes []string
+	var p *playlist.Playlist
 
-	// Extract asset hashes from playlist
-	fmt.Printf("\n🔍 Extracting asset hashes from playlist...\n")
-	expectedHashes := playlist.ExtractAssetHashes(p)
+	// Parse playlist if provided
+	if capsulePlaylist != "" {
+		fmt.Printf("📋 Parsing capsule playlist from input...\n")
+		var err error
+		p, _, err = playlist.ParsePlaylist(capsulePlaylist)
+		if err != nil {
+			return fmt.Errorf("failed to parse capsule playlist: %w", err)
+		}
+
+		fmt.Printf("✅ Capsule playlist parsed successfully\n")
+		fmt.Printf("   - ID: %s\n", p.ID)
+		fmt.Printf("   - Version: %s\n", p.DPVersion)
+		fmt.Printf("   - Items: %d\n", len(p.Items))
+
+		// Extract asset hashes from playlist
+		fmt.Printf("\n🔍 Extracting asset hashes from playlist...\n")
+		expectedHashes = playlist.ExtractAssetHashes(p)
+		if len(expectedHashes) > 0 {
+			fmt.Printf("✅ Found %d asset hashes in playlist\n", len(expectedHashes))
+			for i, hash := range expectedHashes {
+				fmt.Printf("   %d. %s\n", i+1, safeHashPreview(hash))
+			}
+		} else {
+			fmt.Printf("⚠️  No asset hashes found in playlist repro.assetsSHA256\n")
+		}
+	}
+
+	// Override with provided hashes if path is specified and hashes are provided
+	if directoryPath != "" && hashesInput != "" {
+		fmt.Printf("\n🔄 Overriding playlist hashes with provided hashes...\n")
+		providedHashes := playlist.ParseHashesString(hashesInput)
+		if len(providedHashes) == 0 {
+			return fmt.Errorf("no valid hashes found in --hashes input")
+		}
+		expectedHashes = providedHashes
+		fmt.Printf("✅ Using %d hashes from --hashes parameter\n", len(expectedHashes))
+		for i, hash := range expectedHashes {
+			fmt.Printf("   %d. %s\n", i+1, safeHashPreview(hash))
+		}
+	}
+
+	// If we still don't have hashes, check if we have only playlist without hashes
 	if len(expectedHashes) == 0 {
-		return fmt.Errorf("playlist does not contain repro.assetsSHA256 hashes for verification")
-	}
-
-	fmt.Printf("✅ Found %d asset hashes in playlist\n", len(expectedHashes))
-	for i, hash := range expectedHashes {
-		fmt.Printf("   %d. %s...\n", i+1, hash[:16])
+		if capsulePlaylist != "" && directoryPath == "" && hashesInput == "" {
+			return fmt.Errorf("playlist does not contain repro.assetsSHA256 hashes for verification. Use --path and --hashes to specify hashes manually")
+		}
+		if directoryPath != "" && hashesInput == "" {
+			return fmt.Errorf("--hashes must be provided when using --path without a playlist containing repro.assetsSHA256")
+		}
+		return fmt.Errorf("no hashes available for verification")
 	}
 
 	var verificationResult *validator.VerificationResult
@@ -170,16 +223,17 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 	if directoryPath != "" {
 		// Verify against local directory
 		fmt.Printf("\n📁 Verifying assets in directory: %s\n", directoryPath)
+		var err error
 		verificationResult, err = validator.VerifyDirectoryHashes(directoryPath, expectedHashes)
 		if err != nil {
 			return fmt.Errorf("directory verification failed: %w", err)
 		}
 	} else if hashesInput != "" {
-		// Verify against provided hashes
-		fmt.Printf("\n🔢 Parsing provided hashes...\n")
+		// Verify against provided hashes (when no directory path is given)
+		fmt.Printf("\n🔢 Comparing playlist hashes with provided hashes...\n")
 		providedHashes := playlist.ParseHashesString(hashesInput)
 		if len(providedHashes) == 0 {
-			return fmt.Errorf("no valid hashes found in input")
+			return fmt.Errorf("no valid hashes found in --hashes input")
 		}
 
 		fmt.Printf("✅ Found %d hashes in input\n", len(providedHashes))
@@ -196,7 +250,16 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 			ExtraHashes:   extra,
 		}
 	} else {
-		return fmt.Errorf("either --path or --hashes must be provided for verification")
+		// Only playlist provided, no verification target
+		fmt.Printf("\n✅ Playlist validation complete. No asset verification requested.\n")
+		if p != nil {
+			fmt.Printf("\n📊 Playlist Summary:\n")
+			fmt.Printf("   - ID: %s\n", p.ID)
+			fmt.Printf("   - DP Version: %s\n", p.DPVersion)
+			fmt.Printf("   - Items: %d\n", len(p.Items))
+			fmt.Printf("   - Asset Hashes: %d\n", len(expectedHashes))
+		}
+		return nil
 	}
 
 	// Display results
@@ -213,14 +276,14 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 	if len(verificationResult.MissingHashes) > 0 {
 		fmt.Printf("   - Missing hashes: %d\n", len(verificationResult.MissingHashes))
 		for _, hash := range verificationResult.MissingHashes {
-			fmt.Printf("     ❌ %s...\n", hash[:16])
+			fmt.Printf("     ❌ %s\n", safeHashPreview(hash))
 		}
 	}
 
 	if len(verificationResult.ExtraHashes) > 0 {
 		fmt.Printf("   - Extra hashes: %d\n", len(verificationResult.ExtraHashes))
 		for _, hash := range verificationResult.ExtraHashes {
-			fmt.Printf("     ➕ %s...\n", hash[:16])
+			fmt.Printf("     ➕ %s\n", safeHashPreview(hash))
 		}
 	}
 
@@ -230,7 +293,7 @@ func validateCapsule(cmd *cobra.Command, args []string) error {
 			if result.Error != "" {
 				fmt.Printf("   ❌ %s (Error: %s)\n", result.Path, result.Error)
 			} else {
-				fmt.Printf("   ✅ %s (%d bytes) -> %s...\n", result.Path, result.Size, result.SHA256[:16])
+				fmt.Printf("   ✅ %s (%d bytes) -> %s\n", result.Path, result.Size, safeHashPreview(result.SHA256))
 			}
 		}
 	}
