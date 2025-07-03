@@ -35,9 +35,6 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
-      - name: Run unit tests
-        run: go test -v ./...
-
       - name: Run tests with race detection
         run: go test -race -v ./...
 
