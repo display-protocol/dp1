@@ -30,11 +30,16 @@ docs/
     └── openapi.yaml            # OpenAPI 3.1.0 API specification
 
 prototype/
-└── server/                           # Cloudflare Workers API implementation
-    ├── README.md                     # Server setup and deployment guide
-    ├── src/                          # TypeScript source code
-    ├── tests/                        # Unit and integration tests
-    └── wrangler.toml                 # Cloudflare Workers configuration
+├── server/                     # Cloudflare Workers API implementation
+│   ├── README.md              # Server setup and deployment guide
+│   ├── src/                   # TypeScript source code
+│   ├── tests/                 # Unit and integration tests
+│   └── wrangler.toml          # Cloudflare Workers configuration
+└── validator/                 # Go CLI validator implementation
+    ├── README.md              # Validator setup and usage guide
+    ├── main.go                # CLI application entry point
+    ├── playlist/              # Playlist parsing and utilities
+    └── validator/             # Core validation logic
 ```
 
 ## Getting Started
@@ -49,8 +54,12 @@ See `prototype/server/README.md` for detailed setup instructions for the Cloudfl
 - Authentication and secrets management
 - Deployment to Cloudflare Workers
 
-### 🎨 **Client Implementation**
-A Next.js client implementation is coming soon. It will serve as a demonstration feed editor/explorer that allows users to list all playlists, view playlist details, and create new playlists.
+### 🔧 **Validator CLI**
+See `prototype/validator/README.md` for the Go command-line validator that provides:
+- Ed25519 signature verification for DP-1 playlists
+- SHA256 asset integrity checking for `.dp1c` capsules  
+- Support for URLs and base64 encoded playlist data
+- Library usage for Go applications
 
 ### 🔧 **API Documentation**
 Explore `docs/api/openapi.yaml` for the complete OpenAPI 3.1.0 specification with example requests and responses.
