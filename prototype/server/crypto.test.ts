@@ -105,22 +105,28 @@ describe('Crypto Functions', () => {
       expect(canonical.endsWith('\n\n')).toBe(false);
     });
 
-    it('should normalize line endings to LF', () => {
-      // This test verifies that CRLF would be converted to LF
-      // (though JSON.stringify typically doesn't produce CRLF)
+    it('should only contain LF at the end', () => {
+      // Canonical form should have no internal line breaks, only LF terminator
       const canonical = createCanonicalForm(basePlaylist);
 
-      expect(canonical.includes('\r\n')).toBe(false);
-      expect(canonical.includes('\n')).toBe(true);
+      expect(canonical.includes('\r\n')).toBe(false); // No CRLF
+      expect(canonical.includes('\r')).toBe(false); // No CR
+
+      // Only one LF at the very end
+      const lfCount = (canonical.match(/\n/g) || []).length;
+      expect(lfCount).toBe(1);
+      expect(canonical.endsWith('\n')).toBe(true);
     });
 
-    it('should produce pretty-printed JSON with 2-space indentation', () => {
+    it('should produce flattened JSON without whitespace', () => {
       const canonical = createCanonicalForm(basePlaylist);
 
-      // Should have proper indentation
-      expect(canonical.includes('  ')).toBe(true);
-      // Should not be minified
-      expect(canonical.includes('\n')).toBe(true);
+      // Should be flattened (no extra spaces except in string values)
+      const jsonPart = canonical.slice(0, -1); // Remove LF terminator
+      expect(jsonPart.includes('  ')).toBe(false); // No double spaces
+      expect(jsonPart.includes('\n')).toBe(false); // No newlines in JSON
+      expect(jsonPart.includes(' :')).toBe(false); // No spaces before colons
+      expect(jsonPart.includes(': ')).toBe(false); // No spaces after colons
     });
 
     it('should be consistent across multiple calls', () => {

@@ -185,9 +185,8 @@ playlists.post('/', async c => {
 
     // Sign the playlist using ed25519 as per DP-1 specification
     const keyPair = await getServerKeyPair(c.env);
-    const playlistWithoutSignature = { ...playlist };
 
-    playlist.signature = await signPlaylist(playlistWithoutSignature, keyPair.privateKey);
+    playlist.signature = await signPlaylist(playlist, keyPair.privateKey);
 
     // Save playlist
     const saved = await savePlaylist(playlist, c.env);

@@ -2,7 +2,6 @@ package playlist
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -130,7 +129,7 @@ func fetchFromURL(urlStr string) ([]byte, error) {
 
 // CanonicalizePlaylist converts a playlist to canonical JSON form
 // This removes unnecessary whitespace and ensures consistent field ordering
-func CanonicalizePlaylist(playlist *Playlist) ([]byte, error) {
+func CanonicalizePlaylist(playlist *Playlist, signable bool) ([]byte, error) {
 	// Convert to map for sorting
 	data, err := json.Marshal(playlist)
 	if err != nil {
@@ -140,6 +139,10 @@ func CanonicalizePlaylist(playlist *Playlist) ([]byte, error) {
 	var obj map[string]any
 	if err := json.Unmarshal(data, &obj); err != nil {
 		return nil, err
+	}
+
+	if signable {
+		delete(obj, "signature")
 	}
 
 	canonical, err := canonicalizeJSON(obj)
@@ -203,31 +206,6 @@ func canonicalizeJSON(obj any) ([]byte, error) {
 	default:
 		return json.Marshal(v)
 	}
-}
-
-// GetPlaylistHash returns a SHA-256 hash of the canonical playlist representation
-// This can be used to detect duplicate playlists regardless of field order
-func GetPlaylistHash(playlist *Playlist) (string, error) {
-	canonical, err := CanonicalizePlaylist(playlist)
-	if err != nil {
-		return "", err
-	}
-
-	hash := sha256.Sum256(canonical)
-	return fmt.Sprintf("%x", hash), nil
-}
-
-// GetSignableContent returns the content that should be signed (without signature field)
-func GetSignableContent(rawData []byte) ([]byte, error) {
-	var obj map[string]any
-	if err := json.Unmarshal(rawData, &obj); err != nil {
-		return nil, err
-	}
-
-	// Remove signature field for verification
-	delete(obj, "signature")
-
-	return canonicalizeJSON(obj)
 }
 
 // ValidatePlaylistStructure validates the playlist structure using the validator library

@@ -10,6 +10,7 @@ vi.mock('./crypto', () => ({
     publicKey: new Uint8Array(32),
     privateKey: new Uint8Array(32),
   }),
+  createCanonicalForm: vi.fn((playlist: any) => JSON.stringify(playlist) + '\n'),
 }));
 
 // Mock KV implementation for testing

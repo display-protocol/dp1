@@ -86,7 +86,7 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 
 	// Parse the playlist
 	fmt.Printf("📋 Parsing playlist from input...\n")
-	p, rawData, err := playlist.ParsePlaylist(playlistInput)
+	p, _, err := playlist.ParsePlaylist(playlistInput)
 	if err != nil {
 		return fmt.Errorf("failed to parse playlist: %w", err)
 	}
@@ -124,7 +124,7 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 
 	// Get signable content (playlist without signature)
 	fmt.Printf("\n🔒 Preparing content for verification...\n")
-	signableContent, err := playlist.GetSignableContent(rawData)
+	signableContent, err := playlist.CanonicalizePlaylist(p, true)
 	if err != nil {
 		return fmt.Errorf("failed to prepare signable content: %w", err)
 	}

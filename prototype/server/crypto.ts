@@ -94,33 +94,43 @@ export async function getServerKeyPair(env: Env): Promise<KeyPair> {
  * Ensures deterministic output by sorting object keys
  */
 export function createCanonicalForm(playlist: Omit<Playlist, 'signature'>): string {
-  // Helper function to recursively sort all object keys
-  function sortObjectKeys(obj: any): any {
-    if (obj === null || typeof obj !== 'object') {
-      return obj;
+  // Helper function to recursively canonicalize JSON (flattened, sorted keys)
+  function canonicalizeJSON(obj: any): string {
+    if (obj === null) {
+      return 'null';
+    }
+
+    if (typeof obj === 'string') {
+      return JSON.stringify(obj);
+    }
+
+    if (typeof obj === 'number' || typeof obj === 'boolean') {
+      return String(obj);
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(sortObjectKeys);
+      const items = obj.map(item => canonicalizeJSON(item));
+      return '[' + items.join(',') + ']';
     }
 
-    const sorted: any = {};
-    const keys = Object.keys(obj).sort();
-    for (const key of keys) {
-      sorted[key] = sortObjectKeys(obj[key]);
+    if (typeof obj === 'object') {
+      const keys = Object.keys(obj).sort();
+      const pairs = keys.map(key => {
+        const keyStr = JSON.stringify(key);
+        const valueStr = canonicalizeJSON(obj[key]);
+        return keyStr + ':' + valueStr;
+      });
+      return '{' + pairs.join(',') + '}';
     }
-    return sorted;
+
+    return 'null';
   }
 
-  // Sort all nested objects for deterministic output
-  const sortedPlaylist = sortObjectKeys(playlist);
-  const canonical = JSON.stringify(sortedPlaylist, null, 2);
+  // Create flattened, deterministic JSON without whitespace
+  const canonical = canonicalizeJSON(playlist);
 
-  // Ensure LF line endings (not CRLF) and add LF terminator
-  const normalized = canonical.replace(/\r\n/g, '\n');
-
-  // Add LF terminator if not already present
-  return normalized.endsWith('\n') ? normalized : normalized + '\n';
+  // Add LF terminator
+  return canonical + '\n';
 }
 
 /**

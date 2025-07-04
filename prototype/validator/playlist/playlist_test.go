@@ -214,9 +214,10 @@ func TestCanonicalizePlaylist(t *testing.T) {
 				Source: "https://example.com",
 			},
 		},
+		Signature: "ed25519:0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 	}
 
-	canonical, err := CanonicalizePlaylist(playlist)
+	canonical, err := CanonicalizePlaylist(playlist, false)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 		return
@@ -229,7 +230,7 @@ func TestCanonicalizePlaylist(t *testing.T) {
 	}
 
 	// Test that canonicalization is deterministic
-	canonical2, err := CanonicalizePlaylist(playlist)
+	canonical2, err := CanonicalizePlaylist(playlist, false)
 	if err != nil {
 		t.Errorf("Unexpected error on second canonicalization: %v", err)
 		return
@@ -243,100 +244,25 @@ func TestCanonicalizePlaylist(t *testing.T) {
 	if len(canonical) == 0 || canonical[len(canonical)-1] != '\n' {
 		t.Errorf("Canonical form should end with LF terminator")
 	}
-}
 
-func TestGetPlaylistHash(t *testing.T) {
-	playlist1 := &Playlist{
-		DPVersion: "1.0.0",
-		ID:        testPlaylistID,
-		Created:   "2025-06-03T17:01:00Z",
-		Items: []PlaylistItem{
-			{ID: testItemID1, Source: "https://example.com"},
-		},
-	}
-
-	playlist2 := &Playlist{
-		DPVersion: "1.0.0",
-		ID:        testPlaylistID,
-		Created:   "2025-06-03T17:01:00Z",
-		Items: []PlaylistItem{
-			{ID: testItemID1, Source: "https://example.com"},
-		},
-	}
-
-	// Same playlists should have same hash
-	hash1, err := GetPlaylistHash(playlist1)
+	// Check that signable canonical form doesn't have signature
+	canonical3, err := CanonicalizePlaylist(playlist, true)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("Unexpected error on third canonicalization: %v", err)
 		return
 	}
 
-	hash2, err := GetPlaylistHash(playlist2)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	// Unmarshal the signable canonical form
+	var signableObj map[string]any
+	if err := json.Unmarshal(canonical3, &signableObj); err != nil {
+		t.Errorf("Unexpected error on json unmarshal third canonicalization: %v", err)
 		return
 	}
 
-	if hash1 != hash2 {
-		t.Errorf("Same playlists should have same hash")
-	}
-
-	// Different playlists should have different hashes
-	playlist3 := &Playlist{
-		DPVersion: "1.0.0",
-		ID:        "different-id",
-		Created:   "2025-06-03T17:01:00Z",
-		Items: []PlaylistItem{
-			{ID: testItemID1, Source: "https://example.com"},
-		},
-	}
-
-	hash3, err := GetPlaylistHash(playlist3)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	if hash1 == hash3 {
-		t.Errorf("Different playlists should have different hashes")
-	}
-
-	// Hash should be 64 characters (SHA256 hex)
-	if len(hash1) != 64 {
-		t.Errorf("Hash should be 64 characters, got %d", len(hash1))
-	}
-}
-
-func TestGetSignableContent(t *testing.T) {
-	// JSON with signature
-	jsonWithSig := `{
-		"dpVersion": "1.0.0",
-		"id": "` + testPlaylistID + `",
-		"created": "2025-06-03T17:01:00Z",
-		"items": [],
-		"signature": "ed25519:abcdef123456"
-	}`
-
-	content, err := GetSignableContent([]byte(jsonWithSig))
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	// Parse the result to verify signature was removed
-	var obj map[string]any
-	if err := json.Unmarshal(content, &obj); err != nil {
-		t.Errorf("Signable content is not valid JSON: %v", err)
-		return
-	}
-
-	if _, exists := obj["signature"]; exists {
-		t.Errorf("Signature field should be removed from signable content")
-	}
-
-	// Check that other fields are preserved
-	if obj["dpVersion"] != "1.0.0" {
-		t.Errorf("Other fields should be preserved")
+	// Check if signature has been removed
+	sig, ok := signableObj["signature"].(string)
+	if ok && len(sig) > 0 {
+		t.Error("Signature canonical form should have signature removed")
 	}
 }
 
@@ -695,22 +621,6 @@ func BenchmarkCanonicalizePlaylist(b *testing.B) {
 
 	b.ResetTimer()
 	for range b.N {
-		_, _ = CanonicalizePlaylist(playlist)
-	}
-}
-
-func BenchmarkGetPlaylistHash(b *testing.B) {
-	playlist := &Playlist{
-		DPVersion: "1.0.0",
-		ID:        testPlaylistID,
-		Created:   "2025-06-03T17:01:00Z",
-		Items: []PlaylistItem{
-			{ID: testItemID1, Source: "https://example.com"},
-		},
-	}
-
-	b.ResetTimer()
-	for range b.N {
-		_, _ = GetPlaylistHash(playlist)
+		_, _ = CanonicalizePlaylist(playlist, false)
 	}
 }
