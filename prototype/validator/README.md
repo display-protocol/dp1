@@ -9,9 +9,10 @@ A command-line validator for DP-1 playlists and capsules that can verify Ed25519
 ## Features
 
 - **Playlist Validation**: Verify Ed25519 signatures on DP-1 playlists
-- **Capsule Validation**: Verify SHA256 asset integrity in DP-1 capsules
-- **Multiple Input Formats**: Support for URLs and base64 encoded payloads
-- **Directory Verification**: Compare local directory contents against expected hashes
+- **Capsule Validation**: Extract and verify SHA256 asset integrity in DP-1 capsules (.dp1c files)
+- **Multiple Input Formats**: Support for URLs and base64 encoded payloads for playlists
+- **Capsule Extraction**: Automatic tar+zstd extraction to temporary directories
+- **Asset Verification**: Compare extracted files against expected hashes from playlist or CLI
 - **Structural Validation**: Ensure compliance with DP-1 specification
 
 ## Installation
@@ -48,35 +49,39 @@ Validate a DP-1 playlist by verifying its Ed25519 signature:
 
 ### Capsule Validation
 
-Validate a DP-1 capsule by verifying asset integrity using SHA256 hashes:
+Validate a DP-1 capsule (.dp1c file) by extracting it and verifying asset integrity using SHA256 hashes:
 
 ```bash
-# Verify against local directory
+# Validate capsule using hashes from playlist's repro.assetsSHA256
 ./dp1-validator capsule \
-  --playlist "https://example.com/capsule-playlist.json" \
-  --path "/path/to/assets"
+  --path "artwork.dp1c"
 
-# Verify against provided hash list
+# Validate capsule with custom hash list (overrides playlist hashes)
 ./dp1-validator capsule \
-  --playlist "eyJkcFZlcnNpb24iOiIxLjAuMCIsLi4u" \
+  --path "artwork.dp1c" \
   --hashes "hash1,hash2,hash3"
 
 # Alternative hash formats
 ./dp1-validator capsule \
-  --playlist "playlist.json" \
+  --path "artwork.dp1c" \
   --hashes "[hash1,hash2,hash3]"
 
 ./dp1-validator capsule \
-  --playlist "playlist.json" \
+  --path "artwork.dp1c" \
   --hashes "hash1:hash2:hash3"
 ```
 
 **Required flags:**
-- `--playlist`: Capsule playlist URL or base64 encoded payload
+- `--path`: Path to .dp1c capsule file
 
-**Optional flags (one required):**
-- `--path`: Local directory path to verify against playlist hashes
-- `--hashes`: Array of hashes to compare (supports multiple formats)
+**Optional flags:**
+- `--hashes`: Array of hashes to compare (overrides playlist hashes; supports multiple formats)
+
+**Capsule Requirements:**
+- File must have `.dp1c` extension
+- Must be a valid tar+zstd archive
+- Must contain `playlist.json` in the root
+- Must contain `assets/` directory with artwork files
 
 ## Library Usage
 
@@ -112,10 +117,11 @@ func main() {
 ### Core Files
 
 - **`main.go`**: CLI application with subcommands for playlist and capsule validation
-- **`playlist.go`**: Playlist parsing, canonicalization, and utility functions
+- **`playlist/playlist.go`**: Playlist parsing, canonicalization, and utility functions
 - **`validator/ed25519.go`**: Ed25519 signature verification functionality
 - **`validator/sha256.go`**: SHA256 hash computation and verification
-- **`cdp.go`**: Placeholder for Chrome DevTools Protocol integration (future)
+- **`validator/capsule.go`**: DP-1 capsule extraction and validation
+- **`cdp/cdp.go`**: Placeholder for Chrome DevTools Protocol integration (future)
 
 ### Key Functions
 
@@ -134,6 +140,11 @@ func main() {
 - `validator.ComputeDirectoryHashes()`: Calculate SHA256 for all files
 - `validator.VerifyDirectoryHashes()`: Compare computed vs expected hashes
 - `validator.ValidateHashFormat()`: Validate SHA256 hash format
+
+#### Capsule Operations
+- `validator.ExtractCapsule()`: Extract .dp1c files to temporary directories
+- `validator.ExtractAssetHashesFromPlaylist()`: Extract hashes from playlist repro blocks
+- `validator.CleanupCapsule()`: Remove temporary extraction directories
 
 ## Examples
 
@@ -182,16 +193,17 @@ The validator provides detailed error messages for common issues:
 ## Future Enhancements
 
 - **Chrome DevTools Integration**: First-frame capture and verification
-- **Capsule Extraction**: Direct `.dp1c` archive support
 - **Batch Validation**: Process multiple playlists/capsules
-- **JSON Schema Validation**: Comprehensive structural validation
+- **JSON Schema Validation**: Comprehensive structural validation  
 - **Performance Optimization**: Parallel hash computation
+- **Engine Layer Support**: Validation of engine-specific capsule layers
 
 ## Dependencies
 
 - `github.com/spf13/cobra`: CLI framework
+- `github.com/klauspost/compress`: Zstandard compression for capsule extraction
 - `golang.org/x/crypto`: Ed25519 cryptography
-- Standard Go libraries for HTTP, JSON, and file operations
+- Standard Go libraries for HTTP, JSON, tar, and file operations
 
 ## Contributing
 

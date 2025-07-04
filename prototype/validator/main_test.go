@@ -75,12 +75,8 @@ func TestGlobalVariables(t *testing.T) {
 		t.Error("pubkeyHex should be empty initially")
 	}
 
-	if capsulePlaylist != "" {
-		t.Error("capsulePlaylist should be empty initially")
-	}
-
-	if directoryPath != "" {
-		t.Error("directoryPath should be empty initially")
+	if capsulePath != "" {
+		t.Error("capsulePath should be empty initially")
 	}
 
 	if hashesInput != "" {
@@ -138,27 +134,30 @@ func TestPlaylistCommandFlags(t *testing.T) {
 
 func TestCapsuleCommandFlags(t *testing.T) {
 	// Test capsule command flags
-	playlistFlag := capsuleCmd.Flags().Lookup("playlist")
-	//nolint:staticcheck
-	if playlistFlag == nil {
-		t.Error("capsule command should have --playlist flag")
-	}
-
 	pathFlag := capsuleCmd.Flags().Lookup("path")
+	//nolint:staticcheck // SA5011(related information): t.Error will panic
 	if pathFlag == nil {
 		t.Error("capsule command should have --path flag")
 	}
 
 	hashesFlag := capsuleCmd.Flags().Lookup("hashes")
+	//nolint:staticcheck // SA5011(related information): t.Error will panic
 	if hashesFlag == nil {
 		t.Error("capsule command should have --hashes flag")
 	}
 
-	// Check that playlist is NOT required (should be optional now)
-	//nolint:staticcheck
-	playlistAnnotations := playlistFlag.Annotations
-	if playlistAnnotations != nil && playlistAnnotations[cobra.BashCompOneRequiredFlag] != nil {
-		t.Error("playlist flag should be optional for capsule command")
+	// Check that path is required
+	//nolint:staticcheck // SA5011(related information): t.Error will panic
+	pathAnnotations := pathFlag.Annotations
+	if pathAnnotations == nil || pathAnnotations[cobra.BashCompOneRequiredFlag] == nil {
+		t.Error("path flag should be required for capsule command")
+	}
+
+	// Check that hashes is optional
+	//nolint:staticcheck // SA5011(related information): t.Error will panic
+	hashesAnnotations := hashesFlag.Annotations
+	if hashesAnnotations != nil && hashesAnnotations[cobra.BashCompOneRequiredFlag] != nil {
+		t.Error("hashes flag should be optional for capsule command")
 	}
 }
 
@@ -173,41 +172,24 @@ func TestCapsuleCommandValidation(t *testing.T) {
 			name:        "No flags provided",
 			args:        []string{"capsule"},
 			shouldError: true,
-			errorMsg:    "either --playlist or --path must be provided",
+			errorMsg:    "required flag(s) \"path\" not set",
 		},
 		{
-			name:        "Only playlist provided",
-			args:        []string{"capsule", "--playlist", "test"},
-			shouldError: false,
-		},
-		{
-			name:        "Only path provided without hashes",
-			args:        []string{"capsule", "--path", "/tmp"},
-			shouldError: true,
-			errorMsg:    "--hashes must be provided when using --path without a playlist",
+			name:        "Only path provided",
+			args:        []string{"capsule", "--path", "test.dp1c"},
+			shouldError: false, // Will error later due to file not existing, but flag validation passes
 		},
 		{
 			name:        "Path with hashes provided",
-			args:        []string{"capsule", "--path", "/tmp", "--hashes", "abc123,def456"},
-			shouldError: false,
-		},
-		{
-			name:        "Both playlist and path provided",
-			args:        []string{"capsule", "--playlist", "test", "--path", "/tmp"},
-			shouldError: false,
-		},
-		{
-			name:        "All flags provided",
-			args:        []string{"capsule", "--playlist", "test", "--path", "/tmp", "--hashes", "abc123,def456"},
-			shouldError: false,
+			args:        []string{"capsule", "--path", "test.dp1c", "--hashes", "abc123,def456"},
+			shouldError: false, // Will error later due to file not existing, but flag validation passes
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset flags
-			capsulePlaylist = ""
-			directoryPath = ""
+			capsulePath = ""
 			hashesInput = ""
 
 			// Set up command with args
@@ -223,13 +205,10 @@ func TestCapsuleCommandValidation(t *testing.T) {
 					t.Errorf("Expected error containing %q, got %q", tt.errorMsg, err.Error())
 				}
 			} else {
-				// For cases that shouldn't error in validation, they might still error
-				// due to invalid playlist content, but we're just testing the flag validation
-				if err != nil && strings.Contains(err.Error(), "either --playlist or --path must be provided") {
-					t.Errorf("Unexpected validation error: %v", err)
-				}
-				if err != nil && strings.Contains(err.Error(), "--hashes must be provided when using --path without a playlist") {
-					t.Errorf("Unexpected validation error: %v", err)
+				// For cases that shouldn't error in flag validation, they might still error
+				// due to invalid file paths, but we're just testing the flag validation
+				if err != nil && strings.Contains(err.Error(), "required flag(s)") {
+					t.Errorf("Unexpected flag validation error: %v", err)
 				}
 			}
 
@@ -244,11 +223,8 @@ func TestCapsuleUsageModes(t *testing.T) {
 	helpText := capsuleCmd.Long
 
 	expectedModes := []string{
-		"Playlist only:",
-		"Directory + Playlist:",
-		"Directory + Hashes:",
-		"Directory + Both:",
-		"Hash comparison:",
+		"Capsule only:",
+		"Capsule with override:",
 	}
 
 	for _, mode := range expectedModes {
@@ -257,9 +233,19 @@ func TestCapsuleUsageModes(t *testing.T) {
 		}
 	}
 
-	// Test that the help mentions hash override behavior
-	if !strings.Contains(helpText, "hashes override playlist hashes") {
-		t.Error("Help text should mention hash override functionality")
+	// Test that the help mentions important requirements
+	expectedContent := []string{
+		".dp1c file",
+		"tar+zstd",
+		"playlist.json",
+		"assets/",
+		"provided hashes override",
+	}
+
+	for _, content := range expectedContent {
+		if !strings.Contains(helpText, content) {
+			t.Errorf("Help text should contain: %s", content)
+		}
 	}
 }
 
