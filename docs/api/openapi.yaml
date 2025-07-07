@@ -148,7 +148,7 @@ components:
           properties:
             chain:
               type: string
-              enum: [evm, tezos, other]
+              enum: [evm, tezos, bitmark, other]
             standard:
               type: string
               enum: [erc721, erc1155, fa2, other]
@@ -190,7 +190,7 @@ components:
             properties:
               chain:
                 type: string
-                enum: [evm, tezos, other]
+                enum: [evm, tezos, bitmark, other]
               standard:
                 type: string
                 enum: [erc721, erc1155, fa2, other]

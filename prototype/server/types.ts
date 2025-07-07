@@ -135,7 +135,7 @@ const ProvenanceSchema = z
     type: z.enum(['onChain', 'seriesRegistry', 'offChainURI']),
     contract: z
       .object({
-        chain: z.enum(['evm', 'tezos', 'other']),
+        chain: z.enum(['evm', 'tezos', 'bitmark', 'other']),
         standard: z.enum(['erc721', 'erc1155', 'fa2', 'other']).optional(),
         address: z.string().max(48).optional(),
         seriesId: z.union([z.number().min(0).max(4294967295), z.string().max(128)]).optional(),
@@ -155,7 +155,7 @@ const ProvenanceSchema = z
     dependencies: z
       .array(
         z.object({
-          chain: z.enum(['evm', 'tezos', 'other']),
+          chain: z.enum(['evm', 'tezos', 'bitmark', 'other']),
           standard: z.enum(['erc721', 'erc1155', 'fa2', 'other']).optional(),
           uri: z
             .string()
@@ -383,7 +383,7 @@ export interface Repro {
 export interface Provenance {
   type: 'onChain' | 'seriesRegistry' | 'offChainURI';
   contract?: {
-    chain: 'evm' | 'tezos' | 'other';
+    chain: 'evm' | 'tezos' | 'bitmark' | 'other';
     standard?: 'erc721' | 'erc1155' | 'fa2' | 'other';
     address?: string;
     seriesId?: number | string;
@@ -392,7 +392,7 @@ export interface Provenance {
     metaHash?: string;
   };
   dependencies?: Array<{
-    chain: 'evm' | 'tezos' | 'other';
+    chain: 'evm' | 'tezos' | 'bitmark' | 'other';
     standard?: 'erc721' | 'erc1155' | 'fa2' | 'other';
     uri: string;
   }>;
