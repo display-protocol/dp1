@@ -148,7 +148,7 @@ components:
           properties:
             chain:
               type: string
-              enum: [evm, tezos, other]
+              enum: [evm, tezos, bitmark, other]
             standard:
               type: string
               enum: [erc721, erc1155, fa2, other]
@@ -190,7 +190,7 @@ components:
             properties:
               chain:
                 type: string
-                enum: [evm, tezos, other]
+                enum: [evm, tezos, bitmark, other]
               standard:
                 type: string
                 enum: [erc721, erc1155, fa2, other]
@@ -464,11 +464,11 @@ components:
           items:
             type: string
             maxLength: 1024
-            description: Full URL to playlist JSON
-            pattern: '^https://[^\s]+/playlist\.json$'
+            description: Full URL to playlist
+            pattern: '^https://[^\s]+$'
           example: [
-            "https://feed.feralfile.com/geom-p1/playlist.json",
-            "https://feed.feralfile.com/geom-p2/playlist.json"
+            "https://feed.feralfile.com/geom-p1/playlist",
+            "https://feed.feralfile.com/geom-p2/playlist"
           ]
         created:
           type: string
@@ -511,11 +511,11 @@ components:
           items:
             type: string
             maxLength: 1024
-            description: Full URL to playlist JSON
-            pattern: '^https://[^\s]+/playlist\.json$'
+            description: Full URL to playlist
+            pattern: '^https://[^\s]+$'
           example: [
-            "https://feed.feralfile.com/geom-p1/playlist.json",
-            "https://feed.feralfile.com/geom-p2/playlist.json"
+            "https://feed.feralfile.com/geom-p1/playlist",
+            "https://feed.feralfile.com/geom-p2/playlist"
           ]
         coverImage:
           type: string
@@ -551,11 +551,11 @@ components:
           items:
             type: string
             maxLength: 1024
-            description: Full URL to playlist JSON
-            pattern: '^https://[^\s]+/playlist\.json$'
+            description: Full URL to playlist
+            pattern: '^https://[^\s]+$'
           example: [
-            "https://feed.feralfile.com/geom-p1/playlist.json",
-            "https://feed.feralfile.com/geom-p2/playlist.json"
+            "https://feed.feralfile.com/geom-p1/playlist",
+            "https://feed.feralfile.com/geom-p2/playlist"
           ]
         coverImage:
           type: string
