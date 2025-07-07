@@ -243,7 +243,7 @@ export const PlaylistGroupInputSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+\/playlist\.json$/)
+        .regex(/^https:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)
@@ -275,7 +275,7 @@ export const PlaylistGroupUpdateSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+\/playlist\.json$/)
+        .regex(/^https:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)
@@ -338,7 +338,7 @@ export const PlaylistGroupSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+\/playlist\.json$/)
+        .regex(/^https:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)

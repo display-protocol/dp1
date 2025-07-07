@@ -64,7 +64,7 @@ const validPlaylist = {
 const validPlaylistGroup = {
   title: 'Test Exhibition',
   curator: 'Test Curator',
-  playlists: ['https://example.com/playlist.json'],
+  playlists: ['https://example.com/playlist'],
 };
 
 describe('DP-1 Feed Operator API', () => {
@@ -217,7 +217,7 @@ describe('DP-1 Feed Operator API', () => {
         slug: 'custom-slug', // Protected field
         title: 'Updated Exhibition',
         curator: 'Test Curator',
-        playlists: ['https://example.com/playlist.json'],
+        playlists: ['https://example.com/playlist'],
       };
 
       const req = new Request('http://localhost/playlist-groups/test-id', {
