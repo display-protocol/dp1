@@ -680,8 +680,8 @@ paths:
           schema:
             type: integer
             minimum: 1
-            maximum: 1000
-            default: 1000
+            maximum: 100
+            default: 100
           example: 100
         - name: playlist-group
           in: query
@@ -812,8 +812,8 @@ paths:
           schema:
             type: integer
             minimum: 1
-            maximum: 1000
-            default: 1000
+            maximum: 100
+            default: 100
           example: 100
       responses:
         '200':
