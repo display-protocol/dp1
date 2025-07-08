@@ -27,7 +27,7 @@ func init() {
 type PlaylistItem struct {
 	ID         string           `json:"id" validate:"required,uuid4"`
 	Slug       string           `json:"slug,omitempty" validate:"omitempty,max=100"`
-	Title      string           `json:"title,omitempty" validate:"omitempty,max=500"`
+	Title      string           `json:"title,omitempty" validate:"omitempty,max=256"`
 	Source     string           `json:"source" validate:"required,url"`
 	Duration   int              `json:"duration,omitempty" validate:"omitempty,min=0"`
 	License    string           `json:"license,omitempty" validate:"omitempty,oneof=open token subscription"`
@@ -58,6 +58,7 @@ type Playlist struct {
 	DPVersion string         `json:"dpVersion" validate:"required,semver"`
 	ID        string         `json:"id" validate:"required,uuid4"`
 	Slug      string         `json:"slug,omitempty" validate:"omitempty,max=100,alphanum|contains=-|contains=_"`
+	Title     string         `json:"title,omitempty" validate:"required,max=256"`
 	Created   string         `json:"created" validate:"required,datetime=2006-01-02T15:04:05Z"`
 	Defaults  map[string]any `json:"defaults,omitempty"`
 	Items     []PlaylistItem `json:"items" validate:"required,min=1,dive"`

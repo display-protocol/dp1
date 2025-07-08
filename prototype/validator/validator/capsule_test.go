@@ -133,6 +133,7 @@ func TestExtractCapsule(t *testing.T) {
 		"dpVersion": "1.0.0",
 		"id":        "385f79b6-a45f-4c1c-8080-e93a192adccc", // Use valid UUID
 		"created":   "2025-01-01T00:00:00Z",
+		"title":     "Test Playlist",
 		"items": []any{
 			map[string]any{
 				"id":     "285f79b6-a45f-4c1c-8080-e93a192adccc", // Use valid UUID

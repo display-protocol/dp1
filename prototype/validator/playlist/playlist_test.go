@@ -22,6 +22,7 @@ var validPlaylistJSON = `{
   "dpVersion": "1.0.0",
   "id": "` + testPlaylistID + `",
   "slug": "test-playlist",
+  "title": "Test Playlist",
   "created": "2025-06-03T17:01:00Z",
   "defaults": {
     "display": {
@@ -56,6 +57,7 @@ func TestParsePlaylist(t *testing.T) {
   "dpVersion": "1.0.0",
   "id": "` + testPlaylistID + `",
   "slug": "summer-mix-01", 
+  "title": "Summer Mix 01",
   "created": "2025-06-03T17:01:00Z",
   "items": [
     {
@@ -207,6 +209,7 @@ func TestCanonicalizePlaylist(t *testing.T) {
 	playlist := &Playlist{
 		DPVersion: "1.0.0",
 		ID:        testPlaylistID,
+		Title:     "Test Playlist",
 		Created:   "2025-06-03T17:01:00Z",
 		Items: []PlaylistItem{
 			{
@@ -281,6 +284,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
@@ -293,6 +297,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				ID:      validUUID,
 				Created: "2025-06-03T17:01:00Z",
+				Title:   "Test Playlist",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
 				},
@@ -304,6 +309,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			name: "Missing ID",
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
@@ -313,10 +319,24 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			errorMsg:    "missing required field: id",
 		},
 		{
+			name: "Missing title",
+			playlist: &Playlist{
+				DPVersion: "1.0.0",
+				ID:        validUUID,
+				Created:   "2025-06-03T17:01:00Z",
+				Items: []PlaylistItem{
+					{ID: validItemUUID, Source: "https://example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "missing required field: title",
+		},
+		{
 			name: "Missing created",
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
 				},
@@ -329,6 +349,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "not-a-timestamp",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
@@ -342,6 +363,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items:     []PlaylistItem{},
 			},
@@ -353,6 +375,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{Source: "https://example.com"},
@@ -366,6 +389,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID},
@@ -379,6 +403,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        "invalid-uuid",
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
@@ -392,6 +417,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "invalid-version",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "https://example.com"},
@@ -405,6 +431,7 @@ func TestValidatePlaylistStructure(t *testing.T) {
 			playlist: &Playlist{
 				DPVersion: "1.0.0",
 				ID:        validUUID,
+				Title:     "Test Playlist",
 				Created:   "2025-06-03T17:01:00Z",
 				Items: []PlaylistItem{
 					{ID: validItemUUID, Source: "not-a-url"},
