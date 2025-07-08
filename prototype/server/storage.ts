@@ -120,7 +120,10 @@ export async function listAllPlaylists(
   options: ListOptions = {}
 ): Promise<PaginatedResult<Playlist>> {
   try {
-    const limit = options.limit || 1000; // Default KV list limit
+    let limit = options.limit || 100;
+    if (limit > 100) {
+      limit = 100;
+    }
 
     const response = await env.DP1_PLAYLISTS.list({
       prefix: STORAGE_KEYS.PLAYLIST_ID_PREFIX,
@@ -166,7 +169,10 @@ export async function listPlaylistsByGroupId(
   options: ListOptions = {}
 ): Promise<PaginatedResult<Playlist>> {
   try {
-    const limit = options.limit || 1000;
+    let limit = options.limit || 100;
+    if (limit > 100) {
+      limit = 100;
+    }
 
     const response = await env.DP1_PLAYLISTS.list({
       prefix: `${STORAGE_KEYS.PLAYLIST_BY_GROUP_PREFIX}${playlistGroupId}:`,
