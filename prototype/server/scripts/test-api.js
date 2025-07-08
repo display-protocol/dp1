@@ -23,6 +23,7 @@ if (!apiSecret) {
 // Test data without IDs or dpVersion (server will generate them)
 const testPlaylist = {
   dpVersion: '0.9.0',
+  title: 'My Amazing Test Playlist',
   defaults: {
     display: {
       scaling: 'fit',
@@ -39,13 +40,6 @@ const testPlaylist = {
       license: 'open',
     },
   ],
-};
-
-const testPlaylistGroup = {
-  title: 'Digital Art Showcase 2024',
-  curator: 'Test Curator',
-  summary: 'A test exhibition for API validation with UUID and slug support',
-  playlists: [`https://api.feed.feralfile.com/playlists/sample-id/playlist.json`],
 };
 
 // Store server-generated data for testing
@@ -102,18 +96,92 @@ async function makeRequest(method, path, body = null) {
 
 // Test functions
 async function testListPlaylists() {
-  console.log('\n📋 Testing GET /playlists (list all playlists)...');
-  const response = await makeRequest('GET', '/playlists');
+  console.log('\n📋 Testing GET /api/v1/playlists (list all playlists)...');
+  const response = await makeRequest('GET', '/api/v1/playlists');
 
   if (response.ok) {
     console.log('✅ Playlists listed successfully');
-    const playlists = Array.isArray(response.data) ? response.data : [];
-    console.log(`   Count: ${playlists.length}`);
-    if (playlists.length > 0) {
-      console.log(`   First playlist ID: ${playlists[0].id}`);
-      if (playlists[0].slug) {
-        console.log(`   First playlist slug: ${playlists[0].slug}`);
+    // Handle paginated result format
+    const paginatedResult = response.data;
+    if (paginatedResult && Array.isArray(paginatedResult.items)) {
+      console.log(`   Count: ${paginatedResult.items.length}`);
+      console.log(`   Has more: ${paginatedResult.hasMore || false}`);
+      console.log(`   Cursor: ${paginatedResult.cursor ? 'Present' : 'None'}`);
+      if (paginatedResult.items.length > 0) {
+        console.log(`   First playlist ID: ${paginatedResult.items[0].id}`);
+        if (paginatedResult.items[0].slug) {
+          console.log(`   First playlist slug: ${paginatedResult.items[0].slug}`);
+        }
       }
+    } else {
+      console.log('❌ Expected paginated result format with items array');
+      return false;
+    }
+  } else {
+    console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);
+  }
+
+  return response.ok;
+}
+
+async function testPagination() {
+  console.log('\n📄 Testing pagination with limit and cursor...');
+
+  // Test with limit
+  const limitResponse = await makeRequest('GET', '/api/v1/playlists?limit=1');
+
+  if (limitResponse.ok) {
+    const result = limitResponse.data;
+    if (result.items && result.items.length <= 1) {
+      console.log('✅ Limit parameter working correctly');
+
+      // Test cursor if available
+      if (result.cursor && result.hasMore) {
+        const cursorResponse = await makeRequest(
+          'GET',
+          `/api/v1/playlists?limit=1&cursor=${encodeURIComponent(result.cursor)}`
+        );
+        if (cursorResponse.ok) {
+          console.log('✅ Cursor pagination working correctly');
+        } else {
+          console.log('❌ Cursor pagination failed');
+          return false;
+        }
+      } else {
+        console.log('ℹ️  No cursor available (only one page of results)');
+      }
+    } else {
+      console.log('❌ Limit parameter not working correctly');
+      return false;
+    }
+  } else {
+    console.log(`❌ Pagination test failed: ${limitResponse.status}`);
+    return false;
+  }
+
+  return true;
+}
+
+async function testPlaylistGroupFiltering() {
+  if (!createdPlaylistGroupId) {
+    console.log('\n⚠️  Skipping filtering test - no playlist group ID available');
+    return true;
+  }
+
+  console.log('\n🔍 Testing playlist filtering by playlist-group...');
+  const response = await makeRequest(
+    'GET',
+    `/api/v1/playlists?playlist-group=${createdPlaylistGroupId}`
+  );
+
+  if (response.ok) {
+    console.log('✅ Playlist group filtering working');
+    const result = response.data;
+    if (result && Array.isArray(result.items)) {
+      console.log(`   Filtered playlists count: ${result.items.length}`);
+    } else {
+      console.log('❌ Expected paginated result format');
+      return false;
     }
   } else {
     console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);
@@ -123,13 +191,14 @@ async function testListPlaylists() {
 }
 
 async function testCreatePlaylist() {
-  console.log('\n📝 Testing POST /playlists (server-side ID and slug generation)...');
-  const response = await makeRequest('POST', '/playlists', testPlaylist);
+  console.log('\n📝 Testing POST /api/v1/playlists (server-side ID and slug generation)...');
+  const response = await makeRequest('POST', '/api/v1/playlists', testPlaylist);
 
   if (response.ok) {
     console.log('✅ Playlist created successfully');
     console.log(`   ID: ${response.data.id}`);
     console.log(`   Slug: ${response.data.slug}`);
+    console.log(`   Title: ${response.data.title}`);
     console.log(`   Created: ${response.data.created}`);
     console.log(`   Signature: ${response.data.signature ? 'Present' : 'Missing'}`);
 
@@ -179,8 +248,8 @@ async function testGetPlaylistByUUID() {
     return true;
   }
 
-  console.log('\n📖 Testing GET /playlists/{uuid} (access by UUID)...');
-  const response = await makeRequest('GET', `/playlists/${createdPlaylistId}`);
+  console.log('\n📖 Testing GET /api/v1/playlists/{uuid} (access by UUID)...');
+  const response = await makeRequest('GET', `/api/v1/playlists/${createdPlaylistId}`);
 
   if (response.ok) {
     console.log('✅ Playlist retrieved by UUID successfully');
@@ -200,8 +269,8 @@ async function testGetPlaylistBySlug() {
     return true;
   }
 
-  console.log('\n📖 Testing GET /playlists/{slug} (access by slug)...');
-  const response = await makeRequest('GET', `/playlists/${createdPlaylistSlug}`);
+  console.log('\n📖 Testing GET /api/v1/playlists/{slug} (access by slug)...');
+  const response = await makeRequest('GET', `/api/v1/playlists/${createdPlaylistSlug}`);
 
   if (response.ok) {
     console.log('✅ Playlist retrieved by slug successfully');
@@ -228,7 +297,7 @@ async function testUpdatePlaylist() {
     return true;
   }
 
-  console.log('\n📝 Testing PUT /playlists/{id} (slug regeneration and new item IDs)...');
+  console.log('\n📝 Testing PUT /api/v1/playlists/{id} (slug regeneration and new item IDs)...');
   // remove the dpVersion from the testPlaylist
   const { dpVersion, ...rest } = testPlaylist;
   const updatedPlaylist = {
@@ -247,7 +316,11 @@ async function testUpdatePlaylist() {
     ],
   };
 
-  const response = await makeRequest('PUT', `/playlists/${createdPlaylistId}`, updatedPlaylist);
+  const response = await makeRequest(
+    'PUT',
+    `/api/v1/playlists/${createdPlaylistId}`,
+    updatedPlaylist
+  );
 
   if (response.ok) {
     console.log('✅ Playlist updated successfully');
@@ -269,8 +342,28 @@ async function testUpdatePlaylist() {
 }
 
 async function testCreatePlaylistGroup() {
-  console.log('\n📝 Testing POST /playlist-groups (server-side ID and slug generation)...');
-  const response = await makeRequest('POST', '/playlist-groups', testPlaylistGroup);
+  console.log('\n📝 Testing POST /api/v1/playlist-groups (server-side ID and slug generation)...');
+
+  // Ensure we have a playlist to reference
+  if (!createdPlaylistId) {
+    console.log('❌ No playlist available to reference in group. Create a playlist first.');
+    return false;
+  }
+  console.log(`🔍 Using playlist ID: ${createdPlaylistId}`);
+
+  // Create playlist group data with real playlist reference
+  // For testing, we need to use an actual fetchable URL since the server validates external playlists
+  // We'll use a real example playlist from the DP-1 spec for testing
+  const playlistUrl = `http://localhost:8787/api/v1/playlists/${createdPlaylistId}`;
+
+  const playlistGroupData = {
+    title: 'Digital Art Showcase 2024',
+    curator: 'Test Curator',
+    summary: 'A test exhibition for API validation with UUID and slug support',
+    playlists: [playlistUrl],
+  };
+
+  const response = await makeRequest('POST', '/api/v1/playlist-groups', playlistGroupData);
 
   if (response.ok) {
     console.log('✅ Playlist group created successfully');
@@ -306,18 +399,26 @@ async function testCreatePlaylistGroup() {
 }
 
 async function testListPlaylistGroups() {
-  console.log('\n📋 Testing GET /playlist-groups (list all groups)...');
-  const response = await makeRequest('GET', '/playlist-groups');
+  console.log('\n📋 Testing GET /api/v1/playlist-groups (list all groups)...');
+  const response = await makeRequest('GET', '/api/v1/playlist-groups');
 
   if (response.ok) {
     console.log('✅ Playlist groups listed successfully');
-    const groups = Array.isArray(response.data) ? response.data : [];
-    console.log(`   Count: ${groups.length}`);
-    if (groups.length > 0) {
-      console.log(`   First group ID: ${groups[0].id}`);
-      if (groups[0].slug) {
-        console.log(`   First group slug: ${groups[0].slug}`);
+    // Handle paginated result format
+    const paginatedResult = response.data;
+    if (paginatedResult && Array.isArray(paginatedResult.items)) {
+      console.log(`   Count: ${paginatedResult.items.length}`);
+      console.log(`   Has more: ${paginatedResult.hasMore || false}`);
+      console.log(`   Cursor: ${paginatedResult.cursor ? 'Present' : 'None'}`);
+      if (paginatedResult.items.length > 0) {
+        console.log(`   First group ID: ${paginatedResult.items[0].id}`);
+        if (paginatedResult.items[0].slug) {
+          console.log(`   First group slug: ${paginatedResult.items[0].slug}`);
+        }
       }
+    } else {
+      console.log('❌ Expected paginated result format with items array');
+      return false;
     }
   } else {
     console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);
@@ -332,8 +433,8 @@ async function testGetPlaylistGroupByUUID() {
     return true;
   }
 
-  console.log('\n📖 Testing GET /playlist-groups/{uuid} (access by UUID)...');
-  const response = await makeRequest('GET', `/playlist-groups/${createdPlaylistGroupId}`);
+  console.log('\n📖 Testing GET /api/v1/playlist-groups/{uuid} (access by UUID)...');
+  const response = await makeRequest('GET', `/api/v1/playlist-groups/${createdPlaylistGroupId}`);
 
   if (response.ok) {
     console.log('✅ Playlist group retrieved by UUID successfully');
@@ -353,8 +454,8 @@ async function testGetPlaylistGroupBySlug() {
     return true;
   }
 
-  console.log('\n📖 Testing GET /playlist-groups/{slug} (access by slug)...');
-  const response = await makeRequest('GET', `/playlist-groups/${createdPlaylistGroupSlug}`);
+  console.log('\n📖 Testing GET /api/v1/playlist-groups/{slug} (access by slug)...');
+  const response = await makeRequest('GET', `/api/v1/playlist-groups/${createdPlaylistGroupSlug}`);
 
   if (response.ok) {
     console.log('✅ Playlist group retrieved by slug successfully');
@@ -392,7 +493,7 @@ async function testInvalidIdentifiers() {
 
   // Test invalid format IDs (should get 400)
   for (const invalidId of invalidIds) {
-    const response = await makeRequest('GET', `/playlists/${invalidId}`);
+    const response = await makeRequest('GET', `/api/v1/playlists/${invalidId}`);
     if (response.status === 400) {
       console.log(`✅ Correctly rejected invalid ID: ${invalidId}`);
     } else {
@@ -403,7 +504,7 @@ async function testInvalidIdentifiers() {
 
   // Test valid format but not found IDs (should get 404)
   for (const notFoundId of notFoundIds) {
-    const response = await makeRequest('GET', `/playlists/${notFoundId}`);
+    const response = await makeRequest('GET', `/api/v1/playlists/${notFoundId}`);
     if (response.status === 404) {
       console.log(`✅ Correctly returned 404 for valid format but not found: ${notFoundId}`);
     } else {
@@ -417,7 +518,7 @@ async function testInvalidIdentifiers() {
 
 async function testAuthenticationFailure() {
   console.log('\n🔐 Testing authentication failure...');
-  const response = await fetch(`${baseUrl}/playlists`, {
+  const response = await fetch(`${baseUrl}/api/v1/playlists`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -439,20 +540,27 @@ async function testEmptyListing() {
   console.log('\n📋 Testing empty listings behavior...');
 
   // Create a fresh API that might be empty
-  const emptyResponse = await makeRequest('GET', '/playlists');
-  const emptyGroupsResponse = await makeRequest('GET', '/playlist-groups');
+  const emptyResponse = await makeRequest('GET', '/api/v1/playlists');
+  const emptyGroupsResponse = await makeRequest('GET', '/api/v1/playlist-groups');
 
   if (emptyResponse.ok && emptyGroupsResponse.ok) {
     console.log('✅ Empty listings handled correctly');
-    console.log(`   Playlists returned: ${Array.isArray(emptyResponse.data) ? 'array' : 'other'}`);
-    console.log(
-      `   Groups returned: ${Array.isArray(emptyGroupsResponse.data) ? 'array' : 'other'}`
-    );
+
+    // Check if both return paginated format
+    const playlistResult = emptyResponse.data;
+    const groupResult = emptyGroupsResponse.data;
+
+    const playlistsValid = playlistResult && Array.isArray(playlistResult.items);
+    const groupsValid = groupResult && Array.isArray(groupResult.items);
+
+    console.log(`   Playlists returned: ${playlistsValid ? 'paginated format' : 'invalid format'}`);
+    console.log(`   Groups returned: ${groupsValid ? 'paginated format' : 'invalid format'}`);
+
+    return playlistsValid && groupsValid;
   } else {
     console.log(`❌ Failed empty listing test`);
+    return false;
   }
-
-  return emptyResponse.ok && emptyGroupsResponse.ok;
 }
 
 // Main test runner
@@ -460,8 +568,9 @@ async function runTests() {
   console.log('🚀 Starting DP-1 Feed Operator API Tests (UUID + Slug Support)\n');
 
   const tests = [
-    { name: 'List Playlists', fn: testListPlaylists },
     { name: 'Empty Listings', fn: testEmptyListing },
+    { name: 'List Playlists', fn: testListPlaylists },
+    { name: 'Pagination', fn: testPagination },
     { name: 'Create Playlist (UUID + Slug)', fn: testCreatePlaylist },
     { name: 'Get Playlist by UUID', fn: testGetPlaylistByUUID },
     { name: 'Get Playlist by Slug', fn: testGetPlaylistBySlug },
@@ -470,6 +579,7 @@ async function runTests() {
     { name: 'List Playlist Groups', fn: testListPlaylistGroups },
     { name: 'Get Playlist Group by UUID', fn: testGetPlaylistGroupByUUID },
     { name: 'Get Playlist Group by Slug', fn: testGetPlaylistGroupBySlug },
+    { name: 'Playlist Group Filtering', fn: testPlaylistGroupFiltering },
     { name: 'Identifier Validation (400/404)', fn: testInvalidIdentifiers },
     { name: 'Authentication Failure', fn: testAuthenticationFailure },
   ];

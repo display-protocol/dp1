@@ -11,12 +11,12 @@ ENVIRONMENT = "development"
 [[kv_namespaces]]
 binding = "DP1_PLAYLISTS"
 id = "626b74ca2b5b4606904cac7c4bbfd454"
-preview_id = "648e8feef0f24832a01c372a79d76a0a"
+preview_id = "6ccea1576def4fceb9da3f3cc450b46a"
 
 [[kv_namespaces]]
 binding = "DP1_PLAYLIST_GROUPS"
 id = "df9f99f5d73d43f9a941859819cf0f29"
-preview_id = "9a0626e294fa43f1b880b4432da55186"
+preview_id = "a46971c67a444a449651fd72a3adc46d"
 
 # Production environment
 [env.production]

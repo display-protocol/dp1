@@ -232,6 +232,7 @@ export const PlaylistInputSchema = z.object({
       duration: z.number().min(1).optional(),
     })
     .optional(),
+  title: z.string().max(256),
   items: z.array(PlaylistItemInputSchema).min(1).max(1024),
 });
 
@@ -243,7 +244,7 @@ export const PlaylistGroupInputSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+$/)
+        .regex(/^http[s]?:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)
@@ -265,11 +266,12 @@ export const PlaylistUpdateSchema = z.object({
     })
     .optional(),
   items: z.array(PlaylistItemInputSchema).min(1).max(1024),
+  title: z.string().max(256).optional(),
 });
 
 export const PlaylistGroupUpdateSchema = z.object({
-  title: z.string().max(256),
-  curator: z.string().max(128),
+  title: z.string().max(256).optional(),
+  curator: z.string().max(128).optional(),
   summary: z.string().max(4096).optional(),
   playlists: z
     .array(
@@ -309,6 +311,7 @@ export const PlaylistSchema = z.object({
     .string()
     .regex(/^[a-zA-Z0-9-]+$/)
     .max(64),
+  title: z.string().max(256),
   created: z.string().datetime(),
   defaults: z
     .object({
@@ -321,8 +324,7 @@ export const PlaylistSchema = z.object({
   signature: z
     .string()
     .regex(/^ed25519:0x[a-fA-F0-9]+$/)
-    .max(150)
-    .optional(),
+    .max(150),
 });
 
 export const PlaylistGroupSchema = z.object({
@@ -415,6 +417,7 @@ export interface Playlist {
   dpVersion: string;
   id: string;
   slug: string;
+  title: string;
   created?: string;
   defaults?: {
     display?: DisplayPrefs;
@@ -446,13 +449,6 @@ export interface KeyPair {
   publicKey: Uint8Array;
   privateKey: Uint8Array;
 }
-
-// KV Storage Keys
-export const KV_KEYS = {
-  PLAYLIST_PREFIX: 'playlist:',
-  PLAYLIST_GROUP_PREFIX: 'playlist-group:',
-  SERVER_KEYPAIR: 'server:keypair',
-} as const;
 
 // Inferred types from Zod schemas
 export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;
@@ -493,13 +489,13 @@ export function createPlaylistFromInput(input: PlaylistInput): Playlist {
   }));
 
   // Generate slug from first item title or playlist ID
-  const firstItemTitle = itemsWithIds[0]?.title;
-  const slug = generateSlug(firstItemTitle || playlistId);
+  const slug = generateSlug(input.title || playlistId);
 
   return {
     dpVersion: input.dpVersion,
     id: playlistId,
     slug,
+    title: input.title,
     created: timestamp,
     defaults: input.defaults,
     items: itemsWithIds,

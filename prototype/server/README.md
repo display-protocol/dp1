@@ -175,9 +175,9 @@ The API is built using modern web standards optimized for edge computing:
 │ • Bearer Token Authentication         │
 ├─────────────────────────────────────────┤
 │ Routes:                                │
-│ • /playlists (Zod validation)          │
-│ • /playlist-groups (Zod validation)    │
-│ • /health (Health checks)              │
+│ • /api/v1/playlists (Zod validation)   │
+│ • /api/v1/playlist-groups (Zod validation) │
+│ • /api/v1/health (Health checks)       │
 ├─────────────────────────────────────────┤
 │ Services:                              │
 │ • KV Storage Operations                │

@@ -280,11 +280,11 @@ components:
       additionalProperties: false
 
     ####################################################################
-    # 2.5 Playlist — dpVersion, items REQUIRED
+    # 2.5 Playlist — dpVersion, items, title REQUIRED
     ####################################################################
     Playlist:
       type: object
-      required: [dpVersion, items]
+      required: [dpVersion, items, title]
       properties:
         dpVersion:
           type: string
@@ -305,6 +305,11 @@ components:
           description: URL-friendly identifier (generated from title by server)
           readOnly: true
           example: "summer-mix-01-1234"
+        title:
+          type: string
+          description: Display title (OPTIONAL)
+          maxLength: 256
+          example: "Summer Mix 01"
         created:
           type: string
           format: date-time
@@ -422,6 +427,10 @@ components:
           maxItems: 1024
           items:
             $ref: '#/components/schemas/PlaylistItem'
+        title:
+          type: string
+          maxLength: 256
+          example: "Summer Mix 01"
       additionalProperties: false
 
     ####################################################################
@@ -600,7 +609,7 @@ paths:
   #-------------------------#
   # 4.1  PLAYLIST ENDPOINTS #
   #-------------------------#
-  /playlists:
+  /api/v1/playlists:
     post:
       tags: [Playlists]
       summary: Create a new playlist
@@ -629,7 +638,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /playlists/{playlistId}:
+  /api/v1/playlists/{playlistId}:
     parameters:
       - name: playlistId
         in: path
@@ -689,7 +698,7 @@ paths:
   #------------------------------#
   # 4.2  PLAYLIST-GROUP ENDPOINTS #
   #------------------------------#
-  /playlist-groups:
+  /api/v1/playlist-groups:
     post:
       tags: [Playlist-Groups]
       summary: Create a new playlist group (exhibition)
@@ -718,7 +727,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /playlist-groups/{groupId}:
+  /api/v1/playlist-groups/{groupId}:
     parameters:
       - name: groupId
         in: path
