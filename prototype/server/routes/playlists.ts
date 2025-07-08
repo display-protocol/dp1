@@ -297,11 +297,12 @@ playlists.put('/:id', async c => {
       id: crypto.randomUUID(),
     }));
 
-    // Create updated playlist, just allow to update defaults and items
+    // Create updated playlist, just allow to update non-protected fields
     const updatedPlaylist: Playlist = {
       dpVersion: existingPlaylist.dpVersion,
       id: existingPlaylist.id, // Keep original server-generated ID
       slug: existingPlaylist.slug,
+      title: validatedData.title || existingPlaylist.title,
       created: existingPlaylist.created,
       defaults: validatedData.defaults,
       items: itemsWithIds,

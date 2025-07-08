@@ -274,9 +274,9 @@ playlistGroups.put('/:id', async c => {
     const updatedGroup: PlaylistGroup = {
       id: existingGroup.id, // Keep original server-generated ID
       slug: existingGroup.slug, // Keep original slug (don't regenerate)
-      title: validatedData.title,
-      curator: validatedData.curator,
-      summary: validatedData.summary,
+      title: validatedData.title || existingGroup.title,
+      curator: validatedData.curator || existingGroup.curator,
+      summary: validatedData.summary || existingGroup.summary,
       playlists: validatedData.playlists,
       created: existingGroup.created,
       coverImage: validatedData.coverImage,

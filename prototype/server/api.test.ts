@@ -29,6 +29,7 @@ const createMockPlaylistResponse = (id: string, slug: string) =>
         dpVersion: '1.0.0',
         id,
         slug,
+        title: 'Test External Playlist', // Required field for DP-1 validation
         created: '2024-01-01T00:00:00Z',
         signature: 'ed25519:0x1234567890abcdef', // Required for DP-1 validation
         items: [
@@ -115,6 +116,7 @@ const testEnv: Env = {
 
 const validPlaylist = {
   dpVersion: '1.0.0',
+  title: 'Test Playlist',
   items: [
     {
       title: 'Test Artwork',
@@ -508,7 +510,8 @@ describe('DP-1 Feed Operator API', () => {
       const data = await response.json();
       expect(data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(data.dpVersion).toBe('1.0.0'); // Server should preserve client's dpVersion
-      expect(data.slug).toMatch(/^test-artwork-\d{4}$/);
+      expect(data.slug).toMatch(/^test-playlist-\d{4}$/);
+      expect(data.title).toBe('Test Playlist');
       expect(data.created).toBeTruthy();
       expect(data.signature).toBeTruthy();
       expect(data.items[0].id).toMatch(
@@ -531,6 +534,7 @@ describe('DP-1 Feed Operator API', () => {
 
       // Then update it with new title (only send updateable fields)
       const updatedPlaylist = {
+        title: 'Updated Test Playlist',
         defaults: { license: 'token' as const },
         items: [
           {

@@ -23,6 +23,7 @@ if (!apiSecret) {
 // Test data without IDs or dpVersion (server will generate them)
 const testPlaylist = {
   dpVersion: '0.9.0',
+  title: 'My Amazing Test Playlist',
   defaults: {
     display: {
       scaling: 'fit',
@@ -197,6 +198,7 @@ async function testCreatePlaylist() {
     console.log('✅ Playlist created successfully');
     console.log(`   ID: ${response.data.id}`);
     console.log(`   Slug: ${response.data.slug}`);
+    console.log(`   Title: ${response.data.title}`);
     console.log(`   Created: ${response.data.created}`);
     console.log(`   Signature: ${response.data.signature ? 'Present' : 'Missing'}`);
 

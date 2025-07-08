@@ -25,6 +25,7 @@ const createMockPlaylistResponse = (id: string, slug: string) =>
         dpVersion: '1.0.0',
         id,
         slug,
+        title: 'Test External Playlist', // Required field for DP-1 validation
         created: '2024-01-01T00:00:00Z',
         signature: 'ed25519:0x1234567890abcdef', // Required for DP-1 validation
         items: [
@@ -108,6 +109,7 @@ const testPlaylist: Playlist = {
   dpVersion: '1.0.0',
   id: '550e8400-e29b-41d4-a716-446655440000',
   slug: 'test-playlist-1234',
+  title: 'Test Playlist',
   created: '2024-01-01T00:00:00Z',
   items: [
     {
