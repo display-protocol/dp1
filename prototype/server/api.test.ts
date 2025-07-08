@@ -13,6 +13,55 @@ vi.mock('./crypto', () => ({
   createCanonicalForm: vi.fn((playlist: any) => JSON.stringify(playlist) + '\n'),
 }));
 
+// Constants for test playlist IDs
+const playlistId1 = '550e8400-e29b-41d4-a716-446655440000';
+const playlistId2 = '550e8400-e29b-41d4-a716-446655440002';
+const playlistSlug1 = 'test-playlist-1';
+const playlistSlug2 = 'test-playlist-2';
+const playlistGroupId = '550e8400-e29b-41d4-a716-446655440001';
+
+// Helper function to create a simple mock playlist response
+const createMockPlaylistResponse = (id: string, slug: string) =>
+  ({
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        dpVersion: '1.0.0',
+        id,
+        slug,
+        created: '2024-01-01T00:00:00Z',
+        signature: 'ed25519:0x1234567890abcdef', // Required for DP-1 validation
+        items: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            title: 'External Test Artwork',
+            source: 'https://example.com/external-artwork.html',
+            duration: 300,
+            license: 'open',
+          },
+        ],
+      }),
+  }) as Response;
+
+// Helper function to mock fetch for the standard test playlist group URLs
+const mockStandardPlaylistFetch = () => {
+  global.fetch = vi.fn((url: string) => {
+    if (url.includes(playlistSlug1)) {
+      return Promise.resolve(createMockPlaylistResponse(playlistId1, playlistSlug1));
+    }
+    if (url.includes(playlistSlug2)) {
+      return Promise.resolve(createMockPlaylistResponse(playlistId2, playlistSlug2));
+    }
+    if (url.includes(playlistId1)) {
+      return Promise.resolve(createMockPlaylistResponse(playlistId1, playlistSlug1));
+    }
+    if (url.includes(playlistId2)) {
+      return Promise.resolve(createMockPlaylistResponse(playlistId2, playlistSlug2));
+    }
+    return Promise.resolve({ ok: false, status: 404 } as Response);
+  }) as any;
+};
+
 // Mock KV implementation for testing
 const createMockKV = () => {
   const storage = new Map<string, string>();
@@ -26,11 +75,31 @@ const createMockKV = () => {
     delete: async (key: string) => {
       storage.delete(key);
     },
-    list: async (options?: { prefix?: string }) => {
-      const keys = Array.from(storage.keys())
+    list: async (options?: { prefix?: string; limit?: number; cursor?: string }) => {
+      const allKeys = Array.from(storage.keys())
         .filter(key => !options?.prefix || key.startsWith(options.prefix))
-        .map(name => ({ name }));
-      return { keys };
+        .sort();
+
+      let startIndex = 0;
+      if (options?.cursor) {
+        const cursorIndex = allKeys.findIndex(key => key > options.cursor!);
+        startIndex = cursorIndex >= 0 ? cursorIndex : allKeys.length;
+      }
+
+      const limit = options?.limit || 1000;
+      const keys = allKeys.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < allKeys.length;
+
+      const result: any = {
+        keys: keys.map(name => ({ name })),
+        list_complete: !hasMore,
+      };
+
+      if (hasMore) {
+        result.cursor = keys[keys.length - 1];
+      }
+
+      return result;
     },
   };
 };
@@ -43,11 +112,6 @@ const testEnv: Env = {
   DP1_PLAYLISTS: createMockKV() as any,
   DP1_PLAYLIST_GROUPS: createMockKV() as any,
 };
-
-// Test data with proper UUIDs
-const testPlaylistUUID = '385f79b6-a45f-4c1c-8080-e93a192adccc';
-const testPlaylistItemUUID = '550e8400-e29b-41d4-a716-446655440000';
-const testPlaylistGroupUUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 const validPlaylist = {
   dpVersion: '1.0.0',
@@ -64,7 +128,7 @@ const validPlaylist = {
 const validPlaylistGroup = {
   title: 'Test Exhibition',
   curator: 'Test Curator',
-  playlists: ['https://example.com/playlist'],
+  playlists: ['https://example.com/playlists/test-playlist-1'],
 };
 
 describe('DP-1 Feed Operator API', () => {
@@ -78,8 +142,8 @@ describe('DP-1 Feed Operator API', () => {
   });
 
   describe('Health and Info Endpoints', () => {
-    it('GET /health returns healthy status', async () => {
-      const req = new Request('http://localhost/health');
+    it('GET /api/v1/health returns healthy status', async () => {
+      const req = new Request('http://localhost/api/v1/health');
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(200);
 
@@ -88,8 +152,8 @@ describe('DP-1 Feed Operator API', () => {
       expect(data.version).toBe('0.9.0');
     });
 
-    it('GET / returns API information', async () => {
-      const req = new Request('http://localhost/');
+    it('GET /api/v1 returns API information', async () => {
+      const req = new Request('http://localhost/api/v1');
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(200);
 
@@ -198,7 +262,7 @@ describe('DP-1 Feed Operator API', () => {
         ],
       };
 
-      const req = new Request('http://localhost/playlists/test-id', {
+      const req = new Request('http://localhost/api/v1/playlists/test-id', {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(invalidUpdateData),
@@ -217,10 +281,10 @@ describe('DP-1 Feed Operator API', () => {
         slug: 'custom-slug', // Protected field
         title: 'Updated Exhibition',
         curator: 'Test Curator',
-        playlists: ['https://example.com/playlist'],
+        playlists: ['https://example.com/playlists/test-playlist-2'],
       };
 
-      const req = new Request('http://localhost/playlist-groups/test-id', {
+      const req = new Request('http://localhost/api/v1/playlist-groups/test-id', {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(invalidUpdateData),
@@ -235,7 +299,7 @@ describe('DP-1 Feed Operator API', () => {
 
     it('should allow valid playlist updates without protected fields', async () => {
       // First create a playlist
-      const createReq = new Request('http://localhost/playlists', {
+      const createReq = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify(validPlaylist),
@@ -257,7 +321,7 @@ describe('DP-1 Feed Operator API', () => {
         ],
       };
 
-      const updateReq = new Request(`http://localhost/playlists/${createdPlaylist.id}`, {
+      const updateReq = new Request(`http://localhost/api/v1/playlists/${createdPlaylist.id}`, {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(validUpdateData),
@@ -275,7 +339,7 @@ describe('DP-1 Feed Operator API', () => {
 
   describe('Authentication', () => {
     it('should reject POST requests without Authorization header', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -290,7 +354,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should reject POST requests with invalid Bearer token', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: {
           Authorization: 'Bearer invalid-token',
@@ -306,7 +370,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should allow GET requests without authentication', async () => {
-      const req = new Request('http://localhost/playlists');
+      const req = new Request('http://localhost/api/v1/playlists');
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(200);
     });
@@ -314,7 +378,7 @@ describe('DP-1 Feed Operator API', () => {
 
   describe('CORS Headers', () => {
     it('should include CORS headers in responses', async () => {
-      const req = new Request('http://localhost/health');
+      const req = new Request('http://localhost/api/v1/health');
       const response = await app.fetch(req, testEnv);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe(
@@ -323,7 +387,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should handle OPTIONS preflight requests', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'OPTIONS',
       });
       const response = await app.fetch(req, testEnv);
@@ -338,7 +402,7 @@ describe('DP-1 Feed Operator API', () => {
     };
 
     it('should accept valid UUIDs in playlist endpoints', async () => {
-      const req = new Request(`http://localhost/playlists/${testPlaylistUUID}`, {
+      const req = new Request(`http://localhost/api/v1/playlists/${playlistId1}`, {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
@@ -346,7 +410,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should accept valid slugs in playlist endpoints', async () => {
-      const req = new Request('http://localhost/playlists/test-playlist-1234', {
+      const req = new Request('http://localhost/api/v1/playlists/test-playlist-1234', {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
@@ -357,7 +421,7 @@ describe('DP-1 Feed Operator API', () => {
       const invalidIds = ['invalid_id_with_underscores', 'invalid@email.com'];
 
       for (const invalidId of invalidIds) {
-        const req = new Request(`http://localhost/playlists/${invalidId}`, {
+        const req = new Request(`http://localhost/api/v1/playlists/${invalidId}`, {
           headers: validAuth,
         });
         const response = await app.fetch(req, testEnv);
@@ -369,7 +433,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should accept valid UUIDs in playlist group endpoints', async () => {
-      const req = new Request(`http://localhost/playlist-groups/${testPlaylistGroupUUID}`, {
+      const req = new Request(`http://localhost/api/v1/playlist-groups/${playlistGroupId}`, {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
@@ -377,7 +441,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should accept valid slugs in playlist group endpoints', async () => {
-      const req = new Request('http://localhost/playlist-groups/test-exhibition-5678', {
+      const req = new Request('http://localhost/api/v1/playlist-groups/test-exhibition-5678', {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
@@ -391,19 +455,23 @@ describe('DP-1 Feed Operator API', () => {
       'Content-Type': 'application/json',
     };
 
-    it('GET /playlists returns empty array initially', async () => {
-      const req = new Request('http://localhost/playlists', {
+    it('GET /playlists returns paginated result initially', async () => {
+      const req = new Request('http://localhost/api/v1/playlists', {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(200);
 
       const data = await response.json();
-      expect(Array.isArray(data)).toBe(true);
+      expect(data.items).toBeDefined();
+      expect(Array.isArray(data.items)).toBe(true);
+      expect(data.hasMore).toBeDefined();
+      expect(data.items).toHaveLength(0);
     });
 
     it('GET /playlists/:id returns 404 for non-existent playlist', async () => {
-      const req = new Request(`http://localhost/playlists/${testPlaylistUUID}`, {
+      const nonExistentPlaylistId = '550e8400-e29b-41d4-a716-446655440003';
+      const req = new Request(`http://localhost/api/v1/playlists/${nonExistentPlaylistId}`, {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
@@ -414,7 +482,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('POST /playlists with invalid data returns 400', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify({
@@ -429,7 +497,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('POST /playlists should create playlist with server-generated ID and slug', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify(validPlaylist),
@@ -450,7 +518,7 @@ describe('DP-1 Feed Operator API', () => {
 
     it('PUT /playlists/:id should update playlist and preserve protected fields', async () => {
       // First create a playlist
-      const createReq = new Request('http://localhost/playlists', {
+      const createReq = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify(validPlaylist),
@@ -474,7 +542,7 @@ describe('DP-1 Feed Operator API', () => {
         ],
       };
 
-      const updateReq = new Request(`http://localhost/playlists/${playlistId}`, {
+      const updateReq = new Request(`http://localhost/api/v1/playlists/${playlistId}`, {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(updatedPlaylist),
@@ -498,21 +566,28 @@ describe('DP-1 Feed Operator API', () => {
       'Content-Type': 'application/json',
     };
 
-    it('GET /playlist-groups returns empty array initially', async () => {
-      const req = new Request('http://localhost/playlist-groups', {
+    it('GET /playlist-groups returns paginated result initially', async () => {
+      const req = new Request('http://localhost/api/v1/playlist-groups', {
         headers: validAuth,
       });
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(200);
 
       const data = await response.json();
-      expect(Array.isArray(data)).toBe(true);
+      expect(data.items).toBeDefined();
+      expect(Array.isArray(data.items)).toBe(true);
+      expect(data.hasMore).toBeDefined();
+      expect(data.items).toHaveLength(0);
     });
 
     it('GET /playlist-groups/:id returns 404 for non-existent group', async () => {
-      const req = new Request(`http://localhost/playlist-groups/${testPlaylistGroupUUID}`, {
-        headers: validAuth,
-      });
+      const nonExistentPlaylistGroupId = '550e8400-e29b-41d4-a716-446655440003';
+      const req = new Request(
+        `http://localhost/api/v1/playlist-groups/${nonExistentPlaylistGroupId}`,
+        {
+          headers: validAuth,
+        }
+      );
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(404);
 
@@ -521,7 +596,10 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('POST /playlist-groups should create group with server-generated ID and slug', async () => {
-      const req = new Request('http://localhost/playlist-groups', {
+      // Mock fetch for external playlist validation
+      mockStandardPlaylistFetch();
+
+      const req = new Request('http://localhost/api/v1/playlist-groups', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify(validPlaylistGroup),
@@ -536,8 +614,11 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('PUT /playlist-groups/:id should update group and preserve slug', async () => {
+      // Mock fetch for external playlist validation
+      mockStandardPlaylistFetch();
+
       // First create a playlist group
-      const createReq = new Request('http://localhost/playlist-groups', {
+      const createReq = new Request('http://localhost/api/v1/playlist-groups', {
         method: 'POST',
         headers: validAuth,
         body: JSON.stringify(validPlaylistGroup),
@@ -554,7 +635,7 @@ describe('DP-1 Feed Operator API', () => {
         title: 'Updated Exhibition Title',
       };
 
-      const updateReq = new Request(`http://localhost/playlist-groups/${groupId}`, {
+      const updateReq = new Request(`http://localhost/api/v1/playlist-groups/${groupId}`, {
         method: 'PUT',
         headers: validAuth,
         body: JSON.stringify(updatedGroup),
@@ -571,7 +652,7 @@ describe('DP-1 Feed Operator API', () => {
 
   describe('Error Handling', () => {
     it('should return 404 for unknown routes', async () => {
-      const req = new Request('http://localhost/unknown-route');
+      const req = new Request('http://localhost/api/v1/unknown-route');
       const response = await app.fetch(req, testEnv);
       expect(response.status).toBe(404);
 
@@ -580,7 +661,7 @@ describe('DP-1 Feed Operator API', () => {
     });
 
     it('should reject non-JSON content type for POST requests', async () => {
-      const req = new Request('http://localhost/playlists', {
+      const req = new Request('http://localhost/api/v1/playlists', {
         method: 'POST',
         headers: {
           Authorization: 'Bearer test-secret-key',
@@ -593,26 +674,270 @@ describe('DP-1 Feed Operator API', () => {
     });
   });
 
-  describe('Legacy API Routes', () => {
+  describe('Enhanced Functionality', () => {
     const validAuth = {
       Authorization: 'Bearer test-secret-key',
       'Content-Type': 'application/json',
     };
 
-    it('should support legacy /api/v1/playlists route', async () => {
-      const req = new Request('http://localhost/api/v1/playlists', {
-        headers: validAuth,
+    describe('Pagination', () => {
+      it('should paginate playlists with limit and cursor', async () => {
+        // Create multiple playlists first
+        for (let i = 0; i < 5; i++) {
+          const playlist = {
+            ...validPlaylist,
+            items: [
+              {
+                ...validPlaylist.items[0],
+                title: `Test Artwork ${i}`,
+              },
+            ],
+          };
+
+          const req = new Request('http://localhost/api/v1/playlists', {
+            method: 'POST',
+            headers: validAuth,
+            body: JSON.stringify(playlist),
+          });
+          await app.fetch(req, testEnv);
+        }
+
+        // Test pagination
+        const req1 = new Request('http://localhost/api/v1/playlists?limit=3');
+        const response1 = await app.fetch(req1, testEnv);
+        expect(response1.status).toBe(200);
+
+        const data1 = await response1.json();
+        expect(data1.items).toHaveLength(3);
+        expect(data1.hasMore).toBe(true);
+        expect(data1.cursor).toBeDefined();
+
+        // Test next page
+        const req2 = new Request(
+          `http://localhost/api/v1/playlists?limit=3&cursor=${encodeURIComponent(data1.cursor)}`
+        );
+        const response2 = await app.fetch(req2, testEnv);
+        expect(response2.status).toBe(200);
+
+        const data2 = await response2.json();
+        expect(data2.items).toHaveLength(2);
+        expect(data2.hasMore).toBe(false);
+        expect(data2.cursor).toBeUndefined();
       });
-      const response = await app.fetch(req, testEnv);
-      expect(response.status).toBe(200);
+
+      it('should paginate playlist groups with limit and cursor', async () => {
+        // Mock fetch for external playlist validation
+        mockStandardPlaylistFetch();
+
+        // Create multiple playlist groups
+        for (let i = 0; i < 5; i++) {
+          const group = {
+            ...validPlaylistGroup,
+            title: `Test Exhibition ${i}`,
+          };
+
+          const req = new Request('http://localhost/api/v1/playlist-groups', {
+            method: 'POST',
+            headers: validAuth,
+            body: JSON.stringify(group),
+          });
+          await app.fetch(req, testEnv);
+        }
+
+        // Test pagination
+        const req1 = new Request('http://localhost/api/v1/playlist-groups?limit=3');
+        const response1 = await app.fetch(req1, testEnv);
+        expect(response1.status).toBe(200);
+
+        const data1 = await response1.json();
+        expect(data1.items).toHaveLength(3);
+        expect(data1.hasMore).toBe(true);
+        expect(data1.cursor).toBeDefined();
+      });
+
+      it('should validate limit parameter', async () => {
+        const req = new Request('http://localhost/api/v1/playlists?limit=1001');
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(400);
+
+        const data = await response.json();
+        expect(data.error).toBe('invalid_limit');
+      });
     });
 
-    it('should support legacy /api/v1/playlist-groups route', async () => {
-      const req = new Request('http://localhost/api/v1/playlist-groups', {
-        headers: validAuth,
+    describe('Slug-based Access', () => {
+      it('should retrieve playlist by slug', async () => {
+        // Create a playlist
+        const req = new Request('http://localhost/api/v1/playlists', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(validPlaylist),
+        });
+        const response = await app.fetch(req, testEnv);
+        const playlist = await response.json();
+
+        // Retrieve by slug
+        const getReq = new Request(`http://localhost/api/v1/playlists/${playlist.slug}`);
+        const getResponse = await app.fetch(getReq, testEnv);
+        expect(getResponse.status).toBe(200);
+
+        const retrieved = await getResponse.json();
+        expect(retrieved.id).toBe(playlist.id);
+        expect(retrieved.slug).toBe(playlist.slug);
       });
-      const response = await app.fetch(req, testEnv);
-      expect(response.status).toBe(200);
+
+      it('should retrieve playlist group by slug', async () => {
+        // Mock fetch for external playlist validation
+        mockStandardPlaylistFetch();
+
+        // Create a playlist group
+        const req = new Request('http://localhost/api/v1/playlist-groups', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(validPlaylistGroup),
+        });
+        const response = await app.fetch(req, testEnv);
+        const group = await response.json();
+
+        // Retrieve by slug
+        const getReq = new Request(`http://localhost/api/v1/playlist-groups/${group.slug}`);
+        const getResponse = await app.fetch(getReq, testEnv);
+        expect(getResponse.status).toBe(200);
+
+        const retrieved = await getResponse.json();
+        expect(retrieved.id).toBe(group.id);
+        expect(retrieved.slug).toBe(group.slug);
+      });
+
+      it('should update playlist by slug', async () => {
+        // Create a playlist
+        const req = new Request('http://localhost/api/v1/playlists', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(validPlaylist),
+        });
+        const response = await app.fetch(req, testEnv);
+        const playlist = await response.json();
+
+        // Update by slug
+        const updateData = {
+          items: [
+            {
+              title: 'Updated by Slug',
+              source: 'https://example.com/updated.html',
+              duration: 500,
+              license: 'open' as const,
+            },
+          ],
+        };
+
+        const updateReq = new Request(`http://localhost/api/v1/playlists/${playlist.slug}`, {
+          method: 'PUT',
+          headers: validAuth,
+          body: JSON.stringify(updateData),
+        });
+        const updateResponse = await app.fetch(updateReq, testEnv);
+        expect(updateResponse.status).toBe(200);
+
+        const updated = await updateResponse.json();
+        expect(updated.items[0].title).toBe('Updated by Slug');
+      });
+    });
+
+    describe('Playlist Group Filtering', () => {
+      it('should filter playlists by playlist group', async () => {
+        // Mock fetch for both initial and dynamic playlist URLs in this test
+        global.fetch = vi.fn((url: string) => {
+          // Handle initial playlist group creation with test-playlist-1
+          if (url.includes('test-playlist-1')) {
+            return Promise.resolve(createMockPlaylistResponse(playlistId1, playlistSlug1));
+          }
+          // Handle dynamic playlist URLs created during the test
+          const match = url.match(/\/playlists\/([a-f0-9-]{36})/);
+          if (match) {
+            const playlistId = match[1];
+            return Promise.resolve(
+              createMockPlaylistResponse(playlistId, `playlist-${playlistId.substring(0, 8)}`)
+            );
+          }
+          return Promise.resolve({ ok: false, status: 404 } as Response);
+        }) as any;
+
+        // Create a playlist group first
+        const groupReq = new Request('http://localhost/api/v1/playlist-groups', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(validPlaylistGroup),
+        });
+        const groupResponse = await app.fetch(groupReq, testEnv);
+        const group = await groupResponse.json();
+
+        // Create some playlists
+        const playlist1Req = new Request('http://localhost/api/v1/playlists', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(validPlaylist),
+        });
+        const playlist1Response = await app.fetch(playlist1Req, testEnv);
+        const playlist1 = await playlist1Response.json();
+
+        const playlist2Req = new Request('http://localhost/api/v1/playlists', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify({
+            ...validPlaylist,
+            items: [
+              {
+                ...validPlaylist.items[0],
+                title: 'Second Playlist',
+              },
+            ],
+          }),
+        });
+        const playlist2Response = await app.fetch(playlist2Req, testEnv);
+        const playlist2 = await playlist2Response.json();
+
+        // Update the group to reference these playlists
+        const updatedGroup = {
+          title: group.title,
+          curator: group.curator,
+          playlists: [
+            `https://example.com/playlists/${playlist1.id}`,
+            `https://example.com/playlists/${playlist2.id}`,
+          ],
+        };
+
+        const updateGroupReq = new Request(`http://localhost/api/v1/playlist-groups/${group.id}`, {
+          method: 'PUT',
+          headers: validAuth,
+          body: JSON.stringify(updatedGroup),
+        });
+        await app.fetch(updateGroupReq, testEnv);
+
+        // Test filtering playlists by playlist group
+        const filterReq = new Request(
+          `http://localhost/api/v1/playlists?playlist-group=${group.id}`
+        );
+        const filterResponse = await app.fetch(filterReq, testEnv);
+        expect(filterResponse.status).toBe(200);
+
+        const filtered = await filterResponse.json();
+        expect(filtered.items).toHaveLength(2);
+        expect(filtered.items.map(p => p.id)).toContain(playlist1.id);
+        expect(filtered.items.map(p => p.id)).toContain(playlist2.id);
+      });
+
+      it('should return empty result for non-existent playlist group filter', async () => {
+        const req = new Request(
+          'http://localhost/api/v1/playlists?playlist-group=non-existent-group'
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(200);
+
+        const data = await response.json();
+        expect(data.items).toHaveLength(0);
+        expect(data.hasMore).toBe(false);
+      });
     });
   });
 });

@@ -243,7 +243,7 @@ export const PlaylistGroupInputSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+$/)
+        .regex(/^http[s]?:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)
@@ -321,8 +321,7 @@ export const PlaylistSchema = z.object({
   signature: z
     .string()
     .regex(/^ed25519:0x[a-fA-F0-9]+$/)
-    .max(150)
-    .optional(),
+    .max(150),
 });
 
 export const PlaylistGroupSchema = z.object({
@@ -446,13 +445,6 @@ export interface KeyPair {
   publicKey: Uint8Array;
   privateKey: Uint8Array;
 }
-
-// KV Storage Keys
-export const KV_KEYS = {
-  PLAYLIST_PREFIX: 'playlist:',
-  PLAYLIST_GROUP_PREFIX: 'playlist-group:',
-  SERVER_KEYPAIR: 'server:keypair',
-} as const;
 
 // Inferred types from Zod schemas
 export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;

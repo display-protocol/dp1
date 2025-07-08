@@ -7,7 +7,7 @@ import {
   createPlaylistGroupFromInput,
   validateNoProtectedFields,
 } from '../types';
-import { listAllPlaylistGroups, savePlaylistGroup, getPlaylistGroupByIdOrSlug } from '../fileUtils';
+import { listAllPlaylistGroups, savePlaylistGroup, getPlaylistGroupByIdOrSlug } from '../storage';
 
 // Create playlist groups router
 const playlistGroups = new Hono<{ Bindings: Env }>();
@@ -98,12 +98,30 @@ async function validatePlaylistGroupUpdateBody(
 }
 
 /**
- * GET /playlist-groups - List all playlist groups
+ * GET /playlist-groups - List all playlist groups with pagination
+ * Query params:
+ * - limit: number of items per page (max 1000)
+ * - cursor: pagination cursor from previous response
  */
 playlistGroups.get('/', async c => {
   try {
-    const allGroups = await listAllPlaylistGroups(c.env);
-    return c.json(allGroups);
+    // Parse query parameters
+    const limit = parseInt(c.req.query('limit') || '1000');
+    const cursor = c.req.query('cursor') || undefined;
+
+    // Validate limit
+    if (limit < 1 || limit > 1000) {
+      return c.json(
+        {
+          error: 'invalid_limit',
+          message: 'Limit must be between 1 and 1000',
+        },
+        400
+      );
+    }
+
+    const result = await listAllPlaylistGroups(c.env, { limit, cursor });
+    return c.json(result);
   } catch (error) {
     console.error('Error retrieving playlist groups:', error);
     return c.json(

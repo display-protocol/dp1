@@ -32,18 +32,8 @@ app.use('*', corsMiddleware); // CORS headers
 app.use('*', authMiddleware); // Authentication (before validation)
 app.use('*', validateJsonMiddleware); // Content-Type validation (last)
 
-// Health check endpoint
-app.get('/health', c => {
-  return c.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: MIN_DP_VERSION,
-    environment: c.env.ENVIRONMENT || 'development',
-  });
-});
-
 // API version info
-app.get('/', c => {
+app.get('/api/v1', c => {
   return c.json({
     name: 'DP-1 Feed Operator API',
     version: MIN_DP_VERSION,
@@ -52,19 +42,25 @@ app.get('/', c => {
     specification: 'DP-1 v0.9-alpha',
     openapi: '3.1.0',
     endpoints: {
-      playlists: '/playlists',
-      playlistGroups: '/playlist-groups',
-      health: '/health',
+      playlists: '/api/v1/playlists',
+      playlistGroups: '/api/v1/playlist-groups',
+      health: '/api/v1/health',
     },
     documentation: 'https://github.com/feralfile/dp-1/tree/main/docs',
   });
 });
 
-// Mount route modules
-app.route('/playlists', playlists);
-app.route('/playlist-groups', playlistGroups);
+// Health check endpoint
+app.get('/api/v1/health', c => {
+  return c.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: MIN_DP_VERSION,
+    environment: c.env.ENVIRONMENT || 'development',
+  });
+});
 
-// Legacy API routes (for backward compatibility)
+// Mount route modules under /api/v1
 app.route('/api/v1/playlists', playlists);
 app.route('/api/v1/playlist-groups', playlistGroups);
 
@@ -75,16 +71,16 @@ app.notFound(c => {
       error: 'not_found',
       message: 'The requested resource was not found',
       available_endpoints: [
-        'GET /',
-        'GET /health',
-        'GET /playlists',
-        'POST /playlists',
-        'GET /playlists/:id',
-        'PUT /playlists/:id',
-        'GET /playlist-groups',
-        'POST /playlist-groups',
-        'GET /playlist-groups/:id',
-        'PUT /playlist-groups/:id',
+        'GET /api/v1',
+        'GET /api/v1/health',
+        'GET /api/v1/playlists',
+        'POST /api/v1/playlists',
+        'GET /api/v1/playlists/:id',
+        'PUT /api/v1/playlists/:id',
+        'GET /api/v1/playlist-groups',
+        'POST /api/v1/playlist-groups',
+        'GET /api/v1/playlist-groups/:id',
+        'PUT /api/v1/playlist-groups/:id',
       ],
     },
     404

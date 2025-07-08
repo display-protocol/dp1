@@ -600,7 +600,7 @@ paths:
   #-------------------------#
   # 4.1  PLAYLIST ENDPOINTS #
   #-------------------------#
-  /playlists:
+  /api/v1/playlists:
     post:
       tags: [Playlists]
       summary: Create a new playlist
@@ -629,7 +629,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /playlists/{playlistId}:
+  /api/v1/playlists/{playlistId}:
     parameters:
       - name: playlistId
         in: path
@@ -689,7 +689,7 @@ paths:
   #------------------------------#
   # 4.2  PLAYLIST-GROUP ENDPOINTS #
   #------------------------------#
-  /playlist-groups:
+  /api/v1/playlist-groups:
     post:
       tags: [Playlist-Groups]
       summary: Create a new playlist group (exhibition)
@@ -718,7 +718,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /playlist-groups/{groupId}:
+  /api/v1/playlist-groups/{groupId}:
     parameters:
       - name: groupId
         in: path
