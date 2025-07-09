@@ -116,7 +116,7 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 
 	// Validate signature format
 	fmt.Printf("\n📝 Validating signature format...\n")
-	if err := validator.ValidateSignatureFormat(p.Signature); err != nil {
+	if err := validator.ValidateSignatureFormat(*p.Signature); err != nil {
 		return fmt.Errorf("invalid signature format: %w", err)
 	}
 	fmt.Printf("✅ Signature format is valid\n")
@@ -131,7 +131,7 @@ func validatePlaylist(cmd *cobra.Command, args []string) error {
 
 	// Verify signature
 	fmt.Printf("\n✍️  Verifying Ed25519 signature...\n")
-	if err := validator.VerifySignature(pubkeyHex, signableContent, p.Signature); err != nil {
+	if err := validator.VerifySignature(pubkeyHex, signableContent, *p.Signature); err != nil {
 		return fmt.Errorf("signature verification failed: %w", err)
 	}
 
