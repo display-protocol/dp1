@@ -23,12 +23,82 @@ export interface ListOptions {
 }
 
 /**
- * Fetch and validate an external playlist URL with strict DP-1 validation
+ * Check if a URL points to a self-hosted domain
+ */
+function isSelfHostedUrl(url: string, selfHostedDomains?: string | null): boolean {
+  if (!selfHostedDomains) {
+    return false;
+  }
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const port = urlObj.port;
+    const hostWithPort = port ? `${hostname}:${port}` : hostname;
+
+    const domains = selfHostedDomains.split(',').map(d => d.trim());
+    
+    return domains.some(domain => 
+      hostWithPort === domain || hostname === domain
+    );
+  } catch (error) {
+    console.error(`Error parsing URL ${url}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Extract playlist identifier (ID or slug) from a self-hosted playlist URL
+ */
+function extractPlaylistIdentifierFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    // Updated regex to handle both UUIDs and slugs
+    // Matches: /api/v1/playlists/{identifier} where identifier can be:
+    // - UUIDs: 79856015-edf8-4145-8be9-135222d4157d
+    // - Slugs: my-awesome-playlist-slug, playlist_123, etc.
+    const pathMatch = urlObj.pathname.match(/^\/api\/v1\/playlists\/([a-zA-Z0-9\-_]+)$/);
+    return pathMatch ? pathMatch[1] ?? null : null;
+  } catch (error) {
+    console.error(`Error extracting playlist identifier from URL ${url}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch and validate an external playlist URL with strict DP-1 validation.
+ * If the URL points to a self-hosted domain, queries the database directly to avoid 
+ * Cloudflare Workers restrictions on same-domain requests.
  */
 async function fetchAndValidatePlaylist(
-  url: string
+  url: string,
+  env: Env
 ): Promise<{ id: string; playlist: Playlist } | null> {
   try {
+    // Check if this is a self-hosted URL
+    if (isSelfHostedUrl(url, env.SELF_HOSTED_DOMAINS ?? null)) {
+      console.log(`Detected self-hosted URL ${url}, querying database directly`);
+      
+      const playlistIdentifier = extractPlaylistIdentifierFromUrl(url);
+      if (!playlistIdentifier) {
+        console.error(`Could not extract playlist identifier from self-hosted URL: ${url}`);
+        return null;
+      }
+
+      // Query the database directly instead of making an HTTP request (works with both IDs and slugs)
+      const playlist = await getPlaylistByIdOrSlug(playlistIdentifier, env);
+      if (!playlist) {
+        console.error(`Playlist ${playlistIdentifier} not found in database for URL: ${url}`);
+        return null;
+      }
+
+      // For self-hosted playlists, we trust our own data and skip validation
+      console.log(`Successfully retrieved self-hosted playlist ${playlist.id} from database`);
+      return { id: playlist.id, playlist };
+    }
+
+    // For external URLs, use the normal fetch approach
+    console.log(`Fetching external playlist from ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
       console.error(`Failed to fetch playlist from ${url}: ${response.status}`);
@@ -230,7 +300,7 @@ export async function savePlaylistGroup(playlistGroup: PlaylistGroup, env: Env):
     const playlistValidationPromises = playlistGroup.playlists.map(async playlistUrl => {
       // If it's an external URL, fetch and validate it
       if (playlistUrl.startsWith('http://') || playlistUrl.startsWith('https://')) {
-        const result = await fetchAndValidatePlaylist(playlistUrl);
+        const result = await fetchAndValidatePlaylist(playlistUrl, env);
         if (result) {
           return result;
         }
