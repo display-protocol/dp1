@@ -1,4 +1,4 @@
-# DP‑1 Specification (v0.03‑draft)
+# DP‑1 Specification (v0.04‑draft)
 
 *A platform‑neutral protocol for distributing, verifying, and preserving blockchain‑native digital art (BNDA).* 
 
@@ -13,7 +13,7 @@
 3. A minimal **transport & auth profile** so playlists work across HTTP(S), IPFS, and offline media.  
 4. A **compliance suite & badging** model to ensure interoperability.
 
-*“v0.03‑draft” is the document revision; the wire format is already at dpVersion 1.0.0 and is not expected to change before GA.*
+*“v0.04‑draft” is the document revision; the wire format is already at dpVersion 1.0.0 and is not expected to change before GA.*
 
 ---
 
@@ -40,6 +40,7 @@
 {
   "dpVersion": "1.0.0",          // SemVer
   "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
+  "title": "Sunset Collector Loop", // REQUIRED – 1‑200 chars
   "slug": "summer‑mix‑01", 
   "created": "2025-06-03T17:01:00Z",
   "defaults": {                   // OPTIONAL – inherited by items
@@ -52,7 +53,7 @@
     "duration": 300
   },
   "items": [ PlaylistItem, ... ],
-  "signature": "ed25519:0x…"
+  "signature": "ed25519:<hex>"
 }
 ```
 
@@ -82,7 +83,7 @@ The Ed25519 public key that signs the first accepted version of a playlist defin
 }
 ```
 
-*Resolution order*: **defaults → ref → item.local** (last write wins).
+*Resolution order*: **defaults → ref → item.local** (last write wins). Device‑level overrides come after that only if the artist set userOverrides.\<field\> \= true.
 
 ### 3.3 DisplayPrefs
 
@@ -138,9 +139,9 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
   /* present when type == "onChain"  OR "seriesRegistry" */
   "contract": {
-    "chain":    "evm" | "tezos" | "other",
+    "chain":    "evm" | "tezos" | "bitmark" | "other",
     "standard": "erc721" | "erc1155" | "fa2" | "other",   // OPTIONAL
-    "address":  "0x61d45475fe81ef46bdd8093b5c73efee03167e0",
+    "address":  "0x61d45475fe81ef46bdd8093b5c73efee03167e0", // OPTIONAL
     "seriesId": 777,                 // OPTIONAL
     "tokenId":  "42",                // OPTIONAL (one specific edition)
     "uri":      "ipfs://bafybeih...",// ipfs://  eth://  https://…
@@ -160,7 +161,7 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
 ### Mutability & authority
 
-* `uri` and any `dependencies.uri` **SHOULD** be content-addressed (IP FS CID, Arweave TXID) to guarantee immutability.  
+* `uri` and any `dependencies.uri` **SHOULD** be content-addressed (IPFS CID, Arweave TXID) to guarantee immutability.  
 * If an `https://` or `eth://` URI is used, **any** change to the referenced data **MUST** result in a new manifest, and the playlist **MUST** be re-signed.  
 * When `metaHash` is present, players **SHOULD** verify it; implementers **MAY** perform this check asynchronously (i.e., without blocking first render).  
 * Only the **playlist signer** has authority to update the `provenance` block.
@@ -182,7 +183,11 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
 ### 7.1 Playlist Signature
 
-*Canonical form ≡ UTF‑8 (no BOM), LF terminators.* *SHA‑256 → Ed25519 → embed as:* `"signature": "ed25519:<hex>"`.
+Canonical form ≡ **\[JSON Canonicalization Scheme (JCS), [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)\]** UTF‑8 (no BOM, LF line terminators).  
+SHA‑256 → Ed25519 → embed as: `"signature": "ed25519:<hex>"`.
+
+Players MUST verify the Ed25519 signature against a trusted key that is either **(a)** shipped with the player, **(b)** pinned to the feed endpoint during provisioning, or **(c)** stored in the root of a signed *.dp1c* capsule.  
+The key itself is **not** transmitted inside the playlist.
 
 ### 7.2 License Modes
 
@@ -303,9 +308,12 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 
 ## 16 · Changelog
 
+* **v0.04 (2025‑07‑08).** Replaced ad‑hoc whitespace rules with **JCS (RFC 8785)** canonical form for playlist signatures; clarified external public‑key distribution; limited device‑level edits to fields flagged **`userOverrides`**; editorial only—no schema or wire‑format changes.
+
 * **v0.03 (2025-06-27).** Added **`metaHash` (SHA-256)** — optional, but *required* when `uri` is mutable; players may verify it asynchronously. Clarified **Mutability & Authority** rules; removed deprecated `scheme/ref` example.
 
 * **v0.02 (2025‑06‑06)**. Unit rule for `margin`; example updated. Clarified behaviour of `background`, `autoplay`, and keyboard enums. Renamed `border` → `margin` for consistency. Provenance refined (`seriesId`, optional `tokenId`, `dependencies`, immutability).  
+    
 * **v0.01 (2025‑06‑03)** – Added `defaults` inheritance, `ref` / `override`, and Playlist‑Group (Exhibition) API.
 
 
@@ -315,4 +323,3 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 
 `defaults`, `ref`, and inheritance rules implemented in `playlist‑1.0.0.json`. See repository for full source.
 
----
