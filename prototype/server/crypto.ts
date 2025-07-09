@@ -1,4 +1,13 @@
+import { webcrypto } from 'node:crypto';
+import canonicalize from 'canonicalize';
 import type { KeyPair, Playlist, Env } from './types';
+
+/**
+ * Cryptographic utilities for DP-1 protocol
+ */
+
+// Use node:crypto's webcrypto for Cloudflare Workers compatibility
+const crypto = webcrypto;
 
 /**
  * Convert hex string to Uint8Array
@@ -90,47 +99,18 @@ export async function getServerKeyPair(env: Env): Promise<KeyPair> {
 }
 
 /**
- * Create canonical form of playlist for signing (UTF-8, LF terminators)
- * Ensures deterministic output by sorting object keys
+ * Create canonical form of playlist for signing (RFC 8785 compliant)
+ * Uses the canonicalize library which implements the official RFC 8785 standard
  */
 export function createCanonicalForm(playlist: Omit<Playlist, 'signature'>): string {
-  // Helper function to recursively canonicalize JSON (flattened, sorted keys)
-  function canonicalizeJSON(obj: any): string {
-    if (obj === null) {
-      return 'null';
-    }
+  // Use the canonicalize library which is RFC 8785 compliant
+  const canonical = canonicalize(playlist);
 
-    if (typeof obj === 'string') {
-      return JSON.stringify(obj);
-    }
-
-    if (typeof obj === 'number' || typeof obj === 'boolean') {
-      return String(obj);
-    }
-
-    if (Array.isArray(obj)) {
-      const items = obj.map(item => canonicalizeJSON(item));
-      return '[' + items.join(',') + ']';
-    }
-
-    if (typeof obj === 'object') {
-      const keys = Object.keys(obj).sort();
-      const pairs = keys.map(key => {
-        const keyStr = JSON.stringify(key);
-        const valueStr = canonicalizeJSON(obj[key]);
-        return keyStr + ':' + valueStr;
-      });
-      return '{' + pairs.join(',') + '}';
-    }
-
-    return 'null';
+  if (!canonical) {
+    throw new Error('Failed to canonicalize playlist');
   }
 
-  // Create flattened, deterministic JSON without whitespace
-  const canonical = canonicalizeJSON(playlist);
-
-  // Add LF terminator
-  return canonical + '\n';
+  return canonical;
 }
 
 /**
