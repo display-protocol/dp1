@@ -17,6 +17,10 @@ const (
 	testItemID2    = "185f79b6-a45f-4c1c-8080-e93a192adccc"
 )
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 // Test data for playlist validation
 var validPlaylistJSON = `{
   "dpVersion": "1.0.0",
@@ -206,6 +210,7 @@ func TestIsURL(t *testing.T) {
 
 func TestCanonicalizePlaylist(t *testing.T) {
 	// Create test playlist
+	signature := "ed25519:0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	playlist := &Playlist{
 		DPVersion: "1.0.0",
 		ID:        testPlaylistID,
@@ -217,7 +222,7 @@ func TestCanonicalizePlaylist(t *testing.T) {
 				Source: "https://example.com",
 			},
 		},
-		Signature: "ed25519:0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		Signature: &signature,
 	}
 
 	canonical, err := CanonicalizePlaylist(playlist, false)
@@ -472,14 +477,14 @@ func TestHasSignature(t *testing.T) {
 		{
 			name: "With signature",
 			playlist: &Playlist{
-				Signature: "ed25519:abcdef123456",
+				Signature: stringPtr("ed25519:abcdef123456"),
 			},
 			expected: true,
 		},
 		{
 			name: "Without signature",
 			playlist: &Playlist{
-				Signature: "",
+				Signature: stringPtr(""),
 			},
 			expected: false,
 		},
@@ -563,67 +568,6 @@ func TestExtractAssetHashes(t *testing.T) {
 			result := ExtractAssetHashes(tt.playlist)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("ExtractAssetHashes() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestCanonicalizeJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    any
-		expected string
-	}{
-		{
-			name: "Simple object",
-			input: map[string]any{
-				"b": "value2",
-				"a": "value1",
-			},
-			expected: `{"a":"value1","b":"value2"}`,
-		},
-		{
-			name: "Nested object",
-			input: map[string]any{
-				"outer": map[string]any{
-					"z": "last",
-					"a": "first",
-				},
-			},
-			expected: `{"outer":{"a":"first","z":"last"}}`,
-		},
-		{
-			name:     "Array",
-			input:    []any{"c", "a", "b"},
-			expected: `["c","a","b"]`,
-		},
-		{
-			name:     "String",
-			input:    "simple string",
-			expected: `"simple string"`,
-		},
-		{
-			name:     "Number",
-			input:    42,
-			expected: `42`,
-		},
-		{
-			name:     "Boolean",
-			input:    true,
-			expected: `true`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := canonicalizeJSON(tt.input)
-			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-				return
-			}
-
-			if string(result) != tt.expected {
-				t.Errorf("canonicalizeJSON() = %s, want %s", string(result), tt.expected)
 			}
 		})
 	}

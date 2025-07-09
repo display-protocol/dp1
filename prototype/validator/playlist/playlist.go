@@ -1,7 +1,6 @@
 package playlist
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -9,11 +8,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gowebpki/jcs"
 )
 
 // Global validator instance
@@ -62,7 +61,7 @@ type Playlist struct {
 	Created   string         `json:"created" validate:"required,datetime=2006-01-02T15:04:05Z"`
 	Defaults  map[string]any `json:"defaults,omitempty"`
 	Items     []PlaylistItem `json:"items" validate:"required,min=1,dive"`
-	Signature string         `json:"signature,omitempty" validate:"omitempty,startswith=ed25519:"`
+	Signature *string        `json:"signature,omitempty" validate:"omitempty,startswith=ed25519:"`
 }
 
 // ParsePlaylist parses a playlist from either a URL or base64 encoded payload
@@ -131,22 +130,18 @@ func fetchFromURL(urlStr string) ([]byte, error) {
 // CanonicalizePlaylist converts a playlist to canonical JSON form
 // This removes unnecessary whitespace and ensures consistent field ordering
 func CanonicalizePlaylist(playlist *Playlist, signable bool) ([]byte, error) {
-	// Convert to map for sorting
-	data, err := json.Marshal(playlist)
+	if signable {
+		playlist.Signature = nil
+	}
+
+	// Marshal to JSON first
+	rawJson, err := json.Marshal(playlist)
 	if err != nil {
 		return nil, err
 	}
 
-	var obj map[string]any
-	if err := json.Unmarshal(data, &obj); err != nil {
-		return nil, err
-	}
-
-	if signable {
-		delete(obj, "signature")
-	}
-
-	canonical, err := canonicalizeJSON(obj)
+	// Transform to canonical JSON
+	canonical, err := jcs.Transform(rawJson)
 	if err != nil {
 		return nil, err
 	}
@@ -157,56 +152,6 @@ func CanonicalizePlaylist(playlist *Playlist, signable bool) ([]byte, error) {
 	}
 
 	return canonical, nil
-}
-
-// canonicalizeJSON recursively sorts JSON objects by keys to ensure deterministic output
-func canonicalizeJSON(obj any) ([]byte, error) {
-	switch v := obj.(type) {
-	case map[string]any:
-		// Sort keys for deterministic output
-		keys := make([]string, 0, len(v))
-		for k := range v {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		var buf bytes.Buffer
-		buf.WriteByte('{')
-		for i, k := range keys {
-			if i > 0 {
-				buf.WriteByte(',')
-			}
-			keyBytes, _ := json.Marshal(k)
-			buf.Write(keyBytes)
-			buf.WriteByte(':')
-			valueBytes, err := canonicalizeJSON(v[k])
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(valueBytes)
-		}
-		buf.WriteByte('}')
-		return buf.Bytes(), nil
-
-	case []any:
-		var buf bytes.Buffer
-		buf.WriteByte('[')
-		for i, item := range v {
-			if i > 0 {
-				buf.WriteByte(',')
-			}
-			itemBytes, err := canonicalizeJSON(item)
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(itemBytes)
-		}
-		buf.WriteByte(']')
-		return buf.Bytes(), nil
-
-	default:
-		return json.Marshal(v)
-	}
 }
 
 // ValidatePlaylistStructure validates the playlist structure using the validator library
@@ -261,7 +206,7 @@ func ValidatePlaylistStructure(playlist *Playlist) error {
 
 // HasSignature checks if the playlist contains a signature
 func HasSignature(playlist *Playlist) bool {
-	return playlist.Signature != ""
+	return playlist.Signature != nil && *playlist.Signature != ""
 }
 
 // ExtractAssetHashes extracts SHA256 hashes from the repro block of all playlist items
