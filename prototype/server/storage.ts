@@ -37,10 +37,8 @@ function isSelfHostedUrl(url: string, selfHostedDomains?: string | null): boolea
     const hostWithPort = port ? `${hostname}:${port}` : hostname;
 
     const domains = selfHostedDomains.split(',').map(d => d.trim());
-    
-    return domains.some(domain => 
-      hostWithPort === domain || hostname === domain
-    );
+
+    return domains.some(domain => hostWithPort === domain || hostname === domain);
   } catch (error) {
     console.error(`Error parsing URL ${url}:`, error);
     return false;
@@ -58,7 +56,7 @@ function extractPlaylistIdentifierFromUrl(url: string): string | null {
     // - UUIDs: 79856015-edf8-4145-8be9-135222d4157d
     // - Slugs: my-awesome-playlist-slug, playlist_123, etc.
     const pathMatch = urlObj.pathname.match(/^\/api\/v1\/playlists\/([a-zA-Z0-9\-_]+)$/);
-    return pathMatch ? pathMatch[1] ?? null : null;
+    return pathMatch ? (pathMatch[1] ?? null) : null;
   } catch (error) {
     console.error(`Error extracting playlist identifier from URL ${url}:`, error);
     return null;
@@ -67,7 +65,7 @@ function extractPlaylistIdentifierFromUrl(url: string): string | null {
 
 /**
  * Fetch and validate an external playlist URL with strict DP-1 validation.
- * If the URL points to a self-hosted domain, queries the database directly to avoid 
+ * If the URL points to a self-hosted domain, queries the database directly to avoid
  * Cloudflare Workers restrictions on same-domain requests.
  */
 async function fetchAndValidatePlaylist(
@@ -78,7 +76,7 @@ async function fetchAndValidatePlaylist(
     // Check if this is a self-hosted URL
     if (isSelfHostedUrl(url, env.SELF_HOSTED_DOMAINS ?? null)) {
       console.log(`Detected self-hosted URL ${url}, querying database directly`);
-      
+
       const playlistIdentifier = extractPlaylistIdentifierFromUrl(url);
       if (!playlistIdentifier) {
         console.error(`Could not extract playlist identifier from self-hosted URL: ${url}`);
