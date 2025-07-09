@@ -390,4 +390,304 @@ describe('Storage Module', () => {
       expect(groupIndexKeys).toHaveLength(2); // Two playlists in the group
     });
   });
+
+  describe('Self-Hosted URL Detection', () => {
+    it('should detect and handle self-hosted URLs correctly', async () => {
+      // Set up environment with self-hosted domains
+      const envWithSelfHosted: Env = {
+        ...testEnv,
+        SELF_HOSTED_DOMAINS:
+          'api.feed.feralfile.com,dp1-feed-operator-api-dev.workers.dev,localhost:8787',
+      };
+
+      // Pre-populate a playlist in the database
+      const existingPlaylist: Playlist = {
+        ...testPlaylist,
+        id: playlistId1,
+        slug: playlistSlug1,
+      };
+      await savePlaylist(existingPlaylist, envWithSelfHosted);
+
+      // Create a playlist group with a self-hosted URL
+      const selfHostedGroup: PlaylistGroup = {
+        ...testPlaylistGroup,
+        playlists: [
+          `https://api.feed.feralfile.com/api/v1/playlists/${playlistId1}`, // Self-hosted
+          `https://external-api.example.com/api/v1/playlists/${playlistId2}`, // External
+        ],
+      };
+
+      // Mock fetch for external URL (should be called)
+      global.fetch = vi.fn((url: string) => {
+        if (url.includes('external-api.example.com')) {
+          return Promise.resolve(createMockPlaylistResponse(playlistId2, playlistSlug2));
+        }
+        // Self-hosted URLs should NOT trigger fetch
+        throw new Error(`Unexpected fetch call to: ${url}`);
+      }) as any;
+
+      // Spy on console.log to verify detection messages
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Save the playlist group
+      const saved = await savePlaylistGroup(selfHostedGroup, envWithSelfHosted);
+      expect(saved).toBe(true);
+
+      // Verify that self-hosted URL detection message was logged
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected self-hosted URL'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Successfully retrieved self-hosted playlist')
+      );
+
+      // Verify fetch was only called once (for external URL)
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('external-api.example.com')
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it('should handle different self-hosted domain formats', async () => {
+      const testCases = [
+        {
+          domain: 'api.feed.feralfile.com',
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedMatch: true,
+        },
+        {
+          domain: 'dp1-feed-operator-api-dev.workers.dev',
+          url: 'https://dp1-feed-operator-api-dev.workers.dev/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedMatch: true,
+        },
+        {
+          domain: 'localhost:8787',
+          url: 'http://localhost:8787/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedMatch: true,
+        },
+        {
+          domain: 'api.feed.feralfile.com',
+          url: 'https://external-api.example.com/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedMatch: false,
+        },
+        {
+          domain: 'localhost:8787',
+          url: 'http://localhost:3000/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedMatch: false,
+        },
+      ];
+
+      for (const { domain, url, expectedMatch } of testCases) {
+        const envWithSelfHosted: Env = {
+          ...testEnv,
+          SELF_HOSTED_DOMAINS: domain,
+        };
+
+        const playlistId = '123e4567-e89b-12d3-a456-426614174000';
+        const playlist: Playlist = {
+          ...testPlaylist,
+          id: playlistId,
+          slug: 'test-playlist',
+        };
+
+        if (expectedMatch) {
+          // For self-hosted URLs, pre-populate the database
+          await savePlaylist(playlist, envWithSelfHosted);
+        }
+
+        const group: PlaylistGroup = {
+          ...testPlaylistGroup,
+          id: `test-group-${Date.now()}-${Math.random()}`,
+          playlists: [url],
+        };
+
+        // Mock fetch for external URLs
+        global.fetch = vi.fn((fetchUrl: string) => {
+          if (!expectedMatch) {
+            return Promise.resolve(createMockPlaylistResponse(playlistId, 'test-playlist'));
+          }
+          throw new Error(`Unexpected fetch call to: ${fetchUrl}`);
+        }) as any;
+
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        const saved = await savePlaylistGroup(group, envWithSelfHosted);
+        expect(saved).toBe(true);
+
+        if (expectedMatch) {
+          // Should detect self-hosted and NOT call fetch
+          expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected self-hosted URL'));
+          expect(global.fetch).not.toHaveBeenCalled();
+        } else {
+          // Should call fetch for external URL
+          expect(global.fetch).toHaveBeenCalled();
+        }
+
+        logSpy.mockRestore();
+      }
+    });
+
+    it('should handle missing self-hosted playlist gracefully', async () => {
+      const envWithSelfHosted: Env = {
+        ...testEnv,
+        SELF_HOSTED_DOMAINS: 'api.feed.feralfile.com',
+      };
+
+      const group: PlaylistGroup = {
+        ...testPlaylistGroup,
+        playlists: ['https://api.feed.feralfile.com/api/v1/playlists/nonexistent-playlist-id'],
+      };
+
+      const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const saved = await savePlaylistGroup(group, envWithSelfHosted);
+      expect(saved).toBe(false); // Should fail because playlist not found
+
+      // Verify error was logged
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('not found in database'));
+
+      logSpy.mockRestore();
+    });
+
+    it('should handle invalid self-hosted URL format gracefully', async () => {
+      const envWithSelfHosted: Env = {
+        ...testEnv,
+        SELF_HOSTED_DOMAINS: 'api.feed.feralfile.com',
+      };
+
+      const group: PlaylistGroup = {
+        ...testPlaylistGroup,
+        playlists: ['https://api.feed.feralfile.com/invalid/path/format'],
+      };
+
+      const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const saved = await savePlaylistGroup(group, envWithSelfHosted);
+      expect(saved).toBe(false); // Should fail because URL format is invalid
+
+      // Verify error was logged
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Could not extract playlist identifier from self-hosted URL')
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it('should work when SELF_HOSTED_DOMAINS is undefined', async () => {
+      const envWithoutSelfHosted: Env = {
+        ...testEnv,
+        // SELF_HOSTED_DOMAINS is undefined
+      };
+
+      const group: PlaylistGroup = {
+        ...testPlaylistGroup,
+        playlists: [`https://example.com/api/v1/playlists/${playlistId1}`],
+      };
+
+      // Mock fetch for external URL
+      global.fetch = vi.fn(() => {
+        return Promise.resolve(createMockPlaylistResponse(playlistId1, playlistSlug1));
+      }) as any;
+
+      const saved = await savePlaylistGroup(group, envWithoutSelfHosted);
+      expect(saved).toBe(true);
+
+      // Verify fetch was called (no self-hosted detection)
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    it('should extract playlist identifiers (IDs and slugs) correctly from various URL formats', async () => {
+      const testUrls = [
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedId: '123e4567-e89b-12d3-a456-426614174000',
+          description: 'UUID format',
+        },
+        {
+          url: 'http://localhost:8787/api/v1/playlists/550e8400-e29b-41d4-a716-446655440000',
+          expectedId: '550e8400-e29b-41d4-a716-446655440000',
+          description: 'UUID on localhost',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/my-awesome-playlist',
+          expectedId: 'my-awesome-playlist',
+          description: 'Slug format',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/playlist_123',
+          expectedId: 'playlist_123',
+          description: 'Slug with underscore',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/Test-Playlist-2024',
+          expectedId: 'Test-Playlist-2024',
+          description: 'Slug with mixed case and year',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlists/550e8400-e29b-41d4-a716-446655440000?query=param',
+          expectedId: '550e8400-e29b-41d4-a716-446655440000',
+          description: 'UUID with query params (should be ignored)',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v2/playlists/123e4567-e89b-12d3-a456-426614174000',
+          expectedId: null,
+          description: 'Wrong API version',
+        },
+        {
+          url: 'https://api.feed.feralfile.com/api/v1/playlist-groups/123e4567-e89b-12d3-a456-426614174000',
+          expectedId: null,
+          description: 'Wrong endpoint',
+        },
+      ];
+
+      const envWithSelfHosted: Env = {
+        ...testEnv,
+        SELF_HOSTED_DOMAINS: 'api.feed.feralfile.com,localhost:8787',
+      };
+
+      for (const { url, expectedId, description } of testUrls) {
+        console.log(`Testing ${description}: ${url}`);
+
+        if (expectedId) {
+          // Pre-populate playlist for valid identifiers (both IDs and slugs)
+          const playlist: Playlist = {
+            ...testPlaylist,
+            id:
+              expectedId.includes('-') && expectedId.length === 36
+                ? expectedId
+                : '123e4567-e89b-12d3-a456-426614174000', // Use actual ID for UUIDs, fallback for slugs
+            slug:
+              expectedId.includes('-') && expectedId.length === 36
+                ? `slug-${expectedId}`
+                : expectedId, // Use actual slug for slug cases
+          };
+          await savePlaylist(playlist, envWithSelfHosted);
+        }
+
+        const group: PlaylistGroup = {
+          ...testPlaylistGroup,
+          id: `test-group-${Date.now()}-${Math.random()}`,
+          playlists: [url],
+        };
+
+        const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const saved = await savePlaylistGroup(group, envWithSelfHosted);
+
+        if (expectedId) {
+          expect(saved).toBe(true);
+          expect(logSpy).not.toHaveBeenCalledWith(
+            expect.stringContaining('Could not extract playlist identifier')
+          );
+        } else {
+          expect(saved).toBe(false);
+          expect(logSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Could not extract playlist identifier from self-hosted URL')
+          );
+        }
+
+        logSpy.mockRestore();
+      }
+    });
+  });
 });

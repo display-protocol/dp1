@@ -6,6 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 # Variables for all environments
 [vars]
 ENVIRONMENT = "development"
+SELF_HOSTED_DOMAINS = "dp1-feed-operator-api-dev.autonomy-system.workers.dev,localhost:8787"
 
 # KV namespace bindings for storing JSON data
 [[kv_namespaces]]
@@ -24,6 +25,7 @@ name = "dp1-feed-operator-api-prod"
 route = { pattern = "api.feed.feralfile.com/*", zone_name = "feralfile.com" }
 [env.production.vars]
 ENVIRONMENT = "production"
+SELF_HOSTED_DOMAINS = "api.feed.feralfile.com, dp1-feed-operator-api-prod.autonomy-system.workers.dev"
 
 # Production KV namespaces
 [[env.production.kv_namespaces]]

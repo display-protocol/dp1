@@ -63,8 +63,7 @@ export interface Env {
 
   // Optional environment variables
   ENVIRONMENT?: string;
-  IPFS_GATEWAY_URL?: string;
-  ARWEAVE_GATEWAY_URL?: string;
+  SELF_HOSTED_DOMAINS?: string; // Comma-separated list of domains this worker is deployed to
 }
 
 // Zod Schemas for Request Validation
