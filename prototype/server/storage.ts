@@ -322,11 +322,7 @@ export async function listAllPlaylists(
   options: ListOptions = {}
 ): Promise<PaginatedResult<Playlist>> {
   try {
-    let limit = options.limit || 100;
-    if (limit > 100) {
-      limit = 100;
-    }
-
+    const limit = options.limit || 1000;
     const response = await env.DP1_PLAYLISTS.list({
       prefix: STORAGE_KEYS.PLAYLIST_ID_PREFIX,
       limit,
@@ -371,11 +367,7 @@ export async function listPlaylistsByGroupId(
   options: ListOptions = {}
 ): Promise<PaginatedResult<Playlist>> {
   try {
-    let limit = options.limit || 100;
-    if (limit > 100) {
-      limit = 100;
-    }
-
+    const limit = options.limit || 1000;
     const response = await env.DP1_PLAYLISTS.list({
       prefix: `${STORAGE_KEYS.PLAYLIST_BY_GROUP_PREFIX}${playlistGroupId}:`,
       limit,
@@ -606,8 +598,7 @@ export async function listAllPlaylistGroups(
   options: ListOptions = {}
 ): Promise<PaginatedResult<PlaylistGroup>> {
   try {
-    const limit = options.limit || 100;
-
+    const limit = options.limit || 1000;
     const response = await env.DP1_PLAYLIST_GROUPS.list({
       prefix: STORAGE_KEYS.PLAYLIST_GROUP_ID_PREFIX,
       limit,
@@ -742,11 +733,7 @@ export async function listAllPlaylistItems(
   env: Env,
   options: ListOptions = {}
 ): Promise<PaginatedResult<PlaylistItem>> {
-  let limit = options.limit || 100;
-  if (limit > 100) {
-    limit = 100;
-  }
-
+  const limit = options.limit || 1000;
   const response = await env.DP1_PLAYLIST_ITEMS.list({
     prefix: STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX,
     limit,
@@ -755,12 +742,21 @@ export async function listAllPlaylistItems(
 
   const items: PlaylistItem[] = [];
 
-  for (const key of response.keys) {
-    const itemData = await env.DP1_PLAYLIST_ITEMS.get(key.name);
-    if (itemData) {
-      items.push(JSON.parse(itemData) as PlaylistItem);
+  // Use Promise.all to fetch all playlist items in parallel
+  const fetchPromises = response.keys.map(async key => {
+    try {
+      const itemData = await env.DP1_PLAYLIST_ITEMS.get(key.name);
+      if (itemData) {
+        return JSON.parse(itemData) as PlaylistItem;
+      }
+    } catch (error) {
+      console.error(`Error parsing playlist item ${key.name}:`, error);
     }
-  }
+    return null;
+  });
+
+  const results = await Promise.all(fetchPromises);
+  items.push(...results.filter((item): item is PlaylistItem => item !== null));
 
   return {
     items,
@@ -778,11 +774,7 @@ export async function listPlaylistItemsByGroupId(
   options: ListOptions = {}
 ): Promise<PaginatedResult<PlaylistItem>> {
   try {
-    let limit = options.limit || 100;
-    if (limit > 100) {
-      limit = 100;
-    }
-
+    const limit = options.limit || 1000;
     const response = await env.DP1_PLAYLIST_ITEMS.list({
       prefix: `${STORAGE_KEYS.PLAYLIST_ITEM_BY_GROUP_PREFIX}${playlistGroupId}:`,
       limit,

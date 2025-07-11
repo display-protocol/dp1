@@ -100,21 +100,21 @@ async function validatePlaylistGroupUpdateBody(
 /**
  * GET /playlist-groups - List all playlist groups with pagination
  * Query params:
- * - limit: number of items per page (max 1000)
+ * - limit: number of items per page (max 100)
  * - cursor: pagination cursor from previous response
  */
 playlistGroups.get('/', async c => {
   try {
     // Parse query parameters
-    const limit = parseInt(c.req.query('limit') || '1000');
+    const limit = parseInt(c.req.query('limit') || '100');
     const cursor = c.req.query('cursor') || undefined;
 
     // Validate limit
-    if (limit < 1 || limit > 1000) {
+    if (limit < 1 || limit > 100) {
       return c.json(
         {
           error: 'invalid_limit',
-          message: 'Limit must be between 1 and 1000',
+          message: 'Limit must be between 1 and 100',
         },
         400
       );
