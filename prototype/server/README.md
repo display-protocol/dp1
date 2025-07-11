@@ -177,6 +177,7 @@ The API is built using modern web standards optimized for edge computing:
 │ Routes:                                │
 │ • /api/v1/playlists (Zod validation)   │
 │ • /api/v1/playlist-groups (Zod validation) │
+│ • /api/v1/playlist-items (Zod validation) │
 │ • /api/v1/health (Health checks)       │
 ├─────────────────────────────────────────┤
 │ Services:                              │
@@ -196,7 +197,8 @@ src/
 │   └── auth.ts             # Authentication, CORS, logging
 ├── routes/
 │   ├── playlists.ts        # Playlist CRUD operations
-│   └── playlistGroups.ts   # Playlist group operations
+│   ├── playlistGroups.ts   # Playlist group operations
+│   └── playlistItems.ts    # Playlist item read operations
 ├── fileUtils.ts            # KV storage operations
 ├── crypto.ts               # Ed25519 signing utilities
 └── scripts/                # Deployment and testing scripts
@@ -282,6 +284,10 @@ GET  /playlist-groups                   # List all groups (array)
 GET  /playlist-groups/{id}              # Get specific group
 POST /playlist-groups                   # Create group (requires auth + validation)
 PUT  /playlist-groups/{id}              # Update group (requires auth + validation)
+
+# Playlist Items (read-only access)
+GET  /playlist-items                    # List all playlist items (with optional filtering)
+GET  /playlist-items/{id}               # Get specific playlist item by UUID
 ```
 
 #### Legacy Compatibility
@@ -290,6 +296,10 @@ PUT  /playlist-groups/{id}              # Update group (requires auth + validati
 # Legacy v1 routes (for backward compatibility)
 GET  /api/v1/playlists
 POST /api/v1/playlists
+GET  /api/v1/playlist-groups
+POST /api/v1/playlist-groups
+GET  /api/v1/playlist-items
+GET  /api/v1/playlist-items/{id}
 # ... (mirrors main API)
 ```
 
@@ -324,6 +334,19 @@ curl -X POST https://your-api.workers.dev/playlists \
 }
 ```
 
+#### Get Playlist Items (read-only)
+
+```bash
+# List all playlist items with pagination
+curl -X GET "https://your-api.workers.dev/playlist-items?limit=50&cursor=abc123"
+
+# Filter playlist items by playlist group
+curl -X GET "https://your-api.workers.dev/playlist-items?playlist-group=385f79b6-a45f-4c1c-8080-e93a192adccc"
+
+# Get a specific playlist item by UUID
+curl -X GET "https://your-api.workers.dev/playlist-items/123e4567-e89b-12d3-a456-426614174000"
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -356,11 +379,13 @@ The `wrangler.toml` file configures:
 
 **DP1_PLAYLISTS:**
 
-- `playlist:{id}` - Individual playlists
+- `playlist:{id}` - Individual playlists (containing playlist items)
 
 **DP1_PLAYLIST_GROUPS:**
 
 - `playlist-group:{id}` - Individual groups
+
+**Note:** Playlist items are stored within playlists but can be accessed individually via dedicated endpoints for read operations.
 
 ### Data Persistence
 
