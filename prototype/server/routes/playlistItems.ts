@@ -90,34 +90,28 @@ playlistItems.get('/', async c => {
       );
     }
 
-    // playlist-group is required for playlist items query
-    if (!playlistGroupId) {
-      return c.json(
-        {
-          error: 'missing_playlist_group',
-          message: 'playlist-group query parameter is required',
-        },
-        400
+    // playlist-group is optional for playlist items query
+    if (playlistGroupId) {
+      // Validate playlist group ID format
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        playlistGroupId
       );
+      const isSlug = /^[a-zA-Z0-9-]+$/.test(playlistGroupId);
+      if (!isUuid && !isSlug) {
+        return c.json(
+          {
+            error: 'invalid_playlist_group_id',
+            message: 'Playlist group ID must be a valid UUID or slug',
+          },
+          400
+        );
+      }
     }
 
-    // Validate playlist group ID format
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      playlistGroupId
-    );
-    const isSlug = /^[a-zA-Z0-9-]+$/.test(playlistGroupId);
-
-    if (!isUuid && !isSlug) {
-      return c.json(
-        {
-          error: 'invalid_playlist_group_id',
-          message: 'Playlist group ID must be a valid UUID or slug',
-        },
-        400
-      );
-    }
-
-    const result = await listPlaylistItemsByGroupId(playlistGroupId, c.env, { limit, cursor });
+    const result = await listPlaylistItemsByGroupId(playlistGroupId || '', c.env, {
+      limit,
+      cursor,
+    });
     return c.json(result);
   } catch (error) {
     console.error('Error retrieving playlist items:', error);

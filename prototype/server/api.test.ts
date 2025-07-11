@@ -1060,14 +1060,14 @@ describe('DP-1 Feed Operator API', () => {
         expect(result.hasMore).toBe(false);
       });
 
-      it('should require playlist-group parameter', async () => {
+      it('should not require playlist-group parameter', async () => {
         const req = new Request(`http://localhost/api/v1/playlist-items`);
         const response = await app.fetch(req, testEnv);
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(200);
 
-        const data = await response.json();
-        expect(data.error).toBe('missing_playlist_group');
-        expect(data.message).toBe('playlist-group query parameter is required');
+        const result = await response.json();
+        expect(result.items).toHaveLength(0);
+        expect(result.hasMore).toBe(false);
       });
 
       it('should validate playlist group ID format', async () => {

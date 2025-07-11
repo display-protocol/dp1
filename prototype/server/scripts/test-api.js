@@ -643,21 +643,14 @@ async function testPlaylistItemsByGroup() {
   return response.ok;
 }
 
-async function testPlaylistItemsRequiredParameter() {
-  console.log('\n🚫 Testing playlist items endpoint requires playlist-group parameter...');
+async function testPlaylistItemsDoesNotRequiredParameter() {
+  console.log('\n🚫 Testing playlist items endpoint does not require playlist-group parameter...');
   const response = await makeRequest('GET', '/api/v1/playlist-items');
 
-  if (response.status === 400) {
-    console.log('✅ Correctly rejected request without playlist-group parameter');
-    const data = response.data;
-    if (data.error === 'missing_playlist_group') {
-      console.log('✅ Correct error code returned');
-    } else {
-      console.log(`❌ Expected error code 'missing_playlist_group', got '${data.error}'`);
-      return false;
-    }
+  if (response.status === 200) {
+    console.log('✅ Correctly returned 200 without playlist-group parameter');
   } else {
-    console.log(`❌ Expected 400, got ${response.status}`);
+    console.log(`❌ Expected 200, got ${response.status}`);
     return false;
   }
 
@@ -859,7 +852,10 @@ async function runTests() {
     { name: 'Playlist Group Filtering', fn: testPlaylistGroupFiltering },
     { name: 'Get Playlist Item by ID', fn: testPlaylistItemById },
     { name: 'List Playlist Items by Group', fn: testPlaylistItemsByGroup },
-    { name: 'Playlist Items Required Parameter', fn: testPlaylistItemsRequiredParameter },
+    {
+      name: 'Playlist Items Does Not Required Parameter',
+      fn: testPlaylistItemsDoesNotRequiredParameter,
+    },
     { name: 'Playlist Items Invalid IDs', fn: testPlaylistItemsInvalidIds },
     { name: 'Playlist Items Pagination', fn: testPlaylistItemsPagination },
     { name: 'Playlist Items Update via Playlist', fn: testPlaylistItemsUpdate },
