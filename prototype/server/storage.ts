@@ -606,7 +606,7 @@ export async function listAllPlaylistGroups(
   options: ListOptions = {}
 ): Promise<PaginatedResult<PlaylistGroup>> {
   try {
-    const limit = options.limit || 1000; // Default KV list limit
+    const limit = options.limit || 100;
 
     const response = await env.DP1_PLAYLIST_GROUPS.list({
       prefix: STORAGE_KEYS.PLAYLIST_GROUP_ID_PREFIX,
@@ -733,6 +733,40 @@ export async function getPlaylistItemById(itemId: string, env: Env): Promise<Pla
     console.error('Error getting playlist item:', error);
     return null;
   }
+}
+
+/**
+ * List all playlist items
+ */
+export async function listAllPlaylistItems(
+  env: Env,
+  options: ListOptions = {}
+): Promise<PaginatedResult<PlaylistItem>> {
+  let limit = options.limit || 100;
+  if (limit > 100) {
+    limit = 100;
+  }
+
+  const response = await env.DP1_PLAYLIST_ITEMS.list({
+    prefix: STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX,
+    limit,
+    cursor: options.cursor,
+  });
+
+  const items: PlaylistItem[] = [];
+
+  for (const key of response.keys) {
+    const itemData = await env.DP1_PLAYLIST_ITEMS.get(key.name);
+    if (itemData) {
+      items.push(JSON.parse(itemData) as PlaylistItem);
+    }
+  }
+
+  return {
+    items,
+    cursor: response.list_complete ? undefined : (response as any).cursor,
+    hasMore: !response.list_complete,
+  };
 }
 
 /**

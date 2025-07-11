@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { getPlaylistItemById, listPlaylistItemsByGroupId } from '../storage';
+import { getPlaylistItemById, listAllPlaylistItems, listPlaylistItemsByGroupId } from '../storage';
 
 // Create playlist items router
 const playlistItems = new Hono<{ Bindings: Env }>();
@@ -91,6 +91,7 @@ playlistItems.get('/', async c => {
     }
 
     // playlist-group is optional for playlist items query
+    let result;
     if (playlistGroupId) {
       // Validate playlist group ID format
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -106,12 +107,17 @@ playlistItems.get('/', async c => {
           400
         );
       }
+      result = await listPlaylistItemsByGroupId(playlistGroupId, c.env, {
+        limit,
+        cursor,
+      });
+    } else {
+      result = await listAllPlaylistItems(c.env, {
+        limit,
+        cursor,
+      });
     }
 
-    const result = await listPlaylistItemsByGroupId(playlistGroupId || '', c.env, {
-      limit,
-      cursor,
-    });
     return c.json(result);
   } catch (error) {
     console.error('Error retrieving playlist items:', error);

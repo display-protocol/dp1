@@ -1066,7 +1066,9 @@ describe('DP-1 Feed Operator API', () => {
         expect(response.status).toBe(200);
 
         const result = await response.json();
-        expect(result.items).toHaveLength(0);
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].id).toBe(createdPlaylist.items[0].id);
+        expect(result.items[0].title).toBe('Test Artwork');
         expect(result.hasMore).toBe(false);
       });
 
