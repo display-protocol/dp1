@@ -60,6 +60,7 @@ export interface Env {
   // Cloudflare KV bindings for serverless storage
   DP1_PLAYLISTS: KVNamespace;
   DP1_PLAYLIST_GROUPS: KVNamespace;
+  DP1_PLAYLIST_ITEMS: KVNamespace;
 
   // Optional environment variables
   ENVIRONMENT?: string;
@@ -276,7 +277,7 @@ export const PlaylistGroupUpdateSchema = z.object({
     .array(
       z
         .string()
-        .regex(/^https:\/\/[^\s]+$/)
+        .regex(/^http[s]?:\/\/[^\s]+$/)
         .max(1024)
     )
     .min(1)

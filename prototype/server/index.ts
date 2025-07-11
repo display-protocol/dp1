@@ -9,6 +9,7 @@ import {
 } from './middleware/auth';
 import { playlists } from './routes/playlists';
 import { playlistGroups } from './routes/playlistGroups';
+import playlistItems from './routes/playlistItems';
 
 /**
  * DP-1 Feed Operator API Server
@@ -44,6 +45,7 @@ app.get('/api/v1', c => {
     endpoints: {
       playlists: '/api/v1/playlists',
       playlistGroups: '/api/v1/playlist-groups',
+      playlistItems: '/api/v1/playlist-items',
       health: '/api/v1/health',
     },
     documentation: 'https://github.com/feralfile/dp-1/tree/main/docs',
@@ -63,6 +65,7 @@ app.get('/api/v1/health', c => {
 // Mount route modules under /api/v1
 app.route('/api/v1/playlists', playlists);
 app.route('/api/v1/playlist-groups', playlistGroups);
+app.route('/api/v1/playlist-items', playlistItems);
 
 // 404 handler for unmatched routes
 app.notFound(c => {
@@ -81,6 +84,8 @@ app.notFound(c => {
         'POST /api/v1/playlist-groups',
         'GET /api/v1/playlist-groups/:id',
         'PUT /api/v1/playlist-groups/:id',
+        'GET /api/v1/playlist-items',
+        'GET /api/v1/playlist-items/:id',
       ],
     },
     404

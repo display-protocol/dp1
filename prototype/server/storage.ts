@@ -1,4 +1,4 @@
-import type { Env, Playlist, PlaylistGroup } from './types';
+import type { Env, Playlist, PlaylistGroup, PlaylistItem } from './types';
 import { PlaylistSchema } from './types';
 
 // Updated KV Storage Keys with consistent prefixes
@@ -8,6 +8,10 @@ export const STORAGE_KEYS = {
   PLAYLIST_GROUP_ID_PREFIX: 'playlist-group:id:',
   PLAYLIST_GROUP_SLUG_PREFIX: 'playlist-group:slug:',
   PLAYLIST_BY_GROUP_PREFIX: 'playlist:playlist-group-id:',
+  PLAYLIST_ITEM_ID_PREFIX: 'playlist-item:id:',
+  PLAYLIST_ITEM_BY_GROUP_PREFIX: 'playlist-item:group-id:',
+  PLAYLIST_TO_GROUPS_PREFIX: 'playlist-to-groups:',
+  GROUP_TO_PLAYLISTS_PREFIX: 'group-to-playlists:',
   SERVER_KEYPAIR: 'server:keypair',
 } as const;
 
@@ -20,6 +24,28 @@ export interface PaginatedResult<T> {
 export interface ListOptions {
   limit?: number;
   cursor?: string;
+}
+
+/**
+ * Utility function to resolve identifier (UUID or slug) to actual ID
+ */
+async function resolveIdentifierToId(
+  identifier: string,
+  idPrefix: string,
+  slugPrefix: string,
+  kv: KVNamespace
+): Promise<string | null> {
+  // Check if it's a UUID (if not, assume it's a slug)
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+
+  if (isUuid) {
+    // It's a UUID, check if it exists
+    const exists = await kv.get(`${idPrefix}${identifier}`);
+    return exists ? identifier : null;
+  } else {
+    // It's a slug, get the ID
+    return await kv.get(`${slugPrefix}${identifier}`);
+  }
 }
 
 /**
@@ -71,7 +97,7 @@ function extractPlaylistIdentifierFromUrl(url: string): string | null {
 async function fetchAndValidatePlaylist(
   url: string,
   env: Env
-): Promise<{ id: string; playlist: Playlist } | null> {
+): Promise<{ id: string; playlist: Playlist; external: boolean } | null> {
   try {
     // Check if this is a self-hosted URL
     if (isSelfHostedUrl(url, env.SELF_HOSTED_DOMAINS ?? null)) {
@@ -92,7 +118,7 @@ async function fetchAndValidatePlaylist(
 
       // For self-hosted playlists, we trust our own data and skip validation
       console.log(`Successfully retrieved self-hosted playlist ${playlist.id} from database`);
-      return { id: playlist.id, playlist };
+      return { id: playlist.id, playlist, external: false };
     }
 
     // For external URLs, use the normal fetch approach
@@ -116,9 +142,105 @@ async function fetchAndValidatePlaylist(
     }
 
     const playlist = validationResult.data;
-    return { id: playlist.id, playlist };
+    return { id: playlist.id, playlist, external: true };
   } catch (error) {
     console.error(`Error fetching/parsing playlist from ${url}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get all playlist IDs that belong to a specific group (efficient lookup)
+ */
+async function getPlaylistsForGroup(groupId: string, env: Env): Promise<string[]> {
+  try {
+    const prefix = `${STORAGE_KEYS.GROUP_TO_PLAYLISTS_PREFIX}${groupId}:`;
+    const listResult = await env.DP1_PLAYLISTS.list({ prefix });
+
+    // Extract playlist IDs from the key names
+    const playlistIds = listResult.keys
+      .map(key => {
+        // Key format: "group-to-playlists:groupId:playlistId"
+        const parts = key.name.split(':');
+        return parts[parts.length - 1]; // Get the last part (playlistId)
+      })
+      .filter((playlistId): playlistId is string => playlistId !== undefined);
+
+    return playlistIds;
+  } catch (error) {
+    console.error('Error getting playlists for group:', error);
+    return [];
+  }
+}
+
+/**
+ * Remove all bidirectional mappings for a specific group (efficient cleanup)
+ */
+async function removeAllPlaylistToGroupsMappings(groupId: string, env: Env): Promise<void> {
+  try {
+    // First, get all playlists that belong to this group using efficient lookup
+    const playlistIds = await getPlaylistsForGroup(groupId, env);
+
+    const deletePromises: Promise<void>[] = [];
+
+    // Delete both directions of the mapping for each playlist
+    for (const playlistId of playlistIds) {
+      // Delete playlist-to-groups mapping
+      deletePromises.push(
+        env.DP1_PLAYLISTS.delete(
+          `${STORAGE_KEYS.PLAYLIST_TO_GROUPS_PREFIX}${playlistId}:${groupId}`
+        )
+      );
+      // Delete group-to-playlists mapping
+      deletePromises.push(
+        env.DP1_PLAYLISTS.delete(
+          `${STORAGE_KEYS.GROUP_TO_PLAYLISTS_PREFIX}${groupId}:${playlistId}`
+        )
+      );
+    }
+
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error('Error removing all playlist-to-groups mappings for group:', error);
+  }
+}
+
+/**
+ * Get all playlist group IDs that a playlist belongs to (efficient reverse lookup)
+ */
+export async function getPlaylistGroupsForPlaylist(
+  playlistId: string,
+  env: Env
+): Promise<string[]> {
+  try {
+    const prefix = `${STORAGE_KEYS.PLAYLIST_TO_GROUPS_PREFIX}${playlistId}:`;
+    const listResult = await env.DP1_PLAYLISTS.list({ prefix });
+
+    // Extract group IDs from the key names
+    const groupIds = listResult.keys
+      .map(key => {
+        // Key format: "playlist-to-groups:playlistId:groupId"
+        const parts = key.name.split(':');
+        return parts[parts.length - 1]; // Get the last part (groupId)
+      })
+      .filter((groupId): groupId is string => groupId !== undefined);
+
+    return groupIds;
+  } catch (error) {
+    console.error('Error getting playlist groups for playlist:', error);
+    return [];
+  }
+}
+
+/**
+ * Helper function to find the first playlist group ID for a playlist (backwards compatibility)
+ */
+async function getPlaylistGroupForPlaylist(playlistId: string, env: Env): Promise<string | null> {
+  try {
+    const groupIds = await getPlaylistGroupsForPlaylist(playlistId, env);
+    return groupIds.length > 0 ? groupIds[0]! : null;
+  } catch (error) {
+    console.error('Error finding playlist group for playlist:', error);
     return null;
   }
 }
@@ -128,6 +250,17 @@ async function fetchAndValidatePlaylist(
  */
 export async function savePlaylist(playlist: Playlist, env: Env): Promise<boolean> {
   try {
+    // Get existing playlist to check for updates
+    const existingPlaylist = await getPlaylistByIdOrSlug(playlist.id, env);
+
+    // Find the playlist group this playlist belongs to
+    const playlistGroupId = await getPlaylistGroupForPlaylist(playlist.id, env);
+
+    // If this is an update, clean up old playlist items first
+    if (existingPlaylist && existingPlaylist.items.length > 0) {
+      await deletePlaylistItems(playlistGroupId, existingPlaylist.items, env);
+    }
+
     const playlistData = JSON.stringify(playlist);
 
     // Create batch operations for multiple indexes
@@ -139,6 +272,12 @@ export async function savePlaylist(playlist: Playlist, env: Env): Promise<boolea
     ];
 
     await Promise.all(operations);
+
+    // Save playlist items with secondary indexes
+    if (playlist.items.length > 0) {
+      await savePlaylistItems(playlistGroupId, playlist.items, env);
+    }
+
     return true;
   } catch (error) {
     console.error('Error saving playlist:', error);
@@ -154,19 +293,14 @@ export async function getPlaylistByIdOrSlug(
   env: Env
 ): Promise<Playlist | null> {
   try {
-    let playlistId = identifier;
-
-    // Check if it's a UUID (if not, assume it's a slug)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      identifier
+    const playlistId = await resolveIdentifierToId(
+      identifier,
+      STORAGE_KEYS.PLAYLIST_ID_PREFIX,
+      STORAGE_KEYS.PLAYLIST_SLUG_PREFIX,
+      env.DP1_PLAYLISTS
     );
 
-    if (!isUuid) {
-      // It's a slug, get the ID first
-      const id = await env.DP1_PLAYLISTS.get(`${STORAGE_KEYS.PLAYLIST_SLUG_PREFIX}${identifier}`);
-      if (!id) return null;
-      playlistId = id;
-    }
+    if (!playlistId) return null;
 
     const playlistData = await env.DP1_PLAYLISTS.get(
       `${STORAGE_KEYS.PLAYLIST_ID_PREFIX}${playlistId}`
@@ -314,7 +448,7 @@ export async function savePlaylistGroup(playlistGroup: PlaylistGroup, env: Env):
 
     // Filter out failed validations
     const validPlaylists = validatedPlaylists.filter(
-      (result): result is { id: string; playlist: Playlist } => result !== null
+      (result): result is { id: string; playlist: Playlist; external: boolean } => result !== null
     );
 
     // If there are no valid playlists, fail
@@ -345,7 +479,7 @@ export async function savePlaylistGroup(playlistGroup: PlaylistGroup, env: Env):
       ),
     ];
 
-    // If this is an update, clean up all old playlist group indexes
+    // If this is an update, clean up all old playlist group indexes and playlist-to-groups mappings
     const existingGroup = await getPlaylistGroupByIdOrSlug(playlistGroup.id, env);
     if (existingGroup) {
       const groupIndexPrefix = `${STORAGE_KEYS.PLAYLIST_BY_GROUP_PREFIX}${playlistGroup.id}:`;
@@ -354,12 +488,15 @@ export async function savePlaylistGroup(playlistGroup: PlaylistGroup, env: Env):
       for (const indexKey of existingIndexes.keys) {
         operations.push(env.DP1_PLAYLISTS.delete(indexKey.name));
       }
+
+      // Clean up old playlist-to-groups mappings for this group
+      await removeAllPlaylistToGroupsMappings(playlistGroup.id, env);
     }
 
     // Store external playlists and create group indexes
     for (const validPlaylist of validPlaylists) {
       // If it's an external playlist with data, store it
-      if (validPlaylist.playlist) {
+      if (validPlaylist.external) {
         operations.push(
           env.DP1_PLAYLISTS.put(
             `${STORAGE_KEYS.PLAYLIST_ID_PREFIX}${validPlaylist.id}`,
@@ -379,6 +516,49 @@ export async function savePlaylistGroup(playlistGroup: PlaylistGroup, env: Env):
           validPlaylist.id
         )
       );
+
+      // Add bidirectional mappings for efficient lookups
+      operations.push(
+        // playlist-to-groups mapping (playlist → groups lookup)
+        env.DP1_PLAYLISTS.put(
+          `${STORAGE_KEYS.PLAYLIST_TO_GROUPS_PREFIX}${validPlaylist.id}:${playlistGroup.id}`,
+          playlistGroup.id
+        ),
+        // group-to-playlists mapping (group → playlists lookup)
+        env.DP1_PLAYLISTS.put(
+          `${STORAGE_KEYS.GROUP_TO_PLAYLISTS_PREFIX}${playlistGroup.id}:${validPlaylist.id}`,
+          validPlaylist.id
+        )
+      );
+    }
+
+    // Add playlist item operations to the same batch
+    for (const validPlaylist of validPlaylists) {
+      if (
+        validPlaylist.playlist &&
+        validPlaylist.external &&
+        validPlaylist.playlist.items.length > 0
+      ) {
+        for (const item of validPlaylist.playlist.items) {
+          const itemData = JSON.stringify(item);
+
+          // Main record by playlist item ID
+          operations.push(
+            env.DP1_PLAYLIST_ITEMS.put(
+              `${STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX}${item.id}`,
+              itemData
+            )
+          );
+
+          // Secondary index by playlist group ID
+          operations.push(
+            env.DP1_PLAYLIST_ITEMS.put(
+              `${STORAGE_KEYS.PLAYLIST_ITEM_BY_GROUP_PREFIX}${playlistGroup.id}:${item.id}`,
+              item.id
+            )
+          );
+        }
+      }
     }
 
     await Promise.all(operations);
@@ -397,21 +577,14 @@ export async function getPlaylistGroupByIdOrSlug(
   env: Env
 ): Promise<PlaylistGroup | null> {
   try {
-    let groupId = identifier;
-
-    // Check if it's a UUID (if not, assume it's a slug)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      identifier
+    const groupId = await resolveIdentifierToId(
+      identifier,
+      STORAGE_KEYS.PLAYLIST_GROUP_ID_PREFIX,
+      STORAGE_KEYS.PLAYLIST_GROUP_SLUG_PREFIX,
+      env.DP1_PLAYLIST_GROUPS
     );
 
-    if (!isUuid) {
-      // It's a slug, get the ID first
-      const id = await env.DP1_PLAYLIST_GROUPS.get(
-        `${STORAGE_KEYS.PLAYLIST_GROUP_SLUG_PREFIX}${identifier}`
-      );
-      if (!id) return null;
-      groupId = id;
-    }
+    if (!groupId) return null;
 
     const groupData = await env.DP1_PLAYLIST_GROUPS.get(
       `${STORAGE_KEYS.PLAYLIST_GROUP_ID_PREFIX}${groupId}`
@@ -471,10 +644,166 @@ export async function listAllPlaylistGroups(
 }
 
 /**
+ * Save playlist items to KV with secondary indexes
+ */
+export async function savePlaylistItems(
+  playlistGroupId: string | null,
+  items: PlaylistItem[],
+  env: Env
+): Promise<boolean> {
+  try {
+    const operations: Promise<void>[] = [];
+
+    // Store each playlist item with secondary indexes
+    for (const item of items) {
+      const itemData = JSON.stringify(item);
+
+      // Main record by playlist item ID
+      operations.push(
+        env.DP1_PLAYLIST_ITEMS.put(`${STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX}${item.id}`, itemData)
+      );
+
+      // Secondary index by playlist group ID (if applicable)
+      if (playlistGroupId) {
+        operations.push(
+          env.DP1_PLAYLIST_ITEMS.put(
+            `${STORAGE_KEYS.PLAYLIST_ITEM_BY_GROUP_PREFIX}${playlistGroupId}:${item.id}`,
+            item.id
+          )
+        );
+      }
+    }
+
+    await Promise.all(operations);
+    return true;
+  } catch (error) {
+    console.error('Error saving playlist items:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete playlist items by playlist group ID
+ */
+export async function deletePlaylistItems(
+  playlistGroupId: string | null,
+  items: PlaylistItem[],
+  env: Env
+): Promise<boolean> {
+  try {
+    const operations: Promise<void>[] = [];
+
+    // Delete each playlist item and its indexes
+    for (const item of items) {
+      // Delete main record
+      operations.push(
+        env.DP1_PLAYLIST_ITEMS.delete(`${STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX}${item.id}`)
+      );
+
+      // Delete secondary index by playlist group ID (if applicable)
+      if (playlistGroupId) {
+        operations.push(
+          env.DP1_PLAYLIST_ITEMS.delete(
+            `${STORAGE_KEYS.PLAYLIST_ITEM_BY_GROUP_PREFIX}${playlistGroupId}:${item.id}`
+          )
+        );
+      }
+    }
+
+    await Promise.all(operations);
+    return true;
+  } catch (error) {
+    console.error('Error deleting playlist items:', error);
+    return false;
+  }
+}
+
+/**
+ * Get a playlist item by ID
+ */
+export async function getPlaylistItemById(itemId: string, env: Env): Promise<PlaylistItem | null> {
+  try {
+    const itemData = await env.DP1_PLAYLIST_ITEMS.get(
+      `${STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX}${itemId}`
+    );
+    if (!itemData) return null;
+
+    return JSON.parse(itemData) as PlaylistItem;
+  } catch (error) {
+    console.error('Error getting playlist item:', error);
+    return null;
+  }
+}
+
+/**
+ * List playlist items by playlist group ID with pagination
+ */
+export async function listPlaylistItemsByGroupId(
+  playlistGroupId: string,
+  env: Env,
+  options: ListOptions = {}
+): Promise<PaginatedResult<PlaylistItem>> {
+  try {
+    let limit = options.limit || 100;
+    if (limit > 100) {
+      limit = 100;
+    }
+
+    const response = await env.DP1_PLAYLIST_ITEMS.list({
+      prefix: `${STORAGE_KEYS.PLAYLIST_ITEM_BY_GROUP_PREFIX}${playlistGroupId}:`,
+      limit,
+      cursor: options.cursor,
+    });
+
+    const playlistItems: PlaylistItem[] = [];
+
+    // Use Promise.all to fetch all playlist items in parallel
+    const fetchPromises = response.keys.map(async key => {
+      try {
+        // Parse the playlist item ID directly from the key
+        // Key format: playlist-item:group-id:$group-id:$playlist-item-id
+        const keyParts = key.name.split(':');
+        const playlistItemId = keyParts[keyParts.length - 1]; // Last part is the playlist item ID
+
+        const itemData = await env.DP1_PLAYLIST_ITEMS.get(
+          `${STORAGE_KEYS.PLAYLIST_ITEM_ID_PREFIX}${playlistItemId}`
+        );
+        if (itemData) {
+          return JSON.parse(itemData) as PlaylistItem;
+        }
+      } catch (error) {
+        console.error(`Error parsing playlist item from group reference ${key.name}:`, error);
+      }
+      return null;
+    });
+
+    const results = await Promise.all(fetchPromises);
+    playlistItems.push(...results.filter((item): item is PlaylistItem => item !== null));
+
+    return {
+      items: playlistItems,
+      cursor: response.list_complete ? undefined : (response as any).cursor,
+      hasMore: !response.list_complete,
+    };
+  } catch (error) {
+    console.error('Error listing playlist items by group:', error);
+    return { items: [], hasMore: false };
+  }
+}
+
+/**
  * Delete a playlist and all its indexes
  */
 export async function deletePlaylist(playlist: Playlist, env: Env): Promise<boolean> {
   try {
+    // Find the playlist group this playlist belongs to
+    const playlistGroupId = await getPlaylistGroupForPlaylist(playlist.id, env);
+
+    // Delete playlist items first
+    if (playlist.items.length > 0) {
+      await deletePlaylistItems(playlistGroupId, playlist.items, env);
+    }
+
     const operations = [
       env.DP1_PLAYLISTS.delete(`${STORAGE_KEYS.PLAYLIST_ID_PREFIX}${playlist.id}`),
       env.DP1_PLAYLISTS.delete(`${STORAGE_KEYS.PLAYLIST_SLUG_PREFIX}${playlist.slug}`),
@@ -496,6 +825,12 @@ export async function deletePlaylistGroup(
   env: Env
 ): Promise<boolean> {
   try {
+    // First, delete all playlist items associated with this group
+    const playlistItems = await listPlaylistItemsByGroupId(playlistGroup.id, env, { limit: 1000 });
+    if (playlistItems.items.length > 0) {
+      await deletePlaylistItems(playlistGroup.id, playlistItems.items, env);
+    }
+
     const operations = [
       env.DP1_PLAYLIST_GROUPS.delete(`${STORAGE_KEYS.PLAYLIST_GROUP_ID_PREFIX}${playlistGroup.id}`),
       env.DP1_PLAYLIST_GROUPS.delete(
@@ -517,6 +852,10 @@ export async function deletePlaylistGroup(
     }
 
     await Promise.all(operations);
+
+    // Remove all playlist-to-groups mappings for this group
+    await removeAllPlaylistToGroupsMappings(playlistGroup.id, env);
+
     return true;
   } catch (error) {
     console.error('Error deleting playlist group:', error);
