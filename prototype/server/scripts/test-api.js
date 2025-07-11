@@ -563,6 +563,283 @@ async function testEmptyListing() {
   }
 }
 
+async function testPlaylistItemById() {
+  if (!createdPlaylistId) {
+    console.log('\n⚠️  Skipping playlist item by ID test - no playlist ID available');
+    return true;
+  }
+
+  console.log('\n🎯 Testing GET /api/v1/playlist-items/{id}...');
+
+  // First get the playlist to find an item ID
+  const playlistResponse = await makeRequest('GET', `/api/v1/playlists/${createdPlaylistId}`);
+  if (
+    !playlistResponse.ok ||
+    !playlistResponse.data.items ||
+    playlistResponse.data.items.length === 0
+  ) {
+    console.log('❌ Failed to get playlist or playlist has no items');
+    return false;
+  }
+
+  const playlistItemId = playlistResponse.data.items[0].id;
+  console.log(`   Testing with playlist item ID: ${playlistItemId}`);
+
+  const response = await makeRequest('GET', `/api/v1/playlist-items/${playlistItemId}`);
+
+  if (response.ok) {
+    console.log('✅ Playlist item retrieved successfully');
+    console.log(`   ID: ${response.data.id}`);
+    console.log(`   Title: ${response.data.title || 'N/A'}`);
+    console.log(`   Source: ${response.data.source}`);
+    console.log(`   Duration: ${response.data.duration}`);
+    console.log(`   License: ${response.data.license}`);
+
+    if (response.data.id === playlistItemId) {
+      console.log('✅ Correct playlist item returned');
+    } else {
+      console.log('❌ Wrong playlist item returned');
+      return false;
+    }
+  } else {
+    console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);
+  }
+
+  return response.ok;
+}
+
+async function testPlaylistItemsByGroup() {
+  if (!createdPlaylistGroupId) {
+    console.log('\n⚠️  Skipping playlist items by group test - no playlist group ID available');
+    return true;
+  }
+
+  console.log('\n📂 Testing GET /api/v1/playlist-items?playlist-group={id}...');
+  const response = await makeRequest(
+    'GET',
+    `/api/v1/playlist-items?playlist-group=${createdPlaylistGroupId}`
+  );
+
+  if (response.ok) {
+    console.log('✅ Playlist items retrieved by group successfully');
+    const result = response.data;
+
+    if (result && Array.isArray(result.items)) {
+      console.log(`   Count: ${result.items.length}`);
+      console.log(`   Has more: ${result.hasMore || false}`);
+
+      if (result.items.length > 0) {
+        console.log(`   First item ID: ${result.items[0].id}`);
+        console.log(`   First item title: ${result.items[0].title || 'N/A'}`);
+      }
+    } else {
+      console.log('❌ Expected paginated result format with items array');
+      return false;
+    }
+  } else {
+    console.log(`❌ Failed: ${response.status} - ${JSON.stringify(response.data)}`);
+  }
+
+  return response.ok;
+}
+
+async function testPlaylistItemsRequiredParameter() {
+  console.log('\n🚫 Testing playlist items endpoint requires playlist-group parameter...');
+  const response = await makeRequest('GET', '/api/v1/playlist-items');
+
+  if (response.status === 400) {
+    console.log('✅ Correctly rejected request without playlist-group parameter');
+    const data = response.data;
+    if (data.error === 'missing_playlist_group') {
+      console.log('✅ Correct error code returned');
+    } else {
+      console.log(`❌ Expected error code 'missing_playlist_group', got '${data.error}'`);
+      return false;
+    }
+  } else {
+    console.log(`❌ Expected 400, got ${response.status}`);
+    return false;
+  }
+
+  return true;
+}
+
+async function testPlaylistItemsInvalidIds() {
+  console.log('\n🚫 Testing playlist items with invalid IDs...');
+
+  let allCorrect = true;
+
+  // Test invalid playlist item ID format
+  const invalidItemResponse = await makeRequest('GET', '/api/v1/playlist-items/invalid-id');
+  if (invalidItemResponse.status === 400) {
+    console.log('✅ Correctly rejected invalid playlist item ID format');
+  } else {
+    console.log(`❌ Expected 400 for invalid playlist item ID, got ${invalidItemResponse.status}`);
+    allCorrect = false;
+  }
+
+  // Test invalid playlist group ID format
+  const invalidGroupResponse = await makeRequest(
+    'GET',
+    '/api/v1/playlist-items?playlist-group=invalid@id'
+  );
+  if (invalidGroupResponse.status === 400) {
+    console.log('✅ Correctly rejected invalid playlist group ID format');
+  } else {
+    console.log(
+      `❌ Expected 400 for invalid playlist group ID, got ${invalidGroupResponse.status}`
+    );
+    allCorrect = false;
+  }
+
+  // Test non-existent playlist item ID (valid format but not found)
+  const notFoundItemResponse = await makeRequest(
+    'GET',
+    '/api/v1/playlist-items/00000000-0000-0000-0000-000000000000'
+  );
+  if (notFoundItemResponse.status === 404) {
+    console.log('✅ Correctly returned 404 for non-existent playlist item');
+  } else {
+    console.log(
+      `❌ Expected 404 for non-existent playlist item, got ${notFoundItemResponse.status}`
+    );
+    allCorrect = false;
+  }
+
+  return allCorrect;
+}
+
+async function testPlaylistItemsPagination() {
+  if (!createdPlaylistGroupId) {
+    console.log('\n⚠️  Skipping playlist items pagination test - no playlist group ID available');
+    return true;
+  }
+
+  console.log('\n📄 Testing playlist items pagination...');
+
+  // Test with limit
+  const limitResponse = await makeRequest(
+    'GET',
+    `/api/v1/playlist-items?playlist-group=${createdPlaylistGroupId}&limit=1`
+  );
+
+  if (limitResponse.ok) {
+    const result = limitResponse.data;
+    if (result.items && result.items.length <= 1) {
+      console.log('✅ Limit parameter working correctly for playlist items');
+
+      // If there are more items and a cursor, test cursor pagination
+      if (result.cursor && result.hasMore) {
+        const cursorResponse = await makeRequest(
+          'GET',
+          `/api/v1/playlist-items?playlist-group=${createdPlaylistGroupId}&limit=1&cursor=${encodeURIComponent(result.cursor)}`
+        );
+        if (cursorResponse.ok) {
+          console.log('✅ Cursor pagination working correctly for playlist items');
+        } else {
+          console.log('❌ Cursor pagination failed for playlist items');
+          return false;
+        }
+      } else {
+        console.log('ℹ️  No cursor available for playlist items (only one page of results)');
+      }
+    } else {
+      console.log('❌ Limit parameter not working correctly for playlist items');
+      return false;
+    }
+  } else {
+    console.log(`❌ Playlist items pagination test failed: ${limitResponse.status}`);
+    return false;
+  }
+
+  return true;
+}
+
+async function testPlaylistItemsUpdate() {
+  if (!createdPlaylistId) {
+    console.log('\n⚠️  Skipping playlist items update test - no playlist ID available');
+    return true;
+  }
+
+  console.log('\n🔄 Testing playlist items update via playlist update...');
+
+  // First get the current playlist item ID
+  const initialPlaylist = await makeRequest('GET', `/api/v1/playlists/${createdPlaylistId}`);
+  if (
+    !initialPlaylist.ok ||
+    !initialPlaylist.data.items ||
+    initialPlaylist.data.items.length === 0
+  ) {
+    console.log('❌ Failed to get initial playlist or playlist has no items');
+    return false;
+  }
+
+  const originalItemId = initialPlaylist.data.items[0].id;
+  console.log(`   Original playlist item ID: ${originalItemId}`);
+
+  // Update the playlist with new items
+  const updateData = {
+    items: [
+      {
+        title: 'Updated Test Artwork',
+        source: 'https://example.com/updated-artwork.html',
+        duration: 600,
+        license: 'token',
+      },
+    ],
+  };
+
+  const updateResponse = await makeRequest(
+    'PUT',
+    `/api/v1/playlists/${createdPlaylistId}`,
+    updateData
+  );
+
+  if (!updateResponse.ok) {
+    console.log(`❌ Failed to update playlist: ${updateResponse.status}`);
+    return false;
+  }
+
+  const updatedPlaylist = updateResponse.data;
+  const newItemId = updatedPlaylist.items[0].id;
+  console.log(`   New playlist item ID: ${newItemId}`);
+
+  // Verify the new item ID is different
+  if (newItemId !== originalItemId) {
+    console.log('✅ New playlist item has different ID (old item was replaced)');
+  } else {
+    console.log('❌ Playlist item ID did not change (should be replaced)');
+    return false;
+  }
+
+  // Verify the old item is no longer accessible
+  const oldItemResponse = await makeRequest('GET', `/api/v1/playlist-items/${originalItemId}`);
+  if (oldItemResponse.status === 404) {
+    console.log('✅ Old playlist item no longer accessible');
+  } else {
+    console.log(`❌ Old playlist item still accessible (status: ${oldItemResponse.status})`);
+    return false;
+  }
+
+  // Verify the new item is accessible
+  const newItemResponse = await makeRequest('GET', `/api/v1/playlist-items/${newItemId}`);
+  if (newItemResponse.ok) {
+    console.log('✅ New playlist item is accessible');
+    const newItem = newItemResponse.data;
+    if (newItem.title === 'Updated Test Artwork' && newItem.license === 'token') {
+      console.log('✅ New playlist item has correct updated data');
+    } else {
+      console.log('❌ New playlist item does not have expected updated data');
+      return false;
+    }
+  } else {
+    console.log(`❌ New playlist item not accessible (status: ${newItemResponse.status})`);
+    return false;
+  }
+
+  return true;
+}
+
 // Main test runner
 async function runTests() {
   console.log('🚀 Starting DP-1 Feed Operator API Tests (UUID + Slug Support)\n');
@@ -580,6 +857,12 @@ async function runTests() {
     { name: 'Get Playlist Group by UUID', fn: testGetPlaylistGroupByUUID },
     { name: 'Get Playlist Group by Slug', fn: testGetPlaylistGroupBySlug },
     { name: 'Playlist Group Filtering', fn: testPlaylistGroupFiltering },
+    { name: 'Get Playlist Item by ID', fn: testPlaylistItemById },
+    { name: 'List Playlist Items by Group', fn: testPlaylistItemsByGroup },
+    { name: 'Playlist Items Required Parameter', fn: testPlaylistItemsRequiredParameter },
+    { name: 'Playlist Items Invalid IDs', fn: testPlaylistItemsInvalidIds },
+    { name: 'Playlist Items Pagination', fn: testPlaylistItemsPagination },
+    { name: 'Playlist Items Update via Playlist', fn: testPlaylistItemsUpdate },
     { name: 'Identifier Validation (400/404)', fn: testInvalidIdentifiers },
     { name: 'Authentication Failure', fn: testAuthenticationFailure },
   ];

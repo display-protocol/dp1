@@ -112,6 +112,7 @@ const testEnv: Env = {
   ENVIRONMENT: 'test',
   DP1_PLAYLISTS: createMockKV() as any,
   DP1_PLAYLIST_GROUPS: createMockKV() as any,
+  DP1_PLAYLIST_ITEMS: createMockKV() as any,
 };
 
 const validPlaylist = {
@@ -138,9 +139,11 @@ describe('DP-1 Feed Operator API', () => {
     // Clear storage between tests
     const mockPlaylistKV = testEnv.DP1_PLAYLISTS as any;
     const mockGroupKV = testEnv.DP1_PLAYLIST_GROUPS as any;
+    const mockPlaylistItemsKV = testEnv.DP1_PLAYLIST_ITEMS as any;
 
     mockPlaylistKV.storage.clear();
     mockGroupKV.storage.clear();
+    mockPlaylistItemsKV.storage.clear();
   });
 
   describe('Health and Info Endpoints', () => {
@@ -941,6 +944,323 @@ describe('DP-1 Feed Operator API', () => {
         const data = await response.json();
         expect(data.items).toHaveLength(0);
         expect(data.hasMore).toBe(false);
+      });
+    });
+  });
+
+  describe('Playlist Items API', () => {
+    const validAuth = {
+      Authorization: 'Bearer test-secret-key',
+      'Content-Type': 'application/json',
+    };
+
+    let createdPlaylist: any;
+    let createdPlaylistGroup: any;
+
+    beforeEach(async () => {
+      // Create a playlist first
+      const playlistReq = new Request('http://localhost/api/v1/playlists', {
+        method: 'POST',
+        headers: validAuth,
+        body: JSON.stringify(validPlaylist),
+      });
+      const playlistResponse = await app.fetch(playlistReq, testEnv);
+      createdPlaylist = await playlistResponse.json();
+
+      // Mock fetch for playlist group validation to return the created playlist
+      global.fetch = vi.fn((url: string) => {
+        if (url.includes(createdPlaylist.id)) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(createdPlaylist),
+          } as Response);
+        }
+        return Promise.resolve({ ok: false, status: 404 } as Response);
+      }) as any;
+
+      // Create a playlist group that references the playlist
+      const groupData = {
+        title: 'Test Exhibition',
+        curator: 'Test Curator',
+        playlists: [`https://example.com/playlists/${createdPlaylist.id}`],
+      };
+
+      const groupReq = new Request('http://localhost/api/v1/playlist-groups', {
+        method: 'POST',
+        headers: validAuth,
+        body: JSON.stringify(groupData),
+      });
+      const groupResponse = await app.fetch(groupReq, testEnv);
+      createdPlaylistGroup = await groupResponse.json();
+    });
+
+    describe('GET /playlist-items/:id', () => {
+      it('should get playlist item by ID', async () => {
+        const playlistItemId = createdPlaylist.items[0].id;
+
+        const req = new Request(`http://localhost/api/v1/playlist-items/${playlistItemId}`);
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(200);
+
+        const playlistItem = await response.json();
+        expect(playlistItem.id).toBe(playlistItemId);
+        expect(playlistItem.title).toBe('Test Artwork');
+        expect(playlistItem.source).toBe('https://example.com/artwork.html');
+        expect(playlistItem.duration).toBe(300);
+        expect(playlistItem.license).toBe('open');
+      });
+
+      it('should return 404 for non-existent playlist item', async () => {
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items/550e8400-e29b-41d4-a716-446655440999`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(404);
+
+        const data = await response.json();
+        expect(data.error).toBe('not_found');
+        expect(data.message).toBe('Playlist item not found');
+      });
+
+      it('should return 400 for invalid playlist item ID format', async () => {
+        const req = new Request(`http://localhost/api/v1/playlist-items/invalid-id`);
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(400);
+
+        const data = await response.json();
+        expect(data.error).toBe('invalid_id');
+        expect(data.message).toBe('Playlist item ID must be a valid UUID');
+      });
+    });
+
+    describe('GET /playlist-items?playlist-group=', () => {
+      it('should list playlist items by playlist group ID', async () => {
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items?playlist-group=${createdPlaylistGroup.id}`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(200);
+
+        const result = await response.json();
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].id).toBe(createdPlaylist.items[0].id);
+        expect(result.items[0].title).toBe('Test Artwork');
+        expect(result.hasMore).toBe(false);
+      });
+
+      it('should return empty result for non-existent playlist group', async () => {
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items?playlist-group=550e8400-e29b-41d4-a716-446655440999`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(200);
+
+        const result = await response.json();
+        expect(result.items).toHaveLength(0);
+        expect(result.hasMore).toBe(false);
+      });
+
+      it('should require playlist-group parameter', async () => {
+        const req = new Request(`http://localhost/api/v1/playlist-items`);
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(400);
+
+        const data = await response.json();
+        expect(data.error).toBe('missing_playlist_group');
+        expect(data.message).toBe('playlist-group query parameter is required');
+      });
+
+      it('should validate playlist group ID format', async () => {
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items?playlist-group=invalid@id!`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(400);
+
+        const data = await response.json();
+        expect(data.error).toBe('invalid_playlist_group_id');
+        expect(data.message).toBe('Playlist group ID must be a valid UUID or slug');
+      });
+
+      it('should support pagination', async () => {
+        // Set up custom mock fetch for test playlists with multiple items
+        global.fetch = vi.fn((url: string) => {
+          if (url.includes('test-playlist-1')) {
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  dpVersion: '1.0.0',
+                  id: playlistId1,
+                  slug: playlistSlug1,
+                  title: 'Test External Playlist 1',
+                  created: '2024-01-01T00:00:00Z',
+                  signature: 'ed25519:0x1234567890abcdef',
+                  items: [
+                    {
+                      id: '550e8400-e29b-41d4-a716-446655440001',
+                      title: 'External Test Artwork 1',
+                      source: 'https://example.com/external-artwork1.html',
+                      duration: 300,
+                      license: 'open',
+                    },
+                    {
+                      id: '550e8400-e29b-41d4-a716-446655440002',
+                      title: 'External Test Artwork 2',
+                      source: 'https://example.com/external-artwork2.html',
+                      duration: 400,
+                      license: 'open',
+                    },
+                  ],
+                }),
+            } as Response);
+          }
+          if (url.includes('test-playlist-2')) {
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  dpVersion: '1.0.0',
+                  id: playlistId2,
+                  slug: playlistSlug2,
+                  title: 'Test External Playlist 2',
+                  created: '2024-01-01T00:00:00Z',
+                  signature: 'ed25519:0x1234567890abcdef',
+                  items: [
+                    {
+                      id: '550e8400-e29b-41d4-a716-446655440003',
+                      title: 'External Test Artwork 3',
+                      source: 'https://example.com/external-artwork3.html',
+                      duration: 500,
+                      license: 'open',
+                    },
+                  ],
+                }),
+            } as Response);
+          }
+          return Promise.resolve({ ok: false, status: 404 } as Response);
+        }) as any;
+
+        // Create a new playlist group with multiple playlists that have multiple items
+        const groupWithMultiplePlaylists = {
+          title: 'Pagination Test Group',
+          curator: 'Test Curator',
+          playlists: [
+            'https://example.com/playlists/test-playlist-1',
+            'https://example.com/playlists/test-playlist-2',
+          ],
+        };
+
+        const groupReq = new Request('http://localhost/api/v1/playlist-groups', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(groupWithMultiplePlaylists),
+        });
+        const groupResponse = await app.fetch(groupReq, testEnv);
+        expect(groupResponse.status).toBe(201);
+        const testGroup = await groupResponse.json();
+
+        // Test pagination with limit=1 (should return hasMore: true since we have 3 total items)
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items?playlist-group=${testGroup.id}&limit=1`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(200);
+
+        const result = await response.json();
+        expect(result.items).toHaveLength(1);
+        expect(result.hasMore).toBe(true);
+        expect(result.cursor).toBeDefined();
+      });
+
+      it('should validate limit parameter', async () => {
+        const req = new Request(
+          `http://localhost/api/v1/playlist-items?playlist-group=${createdPlaylistGroup.id}&limit=101`
+        );
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(400);
+
+        const data = await response.json();
+        expect(data.error).toBe('invalid_limit');
+        expect(data.message).toBe('Limit must be between 1 and 100');
+      });
+    });
+
+    describe('Playlist Item Updates (via Playlist Updates)', () => {
+      it('should update playlist items when updating playlist', async () => {
+        const originalItemId = createdPlaylist.items[0].id;
+
+        // Update the playlist with new items (should erase old playlist items and create new ones)
+        const updateData = {
+          items: [
+            {
+              title: 'Updated Artwork',
+              source: 'https://example.com/updated-artwork.html',
+              duration: 600,
+              license: 'token' as const,
+            },
+          ],
+        };
+
+        const updateReq = new Request(`http://localhost/api/v1/playlists/${createdPlaylist.id}`, {
+          method: 'PUT',
+          headers: validAuth,
+          body: JSON.stringify(updateData),
+        });
+        const updateResponse = await app.fetch(updateReq, testEnv);
+        expect(updateResponse.status).toBe(200);
+
+        const updatedPlaylist = await updateResponse.json();
+        const newItemId = updatedPlaylist.items[0].id;
+
+        // The new item should have a different ID
+        expect(newItemId).not.toBe(originalItemId);
+
+        // The old playlist item should no longer be accessible
+        const oldItemReq = new Request(`http://localhost/api/v1/playlist-items/${originalItemId}`);
+        const oldItemResponse = await app.fetch(oldItemReq, testEnv);
+        expect(oldItemResponse.status).toBe(404);
+
+        // The new playlist item should be accessible
+        const newItemReq = new Request(`http://localhost/api/v1/playlist-items/${newItemId}`);
+        const newItemResponse = await app.fetch(newItemReq, testEnv);
+        expect(newItemResponse.status).toBe(200);
+
+        const newItem = await newItemResponse.json();
+        expect(newItem.title).toBe('Updated Artwork');
+        expect(newItem.license).toBe('token');
+      });
+
+      it('should not allow passing playlist item IDs in playlist input', async () => {
+        // Try to create a playlist with playlist item IDs (should be ignored/stripped)
+        const playlistWithItemIds = {
+          dpVersion: '1.0.0',
+          title: 'Test Playlist with Item IDs',
+          items: [
+            {
+              id: '550e8400-e29b-41d4-a716-446655440123', // This should be ignored
+              title: 'Test Artwork',
+              source: 'https://example.com/artwork.html',
+              duration: 300,
+              license: 'open' as const,
+            },
+          ],
+        };
+
+        const req = new Request('http://localhost/api/v1/playlists', {
+          method: 'POST',
+          headers: validAuth,
+          body: JSON.stringify(playlistWithItemIds),
+        });
+        const response = await app.fetch(req, testEnv);
+        expect(response.status).toBe(201);
+
+        const playlist = await response.json();
+        // The playlist item should have a server-generated ID, not the one we provided
+        expect(playlist.items[0].id).not.toBe('550e8400-e29b-41d4-a716-446655440123');
+        expect(playlist.items[0].id).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        );
       });
     });
   });
