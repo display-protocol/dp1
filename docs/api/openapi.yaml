@@ -21,6 +21,8 @@ tags:
     description: CRUD for DP-1 playlists
   - name: Playlist-Groups
     description: CRUD for curator-authored collections (exhibitions)
+  - name: Playlist-Items
+    description: Read operations for individual playlist items
 
 ##########################################################################
 # 1 · SECURITY SCHEME — simplified API key authentication
@@ -626,6 +628,18 @@ components:
           $ref: '#/components/schemas/PaginationMeta'
       additionalProperties: false
 
+    PlaylistItemsResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaylistItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      additionalProperties: false
+
     ####################################################################
     # 2.8 Error response
     ####################################################################
@@ -848,6 +862,86 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           description: Invalid playlist group data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  #------------------------------#
+  # 4.3  PLAYLIST-ITEM ENDPOINTS #
+  #------------------------------#
+  /api/v1/playlist-items:
+    get:
+      tags: [Playlist-Items]
+      summary: List playlist items with optional filtering and pagination
+      parameters:
+        - name: cursor
+          in: query
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9]+$'
+            maxLength: 1024
+          example: "1234567890"
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+          example: 100
+        - name: playlist-group
+          in: query
+          description: Filter playlist items by playlist group ID (optional)
+          schema:
+            oneOf:
+              - type: string
+                format: uuid
+              - type: string
+                pattern: '^[a-zA-Z0-9-]+$'
+                maxLength: 64
+          example: "385f79b6-a45f-4c1c-8080-e93a192adccc"
+      responses:
+        '200':
+          description: Playlist items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistItemsResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/playlist-items/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: UUID for the playlist item
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Playlist-Items]
+      summary: Retrieve a playlist item by ID
+      responses:
+        '200':
+          description: Playlist item retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlaylistItem' }
+        '400':
+          description: Invalid playlist item ID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Playlist item not found
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
