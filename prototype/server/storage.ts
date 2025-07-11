@@ -852,6 +852,7 @@ export async function deletePlaylistGroup(
 ): Promise<boolean> {
   try {
     // First, delete all playlist items associated with this group
+    // FIXME: the limit is hardcoded to 1000, which is not ideal
     const playlistItems = await listPlaylistItemsByGroupId(playlistGroup.id, env, { limit: 1000 });
     if (playlistItems.items.length > 0) {
       await deletePlaylistItems(playlistGroup.id, playlistItems.items, env);
