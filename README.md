@@ -60,21 +60,13 @@ See the [DP-1 Validator repository](https://github.com/display-protocol/dp1-vali
 ### 🔧 **API Documentation**
 Explore `docs/feed-api.yaml` for the DP-1 Feed API specification with example requests and responses.
 
-## AI-First Philosophy
+## 📄 License
 
-DP-1 embraces five core design principles:
+Creative Commons Attribution 4.0 International Public License
 
-- **P1**: Natural language as the primary interface
-- **P2**: Context-aware playlist generation
-- **P3**: Seamless device coordination
-- **P4**: Intelligent content discovery
-- **P5**: Adaptive user experience
+Copyright (c) 2025 Feral File
 
-## License Modes
-
-- **Open**: Public domain artworks, no restrictions
-- **Token**: Wallet-based proof of ownership required
-- **Subscription**: JWT-based access control
+For detailed terms and conditions, please refer to the [LICENSE](LICENSE) file.
 
 ---
 
