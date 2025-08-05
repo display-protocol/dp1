@@ -1,4 +1,4 @@
-# DP‑1 Specification (v0.04‑draft)
+# DP‑1 Specification (v1.0.0)
 
 *A platform‑neutral protocol for distributing, verifying, and preserving blockchain‑native digital art (BNDA).* 
 
@@ -12,8 +12,6 @@
 2. A **deterministic capsule** (`*.dp1c`) for long‑term preservation of **code‑based art**.  
 3. A minimal **transport & auth profile** so playlists work across HTTP(S), IPFS, and offline media.  
 4. A **compliance suite & badging** model to ensure interoperability.
-
-*“v0.04‑draft” is the document revision; the wire format is already at dpVersion 1.0.0 and is not expected to change before GA.*
 
 ---
 
@@ -307,6 +305,8 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 ---
 
 ## 16 · Changelog
+
+* **v1.0.0 (2025-08-05)** Finalized and published the official v1.0.0.
 
 * **v0.04 (2025‑07‑08).** Replaced ad‑hoc whitespace rules with **JCS (RFC 8785)** canonical form for playlist signatures; clarified external public‑key distribution; limited device‑level edits to fields flagged **`userOverrides`**; editorial only—no schema or wire‑format changes.
 

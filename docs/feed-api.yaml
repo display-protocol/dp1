@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DP-1 Feed Operator API
-  version: 0.9.0-alpha
+  version: v1.0.0
   description: |
     REST interface for creating, updating, and retrieving DP-1 playlists and
     playlist-groups (exhibitions) with **API key authentication**.
