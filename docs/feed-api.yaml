@@ -53,7 +53,7 @@ components:
           enum: [fit, fill, stretch, auto]
           description: |
             - fit: entire artwork visible with letterbox
-            - fill: fill viewport cropping if needed  
+            - fill: fill viewport cropping if needed
             - stretch: fill both axes ignoring aspect
             - auto: player decides based on device/profile
         margin:
@@ -113,7 +113,7 @@ components:
         assetsSHA256:
           type: array
           maxItems: 1024
-          items: 
+          items:
             type: string
             pattern: '^[a-fA-F0-9]+$'
             maxLength: 64
@@ -232,14 +232,14 @@ components:
           example: "https://cdn.feralfile.com/payphone/index.html"
           maxLength: 1024
         duration:
-          type: number
+          type: integer
           minimum: 1
           description: Duration in seconds
           example: 300
         license:
           type: string
           enum: [open, token, subscription]
-          maxLength: 16          
+          maxLength: 16
         ref:
           type: string
           description: External manifest URL for metadata (OPTIONAL)
@@ -331,12 +331,12 @@ components:
               type: string
               enum: [open, token, subscription]
             duration:
-              type: number
+              type: integer
               minimum: 1
           example: {
             "display": {
               "scaling": "fit",
-              "background": "#000000", 
+              "background": "#000000",
               "margin": "5%"
             },
             "license": "open",
@@ -380,12 +380,12 @@ components:
               type: string
               enum: [open, token, subscription]
             duration:
-              type: number
+              type: integer
               minimum: 1
           example: {
             "display": {
               "scaling": "fit",
-              "background": "#000000", 
+              "background": "#000000",
               "margin": "5%"
             },
             "license": "open",
@@ -415,12 +415,12 @@ components:
               type: string
               enum: [open, token, subscription]
             duration:
-              type: number
+              type: integer
               minimum: 1
           example: {
             "display": {
               "scaling": "fit",
-              "background": "#000000", 
+              "background": "#000000",
               "margin": "5%"
             },
             "license": "open",
