@@ -239,12 +239,14 @@ Tar \+ Zstd; SHA‑256 of archive \= capsule CID.
 | **DP‑1 Deterministic** | Plus 8‑week Regenerate 2030 test.          |
 
 *Alpha must earn the **DP‑1 Compatible** badge; Deterministic comes in RC.*  
+
 ---
 
 ## 12 · Versioning & Extensions
 
 *SemVer*; players warn on major mismatch. Major bumps signal breaking changes, minor are additive, patch is editorial.  
 *Extension Registry* (`/extensions/registry.json`) governs new chains, display fields, etc.  
+
 ---
 
 ## 13 · Governance Roadmap
