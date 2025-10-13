@@ -89,7 +89,7 @@ See §4.
 
 ### 3.4 Metadata/controls manifest
 
-See [document](ref.md)
+See [document](ref-manifest.md)
 
 ---
 
