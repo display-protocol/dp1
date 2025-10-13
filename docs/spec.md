@@ -87,6 +87,10 @@ The Ed25519 public key that signs the first accepted version of a playlist defin
 
 See §4.
 
+### 3.4 Metadata/controls manifest
+
+See [document](ref.md)
+
 ---
 
 ## 4 · Display Preferences (`display`)
