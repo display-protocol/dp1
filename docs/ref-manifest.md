@@ -91,12 +91,15 @@ Defines display preference.
     }
   },
   "safety": {
-    "orientation": ["landscape", "portrait"],
+    "orientation": ["landscape", "portrait", "any"],
     "maxCpuPct": 90,
     "maxMemMB": 1024
   }
 }
 ```
+
+The player should use the default locale first; if not available, fall back to the manifest’s specified locale; if still unavailable, use the en locale as the final default. This ensures robust localization and a predictable fallback order.
+
 
 ## 6. Localization (`i18n`)
 
@@ -111,6 +114,7 @@ Provides localized text overrides for specific languages.
   }
 }
 ```
+
 
 ---
 
@@ -161,9 +165,9 @@ Players must remain fully functional even when manifests are unavailable.
         "name": "A. Example"
       }
     ],
-    "thumbnails": [
+    "thumbnails": {
         "default": { "uri": "ipfs://.../thumb_l.jpg", "w": 1280, "h": 720, "sha256": "..." }
-    ]
+    }
   },
   "controls": {
     "display": {
