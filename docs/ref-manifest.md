@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The `ref` manifest defines an **optional, data-only extension** to DP-1 playlist items. It carries structured metadata and playback control preferences that can be interpreted *offline* by compliant players. This design allows richer artwork descriptions and display guidance without depending on a live network connection.
+The `ref` manifest defines an **optional, data-only extension** to DP-1 playlist items. It carries structured metadata and playback control preferences that can be interpreted by compliant players. This design allows richer artwork descriptions and display guidance without depending on a live network connection.
 
 ---
 
@@ -25,7 +25,6 @@ When `ref` uses HTTPS, the `refHash` field is required for integrity.
 
 ## 2. Goals
 
-* **Offline-first:** essential metadata and control hints are usable without network.
 * **Deterministic merging:** predictable behavior across devices and players.
 * **Integrity-safe:** content-addressed or hash-pinned to prevent drift.
 * **Forward-compatible:** uses semantic versioning for evolvability.
@@ -98,9 +97,6 @@ Defines display preference.
 }
 ```
 
-The player should use the default locale first; if not available, fall back to the manifest’s specified locale; if still unavailable, use the en locale as the final default. This ensures robust localization and a predictable fallback order.
-
-
 ## 6. Localization (`i18n`)
 
 Provides localized text overrides for specific languages.
@@ -115,6 +111,7 @@ Provides localized text overrides for specific languages.
 }
 ```
 
+The player should use the default locale first; if not available, fall back to the manifest’s specified locale; if still unavailable, use the en locale as the final default. This ensures robust localization and a predictable fallback order.
 
 ---
 
