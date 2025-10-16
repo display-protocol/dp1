@@ -312,6 +312,8 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 
 ## 16 · Changelog
 
+* **v1.0.1 (2025-10-16)** Published metadata and controls manifest standard format v0.1.0.
+
 * **v1.0.0 (2025-08-05)** Finalized and published the official v1.0.0.
 
 * **v0.04 (2025‑07‑08).** Replaced ad‑hoc whitespace rules with **JCS (RFC 8785)** canonical form for playlist signatures; clarified external public‑key distribution; limited device‑level edits to fields flagged **`userOverrides`**; editorial only—no schema or wire‑format changes.
