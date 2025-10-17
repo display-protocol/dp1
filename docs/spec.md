@@ -32,11 +32,11 @@
 
 ## 3 · Playlist JSON
 
-### 3.1 Top‑Level Schema
+### 3.1 Top‑Level Schema
 
 ```
 {
-  "dpVersion": "1.0.0",          // SemVer
+  "dpVersion": "1.1.0",          // SemVer
   "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
   "title": "Sunset Collector Loop", // REQUIRED – 1‑200 chars
   "slug": "summer‑mix‑01", 
@@ -51,6 +51,20 @@
     "duration": 300
   },
   "items": [ PlaylistItem, ... ],
+  
+  // Multi-signature (v1.1.0+, recommended)
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6Mk…",
+      "ts": "2025-10-17T07:02:03Z",
+      "payload_hash": "sha256:0f4c0d87…",
+      "role": "curator",
+      "sig": "X2b7cX2sOe7lJ…"
+    }
+  ],
+  
+  // OR legacy single signature (v1.0.x, deprecated)
   "signature": "ed25519:<hex>"
 }
 ```
@@ -58,7 +72,11 @@
 *Inheritance rule*: each `PlaylistItem` starts with a copy of `defaults`; any fields set in the item replace the inherited values.
 
 **Authority model**  
-The Ed25519 public key that signs the first accepted version of a playlist defines the *creator*. *See §7.1 for signature rules.*
+For playlists using **multi-signature** (v1.1.0+): the `curator` role signature defines the primary creator, and additional signatures from other roles establish the trust chain and distribution authority.
+
+For playlists using **legacy signature** (v1.0.x): the Ed25519 public key that signs the first accepted version of a playlist defines the *creator*.
+
+*See §7.1 for complete signature rules and verification requirements.*
 
 ### 3.2 PlaylistItem Schema (excerpt)
 
@@ -185,11 +203,118 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
 ### 7.1 Playlist Signature
 
-Canonical form ≡ **\[JSON Canonicalization Scheme (JCS), [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)\]** UTF‑8 (no BOM, LF line terminators).  
-SHA‑256 → Ed25519 → embed as: `"signature": "ed25519:<hex>"`.
+#### 7.1.1 Multi-Signature Chain (v1.1.0+)
 
-Players MUST verify the Ed25519 signature against a trusted key that is either **(a)** shipped with the player, **(b)** pinned to the feed endpoint during provisioning, or **(c)** stored in the root of a signed *.dp1c* capsule.  
-The key itself is **not** transmitted inside the playlist.
+DP-1 supports a **signature chain** model where multiple entities can independently sign a playlist, establishing trust through multiple attestations. Each signature is computed over the canonical form of the entire playlist (excluding the `signature` and `signatures` fields themselves).
+
+**Canonical form** ≡ [JSON Canonicalization Scheme (JCS), [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)] UTF‑8 (no BOM, LF line terminators).
+
+Playlists using the multi-signature model include a top-level `signatures` array:
+
+```json
+{
+  "dpVersion": "1.1.0",
+  "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
+  "title": "Sunset Collector Loop",
+  "items": [...],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "ts": "2025-10-17T07:02:03Z",
+      "payload_hash": "sha256:0f4c0d87a1b2c3d4e5f6071829a1b2c3d4e5f6071829a1b2",
+      "role": "curator",
+      "sig": "X2b7cX2sOe7lJrN2R2d1xgIBt2m5jXvKxQx3k8Cq9fU"
+    },
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6Mkf5rGMoatrSj1f4CyvuHBeXJELe9RPdzo2rqqC2DoEvwW",
+      "ts": "2025-10-17T09:15:22Z",
+      "payload_hash": "sha256:0f4c0d87a1b2c3d4e5f6071829a1b2c3d4e5f6071829a1b2",
+      "role": "feed",
+      "sig": "Y7d3aY9tPf2mKsO3S5e2yhJCu3n6kYwLyRy4l9Dr0gV"
+    }
+  ]
+}
+```
+
+**Signature Object Fields:**
+
+| Field           | Type   | Description                                                                                                                                                                                   |
+| :-------------- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alg`           | string | Signature algorithm. **REQUIRED.** Supported: `"ed25519"`, `"eip191"` (Ethereum signed message), `"ecdsa-secp256k1"`, `"ecdsa-p256"`, etc.                                                      |
+| `kid`           | string | Key identifier in [W3C DID](https://www.w3.org/TR/did-core/) format (e.g., `did:key:z6Mk…`). **REQUIRED.** Used to retrieve the public key for verification.                                 |
+| `ts`            | string | ISO 8601 timestamp (UTC) when the signature was created. **REQUIRED.** Format: `YYYY-MM-DDTHH:MM:SSZ`.                                                                                       |
+| `payload_hash`  | string | SHA-256 hash of the canonical playlist payload (excluding `signature` and `signatures` fields). **REQUIRED.** Format: `sha256:<64-char-lowercase-hex>`.                                      |
+| `role`          | string | Role of the signing entity. **REQUIRED.** See role definitions below.                                                                                                                         |
+| `sig`           | string | Base64url-encoded signature bytes (no padding `=`). **REQUIRED.** The signature is computed over the `payload_hash` value (not the entire playlist), enabling efficient verification chains. |
+
+**Signature Roles:**
+
+| Role          | Definition                                                                                                                  |
+| :------------ | :-------------------------------------------------------------------------------------------------------------------------- |
+| `curator`     | The individual or entity who authored/curated the playlist.                                                                 |
+| `feed`        | The feed server operator distributing the playlist. Feed signatures establish the distribution chain of trust.              |
+| `agent`       | An automated service or AI agent that created the playlist on behalf of a user or institution.                              |
+| `institution` | A museum, gallery, or cultural institution that endorses or officially publishes the playlist.                              |
+| `licensor`    | An entity with licensing authority over the playlist content (e.g., rights holder, publisher).                              |
+
+**Signature Verification:**
+
+1. Players **MUST** verify at least one signature with role `"feed"` or `"curator"` (and `agent` if it's presented).
+2. Players **SHOULD** verify all signatures present in the chain.
+3. For each signature:
+   - Compute the canonical form of the playlist (excluding `signature` and `signatures` fields)
+   - Compute SHA-256 hash and verify it matches `payload_hash`
+   - Resolve the public key from `kid` (via DID resolution, local keystore, or JWKS endpoint)
+   - Verify `sig` using the specified `alg` and resolved public key
+4. Players **MAY** establish role-specific trust policies (e.g., require both `curator` and `institution` signatures for institutional displays).
+5. Signature timestamps (`ts`) establish ordering but are **not** enforced cryptographically; players **SHOULD** verify timestamps are reasonable (not future-dated beyond clock skew tolerance of ~5 minutes).
+
+#### 7.1.2 Legacy Signature (v1.0.x, Deprecated)
+
+**Deprecated as of v1.1.0.** The legacy single-signature format remains supported for backward compatibility but SHOULD NOT be used in new playlists.
+
+```json
+{
+  "dpVersion": "1.0.0",
+  "signature": "ed25519:a4f3c2d1b9e8f7a6b5c4d3e2f1a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1"
+}
+```
+
+Legacy signature verification:
+- Canonical form ≡ [JSON Canonicalization Scheme (JCS), [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)] UTF‑8 (no BOM, LF line terminators)
+- SHA‑256 → Ed25519 signature → embed as: `"signature": "ed25519:<hex>"`
+- Players verify against a trusted Ed25519 public key obtained from:
+  - **(a)** Player's embedded trust store
+  - **(b)** Feed endpoint's JWKS (JSON Web Key Set) at `/.well-known/jwks.json`
+  - **(c)** Root of signed *.dp1c* capsule
+- The public key is **not** transmitted inside the playlist
+
+#### 7.1.3 Player Implementation Requirements
+
+**Dual-signature support:**
+
+1. Players implementing v1.1.0+ **MUST** support both `signatures` (multi-sig) and `signature` (legacy).
+2. When both fields are present, players **MUST** prioritize `signatures` and **MAY** ignore the legacy `signature` field (though verifying both is recommended).
+3. Players **MUST** reject playlists where neither `signature` nor `signatures` is present (unless `license` mode is `"open"` and the player has been configured to allow unsigned open playlists).
+
+**Key resolution:**
+
+- For legacy `signature`: use feed server's JWKS endpoint (`GET /.well-known/jwks.json`) or pre-configured trust anchors.
+- For `signatures`: resolve each `kid` using:
+  - DID resolution (e.g., `did:key` method extracts the key directly from the identifier)
+  - Feed server's JWKS endpoint (if `kid` references a JWKS key ID)
+  - Local trust store or pinned keys
+- Players **SHOULD** cache resolved keys and **SHOULD** implement reasonable TTLs for remote key fetches.
+
+**Error handling:**
+
+- If signature verification fails, emit `sigInvalid` error (see §14).
+- Players **MAY** distinguish between `legacySigInvalid` and `multiSigInvalid` in logs/telemetry but SHOULD present a unified error to end users.
+- Players **MAY** implement a "partial trust" mode where playlists with some (but not all) valid signatures are accepted with a warning, subject to local policy.
+
+
 
 ### 7.2 License Modes
 
@@ -311,6 +436,8 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 ---
 
 ## 16 · Changelog
+
+* **v1.1.0 (2025-10-17)** Introduced **multi-signature chain** model with new `signatures` array field. Supports multiple signing entities with distinct roles (`curator`, `feed`, `agent`, `institution`, `licensor`). Signatures use DID-based key identifiers (`kid`) and support multiple algorithms (`ed25519`, `eip191`, `ecdsa-p256`,etc.). Legacy single `signature` field deprecated but remains supported for backward compatibility. Players can verify keys via DID resolution, JWKS endpoints, or local trust stores. See §7.1 for complete specification.
 
 * **v1.0.1 (2025-10-16)** Published metadata and controls manifest standard format v0.1.0.
 
