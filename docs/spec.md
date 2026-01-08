@@ -1,4 +1,4 @@
-# DP‑1 Specification (v1.0.0)
+# DP‑1 Specification (v1.1.0)
 
 *A platform‑neutral protocol for distributing, verifying, and preserving blockchain‑native digital art (BNDA).* 
 
