@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/schemas/v1.1.0/playlist.json",
+  "title": "DP-1 Playlist",
+  "description": "A platform-neutral playlist format for distributing, verifying, and preserving blockchain-native digital art (BNDA)",
+  "type": "object",
+  "required": ["dpVersion", "title", "items"],
+  "anyOf": [
+    {
+      "required": ["signatures"]
+    },
+    {
+      "required": ["signature"]
+    }
+  ],
+  "properties": {
+    "dpVersion": {
+      "type": "string",
+      "description": "Semantic version of the DP-1 specification",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["1.1.0", "1.0.0"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the playlist (UUID v4)",
+      "format": "uuid"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable title for the playlist",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly identifier for the playlist",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "created": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the playlist was created",
+      "format": "date-time"
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values inherited by all playlist items unless explicitly overridden",
+      "properties": {
+        "display": {
+          "$ref": "#/$defs/DisplayPrefs"
+        },
+        "license": {
+          "$ref": "#/$defs/LicenseMode"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Default duration in seconds for each item",
+          "minimum": 0
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "description": "Ordered list of playlist items",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/PlaylistItem"
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Multi-signature chain (v1.1.0+)",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Signature"
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Legacy single signature (v1.0.x, deprecated)",
+      "pattern": "^ed25519:[a-f0-9]+$",
+      "deprecated": true
+    }
+  },
+  "$defs": {
+    "PlaylistItem": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the item (UUID v4)",
+          "format": "uuid"
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL-friendly identifier for the item",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable title for the item"
+        },
+        "source": {
+          "type": "string",
+          "description": "URI to the artwork source",
+          "format": "uri"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration in seconds to display this item",
+          "minimum": 0
+        },
+        "license": {
+          "$ref": "#/$defs/LicenseMode"
+        },
+        "ref": {
+          "type": "string",
+          "description": "URI to external metadata/controls manifest",
+          "format": "uri"
+        },
+        "override": {
+          "type": "object",
+          "description": "Fields that override values from ref manifest"
+        },
+        "display": {
+          "$ref": "#/$defs/DisplayPrefs"
+        },
+        "repro": {
+          "$ref": "#/$defs/ReproBlock"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ProvenanceBlock"
+        }
+      }
+    },
+    "DisplayPrefs": {
+      "type": "object",
+      "description": "Display preferences for rendering artwork",
+      "properties": {
+        "scaling": {
+          "type": "string",
+          "description": "How to scale the artwork in the viewport",
+          "enum": ["fit", "fill", "stretch", "auto"],
+          "default": "fit"
+        },
+        "margin": {
+          "description": "Margin around artwork (number in px, string supports %, vw, vh)",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?(px|%|vw|vh)$"
+            }
+          ],
+          "default": 0
+        },
+        "background": {
+          "type": "string",
+          "description": "Background color (hex/RGB) or 'transparent'",
+          "default": "#000000",
+          "oneOf": [
+            {
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            {
+              "const": "transparent"
+            }
+          ]
+        },
+        "autoplay": {
+          "type": "boolean",
+          "description": "Attempt to start playback automatically",
+          "default": true
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Repeat automatically",
+          "default": true
+        },
+        "interaction": {
+          "type": "object",
+          "properties": {
+            "keyboard": {
+              "type": "array",
+              "description": "Allowed keyboard keys (W3C UI Events code values)",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "mouse": {
+              "type": "object",
+              "description": "Mouse interaction settings",
+              "properties": {
+                "click": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "scroll": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "drag": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "hover": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
+        "userOverrides": {
+          "type": "object",
+          "description": "Fields that viewers may override",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "ReproBlock": {
+      "type": "object",
+      "description": "Deterministic reproduction verification data",
+      "properties": {
+        "engineVersion": {
+          "type": "object",
+          "description": "Required engine version for deterministic reproduction",
+          "properties": {
+            "chromium": {
+              "type": "string"
+            },
+            "webkit": {
+              "type": "string"
+            },
+            "gecko": {
+              "type": "string"
+            }
+          }
+        },
+        "seed": {
+          "type": "string",
+          "description": "Hex-encoded seed value for deterministic randomness",
+          "pattern": "^0x[a-f0-9]+$"
+        },
+        "assetsSHA256": {
+          "type": "array",
+          "description": "SHA-256 hashes of all asset files",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "frameHash": {
+          "type": "object",
+          "description": "First-frame verification hashes",
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "phash": {
+              "type": "string",
+              "pattern": "^0x[a-f0-9]+$"
+            }
+          }
+        }
+      }
+    },
+    "ProvenanceBlock": {
+      "type": "object",
+      "description": "Links the artwork to on-chain or off-chain provenance",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type of provenance record",
+          "enum": ["onChain", "seriesRegistry", "offChainURI"]
+        },
+        "contract": {
+          "type": "object",
+          "description": "Smart contract details (required for onChain and seriesRegistry types)",
+          "properties": {
+            "chain": {
+              "type": "string",
+              "description": "Blockchain network",
+              "enum": ["evm", "tezos", "bitmark", "other"]
+            },
+            "standard": {
+              "type": "string",
+              "description": "Token standard",
+              "enum": ["erc721", "erc1155", "fa2", "other"]
+            },
+            "address": {
+              "type": "string",
+              "description": "Contract address"
+            },
+            "seriesId": {
+              "type": "integer",
+              "description": "Series identifier",
+              "minimum": 0
+            },
+            "tokenId": {
+              "type": "string",
+              "description": "Specific token/edition identifier"
+            },
+            "uri": {
+              "type": "string",
+              "description": "URI to token metadata (ipfs://, eth://, https://)",
+              "format": "uri"
+            },
+            "metaHash": {
+              "type": "string",
+              "description": "SHA-256 hash of metadata (required if uri is mutable)",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Documentary dependencies (never executed at runtime)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "chain": {
+                "type": "string",
+                "enum": ["evm", "tezos", "bitmark", "other"]
+              },
+              "standard": {
+                "type": "string",
+                "enum": ["erc721", "erc1155", "fa2", "other"]
+              },
+              "uri": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["onChain", "seriesRegistry"]
+              }
+            }
+          },
+          "then": {
+            "required": ["contract"]
+          }
+        }
+      ]
+    },
+    "Signature": {
+      "type": "object",
+      "description": "Multi-signature object (v1.1.0+)",
+      "required": ["alg", "kid", "ts", "payload_hash", "role", "sig"],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "description": "Signature algorithm",
+          "enum": ["ed25519", "eip191", "ecdsa-secp256k1", "ecdsa-p256"]
+        },
+        "kid": {
+          "type": "string",
+          "description": "Key identifier in W3C DID format",
+          "pattern": "^did:[a-z]+:.+$"
+        },
+        "ts": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when signature was created",
+          "format": "date-time"
+        },
+        "payload_hash": {
+          "type": "string",
+          "description": "SHA-256 hash of canonical playlist payload",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the signing entity",
+          "enum": ["curator", "feed", "agent", "institution", "licensor"]
+        },
+        "sig": {
+          "type": "string",
+          "description": "Base64url-encoded signature bytes (no padding)",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "LicenseMode": {
+      "type": "string",
+      "description": "License/authentication mode",
+      "enum": ["open", "token", "subscription"],
+      "default": "open"
+    }
+  }
+}

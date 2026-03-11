@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/channels/v0.1.0/schema.json",
+  "title": "DP-1 Channel Extension",
+  "description": "Channel schema extending DP-1 Playlist-Group for collaborative, persistent feeds with enhanced metadata and curation capabilities",
+  "type": "object",
+  "required": ["id", "slug", "title", "version", "created", "playlists"],
+  "anyOf": [
+    {
+      "required": ["signatures"]
+    },
+    {
+      "required": ["signature"]
+    }
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the channel (UUID v4)",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly identifier (lowercase, hyphens)",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Display name for the channel",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "version": {
+      "type": "string",
+      "description": "Channel extension version (SemVer)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created": {
+      "type": "string",
+      "description": "Channel creation timestamp (ISO 8601, UTC)",
+      "format": "date-time"
+    },
+    "playlists": {
+      "type": "array",
+      "description": "Ordered array of playlist URLs or identifiers",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "description": "URI to a DP-1 playlist JSON file"
+      }
+    },
+    "curators": {
+      "type": "array",
+      "description": "Array of curator entities",
+      "items": {
+        "$ref": "#/$defs/Entity"
+      }
+    },
+    "publisher": {
+      "description": "Publisher entity",
+      "$ref": "#/$defs/Entity"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Channel description or curatorial statement",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "coverImage": {
+      "type": "string",
+      "description": "Channel cover image (ipfs://, https://, ar://)",
+      "format": "uri"
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Multi-signature chain (v1.1.0+)",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Signature"
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Legacy single signature (v1.0.x, deprecated)",
+      "pattern": "^ed25519:[a-f0-9]+$",
+      "deprecated": true
+    }
+  },
+  "$defs": {
+    "Entity": {
+      "type": "object",
+      "description": "Unified entity format for curators and publishers with verifiable identities",
+      "required": ["name", "key"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Entity display name"
+        },
+        "key": {
+          "type": "string",
+          "description": "Verifiable identity in DID format",
+          "pattern": "^did:[a-z]+:.+$"
+        },
+        "url": {
+          "type": "string",
+          "description": "Entity website or profile URL",
+          "format": "uri"
+        }
+      }
+    },
+    "Signature": {
+      "type": "object",
+      "description": "Multi-signature object (v1.1.0+)",
+      "required": ["alg", "kid", "ts", "payload_hash", "role", "sig"],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "description": "Signature algorithm",
+          "enum": ["ed25519", "eip191", "ecdsa-secp256k1", "ecdsa-p256"]
+        },
+        "kid": {
+          "type": "string",
+          "description": "Key identifier in W3C DID format",
+          "pattern": "^did:[a-z]+:.+$"
+        },
+        "ts": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when signature was created",
+          "format": "date-time"
+        },
+        "payload_hash": {
+          "type": "string",
+          "description": "SHA-256 hash of canonical channel payload",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the signing entity",
+          "enum": ["curator", "feed", "agent", "institution", "licensor"]
+        },
+        "sig": {
+          "type": "string",
+          "description": "Base64url-encoded signature bytes (no padding)",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    }
+  }
+}

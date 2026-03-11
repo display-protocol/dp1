@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
+  "title": "DP-1 Playlist Extension",
+  "description": "Extensions to DP-1 playlists for dynamic item fetching and enhanced metadata",
+  "type": "object",
+  "properties": {
+    "curators": {
+      "type": "array",
+      "description": "Playlist-specific curators with verifiable identities",
+      "items": {
+        "$ref": "#/$defs/Entity"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Playlist description",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "coverImage": {
+      "type": "string",
+      "description": "Playlist cover image (ipfs://, https://, ar://)",
+      "format": "uri"
+    },
+    "dynamicQuery": {
+      "description": "Dynamic item fetching configuration",
+      "$ref": "#/$defs/DynamicQuery"
+    }
+  },
+  "$defs": {
+    "Entity": {
+      "type": "object",
+      "description": "Unified entity format for curators with verifiable identities",
+      "required": ["name", "key"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Curator display name"
+        },
+        "key": {
+          "type": "string",
+          "description": "Verifiable identity in DID format",
+          "pattern": "^did:[a-z]+:.+$"
+        },
+        "url": {
+          "type": "string",
+          "description": "Curator website or profile URL",
+          "format": "uri"
+        }
+      }
+    },
+    "DynamicQuery": {
+      "type": "object",
+      "description": "Machine-executable interface for fetching playlist items dynamically from external indexers",
+      "required": ["profile", "endpoint", "responseMapping"],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "description": "Resolution profile with version",
+          "enum": ["https-json-v1", "graphql-v1"]
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Indexer service endpoint URL",
+          "format": "uri"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP method (default: POST for graphql-v1, GET for https-json-v1)",
+          "enum": ["GET", "POST"]
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers to include in the request",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "query": {
+          "type": "string",
+          "description": "Query payload with optional {{...}} template placeholders"
+        },
+        "responseMapping": {
+          "description": "Instructions for parsing the indexer response",
+          "$ref": "#/$defs/ResponseMapping"
+        }
+      }
+    },
+    "ResponseMapping": {
+      "type": "object",
+      "description": "Configuration for extracting playlist items from indexer response",
+      "required": ["itemsPath", "itemSchema"],
+      "properties": {
+        "itemsPath": {
+          "type": "string",
+          "description": "JSON path to the array of items (dot notation)",
+          "examples": ["data.works", "artworks", "data.userWorks"]
+        },
+        "itemSchema": {
+          "type": "string",
+          "description": "Schema identifier referencing DP-1 version",
+          "pattern": "^dp1/\\d+\\.\\d+$",
+          "examples": ["dp1/1.0", "dp1/1.1"]
+        },
+        "itemMap": {
+          "type": "object",
+          "description": "Optional field mapping from response to DP-1 item schema",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "examples": [
+            {
+              "id": "artwork_id",
+              "title": "name",
+              "source": "media_url"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
