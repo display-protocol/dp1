@@ -9,8 +9,8 @@
     {
       "id": "channels",
       "name": "Channel Extension",
-      "version": "0.1.0",
-      "status": "draft",
+      "version": "1.0.0",
+      "status": "released",
       "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, and verifiable identities.",
       "compatibility": {
         "dpVersion": "1.0.0+",
@@ -18,8 +18,8 @@
       },
       "published": "2026-03-11T00:00:00Z",
       "resources": {
-        "specification": "https://dp1.feralfile.com/extensions/channels/v0.1.0/channel.md",
-        "schema": "https://dp1.feralfile.com/extensions/channels/v0.1.0/schema.json",
+        "specification": "https://dp1.feralfile.com/extensions/channels/v1.0.0/channel.md",
+        "schema": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
         "repository": "https://github.com/display-protocol/dp-1/tree/main/extension/channels"
       },
       "features": [
@@ -71,7 +71,7 @@
       "date": "2026-03-11T00:00:00Z",
       "changes": [
         "Initial registry release",
-        "Registered Channel Extension v0.1.0",
+        "Registered Channel Extension v1.0.0",
         "Registered Playlist Extension v0.1.0"
       ]
     }
