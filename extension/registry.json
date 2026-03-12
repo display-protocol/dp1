@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/registry.json",
+  "title": "DP-1 Extension Registry",
+  "description": "Official registry of DP-1 protocol extensions",
+  "version": "1.0.0",
+  "lastUpdated": "2026-03-11T00:00:00Z",
+  "extensions": [
+    {
+      "id": "channels",
+      "name": "Channel Extension",
+      "version": "0.1.0",
+      "status": "draft",
+      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, and verifiable identities.",
+      "compatibility": {
+        "dpVersion": "1.0.0+",
+        "extends": "playlist-group"
+      },
+      "published": "2026-03-11T00:00:00Z",
+      "resources": {
+        "specification": "https://dp1.feralfile.com/extensions/channels/v0.1.0/channel.md",
+        "schema": "https://dp1.feralfile.com/extensions/channels/v0.1.0/schema.json",
+        "repository": "https://github.com/display-protocol/dp-1/tree/main/extension/channels"
+      },
+      "features": [
+        "Multi-curator exhibitions with verifiable identities",
+        "Publisher attribution for institutions and collectives",
+        "DID-based entity format (curators and publisher)",
+        "Multi-signature support (aligned with DP-1 v1.1.0)",
+        "Enhanced metadata (summary, coverImage)"
+      ],
+      "maintainer": {
+        "name": "Feral File",
+        "contact": "https://feralfile.com"
+      }
+    },
+    {
+      "id": "playlists",
+      "name": "Playlist Extension",
+      "version": "0.1.0",
+      "status": "draft",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching and enhanced metadata. Enables playlists to transition from static collections to live, personalized feeds.",
+      "compatibility": {
+        "dpVersion": "1.0.0+",
+        "extends": "playlist"
+      },
+      "published": "2026-03-11T00:00:00Z",
+      "resources": {
+        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist.md",
+        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
+        "repository": "https://github.com/bitmark-inc/dp-1/tree/main/extension/playlists"
+      },
+      "features": [
+        "Dynamic query for real-time item fetching from indexers",
+        "Multiple resolution profiles (graphql-v1, https-json-v1)",
+        "Template variable hydration ({{viewer_address}}, {{chain}}, etc.)",
+        "Response mapping with schema validation",
+        "Curator metadata with DID-based verifiable identities",
+        "Enhanced metadata (summary, coverImage)",
+        "Fast start, rich upgrade rendering strategy"
+      ],
+      "maintainer": {
+        "name": "Feral File",
+        "contact": "https://feralfile.com"
+      }
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-03-11T00:00:00Z",
+      "changes": [
+        "Initial registry release",
+        "Registered Channel Extension v0.1.0",
+        "Registered Playlist Extension v0.1.0"
+      ]
+    }
+  ],
+  "governance": {
+    "steward": "Feral File",
+    "period": "2025-2026",
+    "process": {
+      "proposal": "Open GitHub issue with extension proposal",
+      "discussion": "Minimum 2 weeks community discussion period",
+      "implementation": "Reference implementation required for breaking changes",
+      "review": "Steering committee review (if applicable)",
+      "publication": "Version bump and registry update"
+    },
+    "contact": {
+      "repository": "https://github.com/bitmark-inc/dp-1",
+      "discussions": "https://github.com/bitmark-inc/dp-1/discussions",
+      "issues": "https://github.com/bitmark-inc/dp-1/issues"
+    }
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
+  "title": "DP-1 Ref Manifest",
+  "description": "Optional, data-only extension to DP-1 playlist items carrying structured metadata and playback control preferences",
+  "type": "object",
+  "required": ["refVersion", "id", "created", "locale"],
+  "properties": {
+    "refVersion": {
+      "type": "string",
+      "description": "Semantic version of the manifest schema",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["0.1.0", "1.0.0"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the manifest (for caching)",
+      "minLength": 1
+    },
+    "created": {
+      "type": "string",
+      "description": "RFC3339 timestamp when the manifest was created",
+      "format": "date-time"
+    },
+    "locale": {
+      "type": "string",
+      "description": "Default locale (ISO 639-1 language code)",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "default": "en"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "controls": {
+      "$ref": "#/$defs/Controls"
+    },
+    "i18n": {
+      "type": "object",
+      "description": "Localized text overrides for specific languages",
+      "additionalProperties": {
+        "$ref": "#/$defs/LocalizedMetadata"
+      }
+    }
+  },
+  "$defs": {
+    "Metadata": {
+      "type": "object",
+      "description": "Human-readable information for labeling, crediting, and exhibition",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Work title"
+        },
+        "artists": {
+          "type": "array",
+          "description": "List of artists who created the work",
+          "items": {
+            "$ref": "#/$defs/Artist"
+          }
+        },
+        "creditLine": {
+          "type": "string",
+          "description": "Copyright and credit information"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the work (one or two paragraphs)"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Categorical tags for the work",
+          "items": {
+            "type": "string"
+          }
+        },
+        "thumbnails": {
+          "type": "object",
+          "description": "Thumbnail images at various sizes",
+          "properties": {
+            "small": {
+              "$ref": "#/$defs/Thumbnail"
+            },
+            "large": {
+              "$ref": "#/$defs/Thumbnail"
+            },
+            "xlarge": {
+              "$ref": "#/$defs/Thumbnail"
+            },
+            "default": {
+              "$ref": "#/$defs/Thumbnail"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Thumbnail"
+          }
+        }
+      }
+    },
+    "Artist": {
+      "type": "object",
+      "description": "Information about an artist",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Artist's name"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the artist"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to artist's website or profile",
+          "format": "uri"
+        }
+      }
+    },
+    "Thumbnail": {
+      "type": "object",
+      "description": "Thumbnail image specification",
+      "required": ["uri", "w", "h"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "description": "URI to the thumbnail image (content-addressed preferred)",
+          "format": "uri"
+        },
+        "w": {
+          "type": "integer",
+          "description": "Width in pixels",
+          "minimum": 1
+        },
+        "h": {
+          "type": "integer",
+          "description": "Height in pixels",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "description": "SHA-256 hash of the image file",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "Controls": {
+      "type": "object",
+      "description": "Display preferences and safety constraints",
+      "properties": {
+        "display": {
+          "$ref": "#/$defs/DisplayControls"
+        },
+        "safety": {
+          "$ref": "#/$defs/SafetyControls"
+        }
+      }
+    },
+    "DisplayControls": {
+      "type": "object",
+      "description": "Display preference settings",
+      "properties": {
+        "scaling": {
+          "type": "string",
+          "description": "How to scale the artwork in the viewport",
+          "enum": ["fit", "fill", "stretch", "auto"]
+        },
+        "margin": {
+          "description": "Margin around artwork (number in px, string supports %, vw, vh)",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?(px|%|vw|vh)$"
+            }
+          ],
+          "default": "0px"
+        },
+        "background": {
+          "type": "string",
+          "description": "Background color (hex/RGB) or 'transparent'",
+          "default": "#000000",
+          "oneOf": [
+            {
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            {
+              "const": "transparent"
+            }
+          ]
+        },
+        "autoplay": {
+          "type": "boolean",
+          "description": "Attempt to start playback automatically",
+          "default": true
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Repeat automatically",
+          "default": false
+        },
+        "interaction": {
+          "type": "object",
+          "description": "Interaction settings",
+          "properties": {
+            "keyboard": {
+              "type": "array",
+              "description": "Allowed keyboard keys (W3C UI Events code values)",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "mouse": {
+              "type": "object",
+              "description": "Mouse interaction settings",
+              "properties": {
+                "click": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "scroll": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "drag": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "hover": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "SafetyControls": {
+      "type": "object",
+      "description": "Safety constraints for resource usage",
+      "properties": {
+        "orientation": {
+          "type": "array",
+          "description": "Allowed screen orientations",
+          "items": {
+            "type": "string",
+            "enum": ["landscape", "portrait", "any"]
+          },
+          "default": ["any"]
+        },
+        "maxCpuPct": {
+          "type": "integer",
+          "description": "Maximum CPU usage percentage",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 90
+        },
+        "maxMemMB": {
+          "type": "integer",
+          "description": "Maximum memory usage in megabytes",
+          "minimum": 1,
+          "default": 1024
+        }
+      }
+    },
+    "LocalizedMetadata": {
+      "type": "object",
+      "description": "Localized text overrides",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Localized work title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Localized description"
+        },
+        "creditLine": {
+          "type": "string",
+          "description": "Localized credit line"
+        }
+      }
+    }
+  }
+}
