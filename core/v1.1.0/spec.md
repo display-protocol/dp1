@@ -1,6 +1,6 @@
 # DP‑1 Specification (v1.1.0)
 
-*A platform‑neutral protocol for distributing, verifying, and preserving blockchain‑native digital art (BNDA).* 
+*A platform‑neutral protocol for distributing, verifying, and preserving blockchain‑native digital art (BNDA).*
 
 ---
 
@@ -8,9 +8,9 @@
 
 **DP‑1** defines:
 
-1. A **playlist format** (JSON 2020‑12) that tells any compliant player *what* to render, *when*, and *under which rights*.  
-2. A **deterministic capsule** (`*.dp1c`) for long‑term preservation of **code‑based art**.  
-3. A minimal **transport & auth profile** so playlists work across HTTP(S), IPFS, and offline media.  
+1. A **playlist format** (JSON 2020‑12) that tells any compliant player *what* to render, *when*, and *under which rights*.
+2. A **deterministic capsule** (`*.dp1c`) for long‑term preservation of **code‑based art**.
+3. A minimal **transport & auth profile** so playlists work across HTTP(S), IPFS, and offline media.
 4. A **compliance suite & badging** model to ensure interoperability.
 
 ---
@@ -39,7 +39,7 @@
   "dpVersion": "1.1.0",          // SemVer
   "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
   "title": "Sunset Collector Loop", // REQUIRED – 1‑200 chars
-  "slug": "summer‑mix‑01", 
+  "slug": "summer‑mix‑01",
   "created": "2025-06-03T17:01:00Z",
   "defaults": {                   // OPTIONAL – inherited by items
     "display": {
@@ -51,7 +51,7 @@
     "duration": 300
   },
   "items": [ PlaylistItem, ... ],
-  
+
   // Multi-signature (v1.1.0+, recommended)
   "signatures": [
     {
@@ -63,7 +63,7 @@
       "sig": "X2b7cX2sOe7lJ…"
     }
   ],
-  
+
   // OR legacy single signature (v1.0.x, deprecated)
   "signature": "ed25519:<hex>"
 }
@@ -71,7 +71,7 @@
 
 *Inheritance rule*: each `PlaylistItem` starts with a copy of `defaults`; any fields set in the item replace the inherited values.
 
-**Authority model**  
+**Authority model**
 For playlists using **multi-signature** (v1.1.0+): the `curator` role signature defines the primary creator, and additional signatures from other roles establish the trust chain and distribution authority.
 
 For playlists using **legacy signature** (v1.0.x): the Ed25519 public key that signs the first accepted version of a playlist defines the *creator*.
@@ -115,12 +115,12 @@ See [document](ref-manifest.md)
 
 **Unit rule** – Length fields (e.g., `margin`) accept either:
 
--  **number** → pixels (CSS‑px, device‑independent)  
+-  **number** → pixels (CSS‑px, device‑independent)
 -  **string** → `%(vw\|vh)` units (`"5%"`, `"3vw"`, `"2vh"`) Players **MUST** support px, %, vw, vh and **MUST** reject unknown units.
 
 | Field                   | Type             | Default    | Behaviour                                                                                                                                                                    |
 | :---------------------- | :--------------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scaling`               | "fit"            | "fill"     | "stretch"                                                                                                                                                                    | "auto" | from defaults or "fit" | fit: entire artwork visible with letterbox; fill: fill viewport cropping if needed; stretch: fill both axes ignoring aspect; auto: player decides based on device/profile. |
+| `scaling`               | "fit" \| "fill" \| "stretch" \| "auto" | from defaults or "fit" | fit: entire artwork visible with letterbox; fill: fill viewport cropping if needed; stretch: fill both axes ignoring aspect; auto: player decides based on device/profile. |
 | `margin`                | number or string | 0          | Even margin around artwork. Number = px; string supports %, vw, vh (computed relative to viewport).                                                                          |
 | `background`            | string           | "\#000000" | Hex/RGB color used outside the artwork and beneath any transparent pixels. Special value "transparent" lets the underlying screen show through.                              |
 | `autoplay`              | bool             | true       | Attempt to start playback automatically. Player MUST fall back to waiting for a first user gesture when the runtime blocks WebAudio/video autoplay (e.g., browser policies). |
@@ -181,9 +181,9 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
 ### Mutability & authority
 
-* `uri` and any `dependencies.uri` **SHOULD** be content-addressed (IPFS CID, Arweave TXID) to guarantee immutability.  
-* If an `https://` or `eth://` URI is used, **any** change to the referenced data **MUST** result in a new manifest, and the playlist **MUST** be re-signed.  
-* When `metaHash` is present, players **SHOULD** verify it; implementers **MAY** perform this check asynchronously (i.e., without blocking first render).  
+* `uri` and any `dependencies.uri` **SHOULD** be content-addressed (IPFS CID, Arweave TXID) to guarantee immutability.
+* If an `https://` or `eth://` URI is used, **any** change to the referenced data **MUST** result in a new manifest, and the playlist **MUST** be re-signed.
+* When `metaHash` is present, players **SHOULD** verify it; implementers **MAY** perform this check asynchronously (i.e., without blocking first render).
 * Only the **playlist signer** has authority to update the `provenance` block.
 
 ### Field guidance
@@ -352,10 +352,10 @@ Tar \+ Zstd; SHA‑256 of archive \= capsule CID.
 
 ## 10 · Conservation Workflow
 
-1. `feral‑conservationd` on boot \+ weekly.  
-2. Render → SHA‑256 \+ pHash.  
-3. Append to 500 MiB ring buffer.  
-4. ≥80 % full → `feral‑archive‑push` pins to IPFS, optional Arweave mirror.  
+1. `feral‑conservationd` on boot \+ weekly.
+2. Render → SHA‑256 \+ pHash.
+3. Append to 500 MiB ring buffer.
+4. ≥80 % full → `feral‑archive‑push` pins to IPFS, optional Arweave mirror.
 5. Drift → `reproMismatch` DBus signal.
 
 ---
@@ -367,20 +367,20 @@ Tar \+ Zstd; SHA‑256 of archive \= capsule CID.
 | **DP‑1 Compatible**    | JSON‑Schema pass \+ demo capsules display. |
 | **DP‑1 Deterministic** | Plus 8‑week Regenerate 2030 test.          |
 
-*Alpha must earn the **DP‑1 Compatible** badge; Deterministic comes in RC.*  
+*Alpha must earn the **DP‑1 Compatible** badge; Deterministic comes in RC.*
 
 ---
 
 ## 12 · Versioning & Extensions
 
-*SemVer*; players warn on major mismatch. Major bumps signal breaking changes, minor are additive, patch is editorial.  
-*Extension Registry* (`/extensions/registry.json`) governs new chains, display fields, etc.  
+*SemVer*; players warn on major mismatch. Major bumps signal breaking changes, minor are additive, patch is editorial.
+*Extension Registry* (`/extensions/registry.json`) governs new chains, display fields, etc.
 
 ---
 
 ## 13 · Governance Roadmap
 
-2025‑06 → 2026‑06: canonical repo under Feral File.   
+2025‑06 → 2026‑06: canonical repo under Feral File.
 2026‑07: 5‑seat Steering Committee.
 
 ---
@@ -447,8 +447,8 @@ Players iterate playlists in `playlists[]` order by default; exhibition‐level 
 
 * **v0.03 (2025-06-27).** Added **`metaHash` (SHA-256)** — optional, but *required* when `uri` is mutable; players may verify it asynchronously. Clarified **Mutability & Authority** rules; removed deprecated `scheme/ref` example.
 
-* **v0.02 (2025‑06‑06)**. Unit rule for `margin`; example updated. Clarified behaviour of `background`, `autoplay`, and keyboard enums. Renamed `border` → `margin` for consistency. Provenance refined (`seriesId`, optional `tokenId`, `dependencies`, immutability).  
-    
+* **v0.02 (2025‑06‑06)**. Unit rule for `margin`; example updated. Clarified behaviour of `background`, `autoplay`, and keyboard enums. Renamed `border` → `margin` for consistency. Provenance refined (`seriesId`, optional `tokenId`, `dependencies`, immutability).
+
 * **v0.01 (2025‑06‑03)** – Added `defaults` inheritance, `ref` / `override`, and Playlist‑Group (Exhibition) API.
 
 

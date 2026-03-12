@@ -1,0 +1,77 @@
+---
+description: Run markdown and JSON linting after making changes
+globs: "**/*.{md,json}"
+alwaysApply: false
+---
+
+# Lint Validation After Changes
+
+When you modify markdown (`.md`) or JSON (`.json`) files in this project, you MUST run the appropriate linting validation before completing your task.
+
+## Markdown Files
+
+After editing any `.md` file, run:
+
+```bash
+npx markdownlint '**/*.md' --ignore node_modules
+```
+
+**What to check:**
+- ✅ Exit code 0 = all tests pass
+- ❌ Exit code 1 = linting errors found
+
+**If errors are found:**
+1. Review the error output (shows file:line:column)
+2. Fix the issues (focus on MD009 trailing spaces and MD056 table structure)
+3. Re-run the linter to confirm fixes
+
+**Common fixes:**
+- **MD009 (trailing spaces)**: Remove whitespace at end of lines
+- **MD056 (table column count)**: Ensure table rows have correct number of columns
+
+## JSON Files
+
+After editing any `.json` file, run:
+
+```bash
+# Validate JSON syntax
+for json in $(find . -name "*.json" -not -path "./node_modules/*"); do
+  jq empty "$json" || exit 1
+done
+```
+
+**What to check:**
+- ✅ No output = valid JSON
+- ❌ Parse error = invalid JSON syntax
+
+## Example Workflow
+
+```bash
+# 1. Make your changes to markdown/JSON files
+# 2. Run appropriate linter
+npx markdownlint '**/*.md' --ignore node_modules
+
+# 3. If errors found, fix them and re-run
+# 4. Only complete task when linter passes with exit code 0
+```
+
+## Why This Matters
+
+- The CI/CD pipeline runs these same checks on every PR
+- Catching errors locally prevents CI failures
+- Maintains consistent code quality across the project
+
+## Testing GitHub Actions Locally
+
+If you modify `.github/workflows/lint.yaml`, test it locally using `act`:
+
+```bash
+# Test markdown linting job
+act push --container-architecture linux/amd64 -j lint-markdown
+
+# Test JSON validation job
+act push --container-architecture linux/amd64 -j lint-json-schema
+
+# Test both jobs together
+act push --container-architecture linux/amd64
+```

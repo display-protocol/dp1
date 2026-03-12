@@ -1,0 +1,65 @@
+name: CI - Lint Markdown and JSON Schema
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-markdown:
+    name: Lint Markdown Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Lint Markdown files
+        run: markdownlint '**/*.md' --ignore node_modules
+
+  lint-json-schema:
+    name: Lint and Validate JSON Schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Validate JSON Schema files
+        run: |
+          echo "Validating JSON Schema files structure..."
+          # Find all JSON files in any 'schemas' folder and any files ending with 'schema.json'
+          find . -type f \( -path "*/schemas/*.json" -o -name "*schema.json" \) -not -path "./node_modules/*" | while read schema; do
+            echo "Compiling schema: $schema"
+            ajv compile -s "$schema" --spec=draft2020 -c ajv-formats
+          done
+
+      - name: Validate JSON files syntax
+        run: |
+          echo "Validating JSON syntax..."
+          for json in $(find . -name "*.json" -not -path "./node_modules/*"); do
+            echo "Validating $json"
+            if ! jq empty "$json" 2>/dev/null; then
+              echo "❌ Invalid JSON: $json"
+              exit 1
+            else
+              echo "✓ Valid JSON: $json"
+            fi
+          done
