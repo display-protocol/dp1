@@ -20,7 +20,7 @@
       "resources": {
         "specification": "https://dp1.feralfile.com/extensions/channels/v1.0.0/channel.md",
         "schema": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
-        "repository": "https://github.com/display-protocol/dp-1/tree/main/extension/channels"
+        "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/channels"
       },
       "features": [
         "Multi-curator exhibitions with verifiable identities",
@@ -48,7 +48,7 @@
       "resources": {
         "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist.md",
         "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
-        "repository": "https://github.com/bitmark-inc/dp-1/tree/main/extension/playlists"
+        "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/playlists"
       },
       "features": [
         "Dynamic query for real-time item fetching from indexers",
@@ -87,9 +87,9 @@
       "publication": "Version bump and registry update"
     },
     "contact": {
-      "repository": "https://github.com/bitmark-inc/dp-1",
-      "discussions": "https://github.com/bitmark-inc/dp-1/discussions",
-      "issues": "https://github.com/bitmark-inc/dp-1/issues"
+      "repository": "https://github.com/display-protocol/dp1",
+      "discussions": "https://github.com/display-protocol/dp1/discussions",
+      "issues": "https://github.com/display-protocol/dp1/issues"
     }
   }
 }

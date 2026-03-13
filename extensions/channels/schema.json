@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/channels/v0.1.0/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
   "title": "DP-1 Channel Extension",
   "description": "Channel schema extending DP-1 Playlist-Group for collaborative, persistent feeds with enhanced metadata and curation capabilities",
   "type": "object",
