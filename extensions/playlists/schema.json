@@ -7,7 +7,7 @@
   "properties": {
     "curators": {
       "type": "array",
-      "description": "Playlist-specific curators with verifiable identities",
+      "description": "Array of curator entities using the shared DP-1 extension entity shape",
       "items": {
         "$ref": "#/$defs/Entity"
       }
@@ -31,12 +31,12 @@
   "$defs": {
     "Entity": {
       "type": "object",
-      "description": "Unified entity format for curators with verifiable identities",
+      "description": "Unified entity format for curators and publishers with verifiable identities",
       "required": ["name", "key"],
       "properties": {
         "name": {
           "type": "string",
-          "description": "Curator display name"
+          "description": "Entity display name"
         },
         "key": {
           "type": "string",
@@ -45,7 +45,7 @@
         },
         "url": {
           "type": "string",
-          "description": "Curator website or profile URL",
+          "description": "Entity website or profile URL",
           "format": "uri"
         }
       }

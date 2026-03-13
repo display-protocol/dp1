@@ -87,7 +87,7 @@ These extensions enable playlists to transition from static collections to live,
 
 ### 3.3 Entity Format (Curators)
 
-Curators use a unified entity format with verifiable identities.
+This extension uses the same unified entity shape as the Channel Extension.
 
 **Entity Object:**
 
@@ -103,9 +103,11 @@ Curators use a unified entity format with verifiable identities.
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `name` | string | **REQUIRED** | Curator display name. |
+| `name` | string | **REQUIRED** | Entity display name. |
 | `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
-| `url` | string | OPTIONAL | Curator website or profile URL. |
+| `url` | string | OPTIONAL | Entity website or profile URL. |
+
+In the Playlist Extension, this entity shape is currently used by `curators[]`.
 
 **Example:**
 

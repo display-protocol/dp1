@@ -131,6 +131,7 @@ Channels extend the Playlist-Group object from DP-1 §15 with **optional** addit
 ### 3.3 Entity Format (Curators & Publisher)
 
 Both `curators` and `publisher` use a unified entity format with verifiable identities.
+This is the same entity shape used by the Playlist Extension.
 
 **Entity Object:**
 
