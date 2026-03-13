@@ -1,30 +1,53 @@
-# DP-1 Protocol Specification
-DP‑1 is an open, vendor‑neutral protocol that bundles a digitally signed JSON "playlist" (plus an optional long‑term capsule) so any compliant player—from museum screens to home frames—can display blockchain‑native, code‑based art exactly as the artist intended. Like MIDI or RSS in their domains, it supplies a common rail gauge that ends today's patchwork of ad‑hoc embed codes, broken CDN links and browser‑specific hacks. Urgency comes from the wave of generative NFTs now aging out of their original runtimes: if we don't lock in a lightweight standard, artworks will keep degrading or disappearing. Feral File is seeding DP‑1—hosting the spec, shipping validator tools and using its own FF1 devices as the first reference implementation—while inviting independent nodes to prove interoperability.
+# DP-1 Protocol
 
-The longer‑range vision is a durable network where curators publish once and reach every screen. The protocol itself remains free and open‑source so the ecosystem can thrive without locking the rails.
+DP-1 is an open, vendor-neutral protocol for signed digital art playlists and optional preservation capsules (`.dp1c`).
 
-## Related Repositories
+## Canonical version
 
-### DP-1 Feed Server
-**Repository**: [display-protocol/dp1-feed](https://github.com/display-protocol/dp1-feed)  
-A modern API server implementing the DP-1 Feed Operator specification for blockchain-native digital art playlists. Supports both **Cloudflare Workers** (serverless) and **Node.js** (self-hosted) deployments.
+- The canonical core specification in this repository is **DP-1 v1.1.0**.
+- Version pointer: [`core/latest`](core/latest)
+- Source of truth: [`core/v1.1.0/spec.md`](core/v1.1.0/spec.md)
 
-**Key Features:**
-- **DP-1 Compliant**: Full OpenAPI 3.1.0 implementation of DP-1 v1.0.0
-- **Dual Deployment**: Cloudflare Workers (serverless) + Node.js (self-hosted)
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Modern Stack**: Hono framework, Ed25519 signatures, async processing
-- **Production Ready**: KV storage, queues, authentication, CORS, monitoring
+## Validate first
 
-### DP-1 Validator
-**Repository**: [display-protocol/dp1-validator](https://github.com/display-protocol/dp1-validator)  
-Go CLI validator implementation providing:
-- Ed25519 signature verification for DP-1 playlists
-- SHA256 asset integrity checking for `.dp1c` capsules
-- Support for URLs and base64 encoded playlist data
-- Library usage for Go applications
+Before building feed or player integrations, validate one playlist payload.
 
-## 📄 License
+- Validator repo: [display-protocol/dp1-validator](https://github.com/display-protocol/dp1-validator)
+- Validator command (base64 payload):
+
+```bash
+./dp1-validator playlist --playlist "<base64-encoded-playlist-json>"
+```
+
+If signatures are present, add `--pubkey` as required by your validation flow.
+
+## Compatibility at a glance
+
+| Area | Version | Status | Notes |
+| :--- | :--- | :--- | :--- |
+| DP-1 core spec (this repo) | `1.1.0` | Current | Multi-signature model (`signatures`) is defined in core v1.1.0. |
+| DP-1 legacy playlists | `1.0.x` | Legacy compatible | Single `signature` format remains supported by v1.1.0 players. |
+| dp1-validator examples | Mostly `1.0.0` payloads | Transitional ecosystem state | Useful for first validation; align to your toolchain output. |
+| dp1-feed OpenAPI (`dp1-feed` repo) | API `1.0.0` | Current for that API surface | Feed API version is separate from playlist spec SemVer. |
+| Core/extensions implementation parity across repos | N/A | Must verify per integration | Validate in feed/player/tool repos before claiming full parity. |
+
+## Canonical entry points
+
+- Core specification: [`core/v1.1.0/spec.md`](core/v1.1.0/spec.md)
+- Ref manifest specification: [`core/v1.1.0/ref-manifest.md`](core/v1.1.0/ref-manifest.md)
+- Extension registry: [`extensions/registry.json`](extensions/registry.json)
+- Feed implementation and OpenAPI: [display-protocol/dp1-feed](https://github.com/display-protocol/dp1-feed)
+- Validator implementation: [display-protocol/dp1-validator](https://github.com/display-protocol/dp1-validator)
+
+## Reference hardware path
+
+FF1 is a reference hardware/player path for DP-1, not the definition of DP-1 itself.
+
+## Guided integration flow
+
+For a guided first-run integration route, see: <https://docs.feralfile.com/dp1-protocol/overview/>
+
+## License
 
 Creative Commons Attribution 4.0 International Public License
 
