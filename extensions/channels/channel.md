@@ -1,9 +1,9 @@
-# DP-1 Channel Extension (v0.1.0)
+# DP-1 Channel Extension (v1.0.0)
 
 *A formal extension to DP-1 v1.0.0+ for collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities.*
 
-**Specification version:** 0.1.0  
-**Status:** Draft Extension  
+**Specification version:** 1.0.0  
+**Status:** Released Extension  
 **DP-1 compatibility:** v1.0.0+  
 **Published:** 2026-03-11
 
@@ -49,7 +49,7 @@ Channels extend the Playlist-Group object from DP-1 §15 with **optional** addit
   "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
   "slug": "generative-geometry-2025",
   "title": "Generative Geometry",
-  "version": "0.1.0",
+  "version": "1.0.0",
   
   "curators": [
     {
@@ -113,7 +113,7 @@ Channels extend the Playlist-Group object from DP-1 §15 with **optional** addit
 | `id` | string (UUID) | **REQUIRED** | Unique identifier for the channel. |
 | `slug` | string | **REQUIRED** | URL-friendly identifier (lowercase, hyphens). |
 | `title` | string | **REQUIRED** | Display name (1-200 characters). |
-| `version` | string | **REQUIRED** | Channel extension version (SemVer, e.g., `"0.1.0"`). |
+| `version` | string | **REQUIRED** | Channel extension version (SemVer, e.g., `"1.0.0"`). |
 | `created` | string (ISO 8601) | **REQUIRED** | Channel creation timestamp (UTC). |
 | `playlists` | array of strings | **REQUIRED** | Ordered array of playlist URLs or identifiers. |
 | `signatures` | array of objects | **REQUIRED** | Multi-signature chain per DP-1 §7.1. Legacy `signature` field supported but deprecated. |
@@ -364,7 +364,7 @@ GET /api/v1/channels/generative-geometry-2025
   "id": "b1c2d3e4-...",
   "slug": "digital-frontiers-2025",
   "title": "Digital Frontiers",
-  "version": "0.1.0",
+  "version": "1.0.0",
   
   "publisher": {
     "name": "Contemporary Art Collective",
@@ -407,7 +407,7 @@ GET /api/v1/channels/generative-geometry-2025
   "id": "c2d3e4f5-...",
   "slug": "museum-digital-collection",
   "title": "Digital Collection 2025",
-  "version": "0.1.0",
+  "version": "1.0.0",
   
   "publisher": {
     "name": "National Museum of Digital Art",
@@ -475,7 +475,7 @@ GET /api/v1/channels/generative-geometry-2025
 
 ## 9 · Compliance & Testing
 
-### 9.1 Extension Badge: "DP-1 Channel v0.1"
+### 9.1 Extension Badge: "DP-1 Channel v1.0"
 
 **Requirements:**
 - Parse and display all required channel fields
@@ -504,7 +504,7 @@ Channel extension follows SemVer:
 - **Minor:** Additive features, backward-compatible
 - **Patch:** Bug fixes, clarifications, editorial changes
 
-Current version: **0.1.0**
+Current version: **1.0.0**
 
 ### 10.2 Proposed Future Features
 
@@ -514,7 +514,7 @@ Current version: **0.1.0**
 - Enhanced analytics/tracking fields
 - Playlist ordering strategies (shuffle, personalized)
 
-**Potential v1.0.0 changes:**
+**Potential v1.1.0 changes:**
 - Production-ready status after community feedback
 - Finalized compliance badge requirements
 - Reference implementation validation
@@ -551,9 +551,9 @@ Current version: **0.1.0**
 
 ## 13 · Changelog
 
-### v0.1.0 (2026-03-11)
+### v1.0.0 (2026-03-11)
 
-**Initial draft release of Channel Extension.**
+**Initial stable release of Channel Extension.**
 
 **Core Features:**
 - Channel schema extending DP-1 Playlist-Group (§15)
@@ -576,7 +576,7 @@ Current version: **0.1.0**
 - Query parameters: publisher, curator, limit, offset
 
 **Compliance:**
-- Extension badge: "DP-1 Channel v0.1"
+- Extension badge: "DP-1 Channel v1.0"
 - Test suite with 10+ scenarios
 
 **Entity Format:**
@@ -592,7 +592,7 @@ Current version: **0.1.0**
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://feralfile.com/schemas/dp1-channel-0.1.0.json",
+  "$id": "https://feralfile.com/schemas/dp1-channel-1.0.0.json",
   "title": "DP-1 Channel Extension",
   "description": "Channel schema extending DP-1 Playlist-Group",
   "type": "object",
