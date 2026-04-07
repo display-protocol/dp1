@@ -3,8 +3,8 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.0",
-  "lastUpdated": "2026-03-11T00:00:00Z",
+  "version": "1.0.1",
+  "lastUpdated": "2026-04-07T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -48,6 +48,7 @@
       "resources": {
         "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist.md",
         "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
+        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist_with_extension.json",
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/playlists"
       },
       "features": [
@@ -66,6 +67,15 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.1",
+      "date": "2026-04-07T00:00:00Z",
+      "changes": [
+        "Playlist extension: document composed full-playlist validator at playlist_with_extension.json (allOf bundled core-compatible playlist + extension fragment).",
+        "Playlist extension: add bundles/playlist-core-v1.1.0.json so validation allows an empty items array when dynamicQuery is present, without changing the canonical core playlist schema.",
+        "Playlist extension: registry resources include composedPlaylistSchema pointing at the composed schema URL for implementers and SDKs."
+      ]
+    },
     {
       "version": "1.0.0",
       "date": "2026-03-11T00:00:00Z",
