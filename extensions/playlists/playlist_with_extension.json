@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist_with_extension.json",
+  "title": "DP-1 Playlist with playlists extension (composed)",
+  "description": "Validates a full playlist document that uses the playlists extension. Uses an extension-local copy of the core playlist schema so items may be empty when dynamicQuery is present, combined with the extension fragment schema.",
+  "allOf": [
+    {
+      "$ref": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/bundles/playlist-core-v1.1.0.json"
+    },
+    {
+      "$ref": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json"
+    }
+  ]
+}
