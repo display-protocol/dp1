@@ -94,7 +94,7 @@ These extensions enable playlists to transition from static collections to live,
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
-Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). This field is **not** part of canonical DP-1 core; it is defined only by this extension and appears in the extension JSON Schema (see Appendix A).
+Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). This field is **not** part of canonical DP-1 core; it is defined only by this extension. In JSON Schema, item-level `note` is validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for `note`.
 
 ### 3.3 Entity Format (Curators)
 
@@ -648,7 +648,7 @@ Current version: **0.1.0**
 
 - Documented optional **`note`** on the playlist and on each **`PlaylistItem`**: `text` (required, ≤500 characters), `duration` (optional, default 20 seconds when omitted).
 - Normative intent: players show a **dedicated intermission page** before the playlist starts or before an item, for the effective duration; **experimental** and **may be deprecated** in a later version.
-- JSON: `extensions/playlists/schema.json` (playlist-level fragment). Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+- JSON: `extensions/playlists/schema.json` (playlist-level `note` and per-item `note` via `items` overlay; composed with the bundle using `allOf`). Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
 
 ### v0.1.0 (2026-03-11)
 
@@ -703,6 +703,17 @@ Current version: **0.1.0**
   "properties": {
     "note": {
       "$ref": "#/$defs/Note"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "$ref": "#/$defs/Note"
+          }
+        }
+      }
     },
     "curators": {
       "type": "array",

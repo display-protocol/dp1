@@ -8,6 +8,18 @@
     "note": {
       "$ref": "#/$defs/Note"
     },
+    "items": {
+      "type": "array",
+      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "$ref": "#/$defs/Note"
+          }
+        }
+      }
+    },
     "curators": {
       "type": "array",
       "description": "Array of curator entities using the shared DP-1 extension entity shape",
