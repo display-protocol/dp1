@@ -2,9 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
   "title": "DP-1 Playlist Extension",
-  "description": "Extensions to DP-1 playlists for dynamic item fetching and enhanced metadata",
+  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional intermission notes",
   "type": "object",
   "properties": {
+    "note": {
+      "$ref": "#/$defs/Note"
+    },
     "curators": {
       "type": "array",
       "description": "Array of curator entities using the shared DP-1 extension entity shape",
@@ -29,6 +32,25 @@
     }
   },
   "$defs": {
+    "Note": {
+      "type": "object",
+      "description": "Experimental intermission card: short artist-authored text between works. May be removed or changed in a future Playlist Extension version.",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Short label or interlude text (not a social thread)",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "duration": {
+          "type": "number",
+          "description": "How long to show the intermission page before continuing, in seconds. Omitted means 20.",
+          "default": 20,
+          "exclusiveMinimum": 0
+        }
+      }
+    },
     "Entity": {
       "type": "object",
       "description": "Unified entity format for curators and publishers with verifiable identities",
