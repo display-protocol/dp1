@@ -11,10 +11,11 @@
 
 ## 1 · Purpose & Scope
 
-The **Playlist Extension** provides two key enhancements to DP-1 playlists:
+The **Playlist Extension** provides the following enhancements to DP-1 playlists:
 
 1. **Dynamic Query**: Machine-executable interface for fetching playlist items dynamically from external indexers
 2. **Enhanced Metadata**: Additional fields for curators, summary, and cover images
+3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -36,6 +37,8 @@ These extensions enable playlists to transition from static collections to live,
 | **Template Variable** | Placeholder in query configuration that gets hydrated with runtime data (e.g., `{{viewer_address}}`). |
 | **Indexer** | External service providing blockchain data or content discovery via standardized query interfaces. |
 | **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
+| **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
+| **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 
 ---
 
@@ -60,7 +63,12 @@ These extensions enable playlists to transition from static collections to live,
   ],
   "summary": "Part 1 explores fundamental geometric forms through algorithmic processes…",
   "coverImage": "ipfs://bafybeig.../p1-cover.jpg",
-  
+
+  "note": {
+    "text": "Rhythm and stillness are paired—treat the pauses as part of the work.",
+    "duration": 15
+  },
+
   "dynamicQuery": {
     "profile": "graphql-v1",
     "endpoint": "https://indexer.example.com/graphql",
@@ -83,7 +91,10 @@ These extensions enable playlists to transition from static collections to live,
 | `curators` | array of objects | OPTIONAL | Playlist-specific curators (who curated this playlist). Uses entity format (§3.3). |
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
+| `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
+
+Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). This field is **not** part of canonical DP-1 core; it is defined only by this extension. In JSON Schema, item-level `note` is validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for `note`.
 
 ### 3.3 Entity Format (Curators)
 
@@ -123,6 +134,38 @@ In the Playlist Extension, this entity shape is currently used by `curators[]`.
     "key": "did:key:z6Mkf5rG..."
   }
 ]
+```
+
+### 3.4 Note (experimental intermission)
+
+The **`note`** object is an **optional** intermission card: short, **artist-authored** text that can travel with the show. It is meant for moments **between works** (a label, caption, or interlude), **not** for social-style threads or comments.
+
+**Status:** This feature is **experimental**. It **MAY** be revised, narrowed, or **deprecated in a future Playlist Extension version**. Players and publishers **SHOULD** treat it as best-effort and avoid hard dependencies on long-term stability.
+
+**Object shape:**
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `text` | string | **REQUIRED** | Body copy for the intermission (1–500 characters). |
+| `duration` | number (seconds) | OPTIONAL | How long the intermission page stays visible **before** the player continues. **Default: 20** when omitted. **MUST** be greater than zero when present. |
+
+**Playlist-level `note`:** When present, players **SHOULD** render a **dedicated intermission page** (full-screen or player-defined “card”) **before** starting playback of the playlist body (including before the first static or dynamic item), for the effective duration.
+
+**Item-level `note`:** When present on a `PlaylistItem`, players **SHOULD** render the intermission **before loading or displaying that item’s** `source`, for the effective duration, then proceed with the item as usual.
+
+**Presentation:** Rendering (typography, progress, skip affordances) is **implementation-defined**. Players **MAY** allow the viewer to dismiss or skip early unless a future specification adds stricter rules.
+
+**Example (item with note):**
+
+```json
+{
+  "title": "Study in Blue",
+  "source": "https://example.com/art/blue.html",
+  "note": {
+    "text": "Painted in 2024; the loop references early net art palettes.",
+    "duration": 20
+  }
+}
 ```
 
 ---
@@ -346,6 +389,7 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `license` (string)
 - `display` (object)
 - `provenance` (object)
+- `note` (object; experimental intermission per §3.4)
 - All other PlaylistItem fields per DP-1 §3.2
 
 **Field mapping (optional):**
@@ -600,6 +644,12 @@ Current version: **0.1.0**
 
 ## 11 · Changelog
 
+### Amendment (2026-04-13) — Note (experimental)
+
+- Documented optional **`note`** on the playlist and on each **`PlaylistItem`**: `text` (required, ≤500 characters), `duration` (optional, default 20 seconds when omitted).
+- Normative intent: players show a **dedicated intermission page** before the playlist starts or before an item, for the effective duration; **experimental** and **may be deprecated** in a later version.
+- JSON: `extensions/playlists/schema.json` (playlist-level `note` and per-item `note` via `items` overlay; composed with the bundle using `allOf`). Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+
 ### v0.1.0 (2026-03-11)
 
 **Initial draft release of Playlist Extension.**
@@ -651,6 +701,20 @@ Current version: **0.1.0**
   "description": "Extended fields for DP-1 playlists",
   "type": "object",
   "properties": {
+    "note": {
+      "$ref": "#/$defs/Note"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "$ref": "#/$defs/Note"
+          }
+        }
+      }
+    },
     "curators": {
       "type": "array",
       "items": {
@@ -710,6 +774,25 @@ Current version: **0.1.0**
               "type": "object"
             }
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Note": {
+      "type": "object",
+      "description": "Experimental intermission card (may change or be deprecated)",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "duration": {
+          "type": "number",
+          "default": 20,
+          "exclusiveMinimum": 0
         }
       }
     }

@@ -3,8 +3,8 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.1",
-  "lastUpdated": "2026-04-07T00:00:00Z",
+  "version": "1.0.2",
+  "lastUpdated": "2026-04-13T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -39,7 +39,7 @@
       "name": "Playlist Extension",
       "version": "0.1.0",
       "status": "draft",
-      "description": "Extensions to DP-1 playlists for dynamic item fetching and enhanced metadata. Enables playlists to transition from static collections to live, personalized feeds.",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional experimental Note (intermission) fields on the playlist and on each item. Enables playlists to transition from static collections to live, personalized feeds.",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -58,7 +58,8 @@
         "Response mapping with schema validation",
         "Curator metadata with DID-based verifiable identities",
         "Enhanced metadata (summary, coverImage)",
-        "Fast start, rich upgrade rendering strategy"
+        "Fast start, rich upgrade rendering strategy",
+        "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -67,6 +68,15 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.2",
+      "date": "2026-04-13T00:00:00Z",
+      "changes": [
+        "Playlist extension: optional experimental Note object on playlist and on each PlaylistItem (text required up to 500 characters; duration optional, default 20 seconds when omitted) for intermission-style screens between works.",
+        "Playlist extension: Note is validated only via the extension fragment and composed playlist schema (allOf); canonical core playlist.json unchanged.",
+        "Registry: Playlist Extension description and features list updated to document Note; status remains draft extension v0.1.0."
+      ]
+    },
     {
       "version": "1.0.1",
       "date": "2026-04-07T00:00:00Z",
