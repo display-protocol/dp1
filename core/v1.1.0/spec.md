@@ -124,10 +124,21 @@ See [document](ref-manifest.md)
 | `margin`                | number or string | 0          | Even margin around artwork. Number = px; string supports %, vw, vh (computed relative to viewport).                                                                          |
 | `background`            | string           | "\#000000" | Hex/RGB color used outside the artwork and beneath any transparent pixels. Special value "transparent" lets the underlying screen show through.                              |
 | `autoplay`              | bool             | true       | Attempt to start playback automatically. Player MUST fall back to waiting for a first user gesture when the runtime blocks WebAudio/video autoplay (e.g., browser policies). |
-| `loop`                  | bool             | true       | Repeat automatically.                                                                                                                                                        |
+| `loop`                  | bool             | true       | When `true`, time-based sources (video, audio) repeat continuously. When `false`, players **MUST** advance to the next playlist item at end-of-stream (see §4.1). Has no effect on non-time-based sources. |
 | `interaction.keyboard`  | string\[\]       | \[\]       | Allowed keys, using [W3C UI Events code values](https://www.w3.org/TR/uievents-code/) (e.g., `"ArrowLeft"`, `"Space"`, `"KeyW"`). Players MUST ignore unknown codes.         |
 | `interaction.mouse`     | object           | all false  | `{click, scroll, drag, hover}` booleans.                                                                                                                                     |
 | `userOverrides.<field>` | bool             | true       | Viewer may change field if true.                                                                                                                                             |
+
+### 4.1 Playback advance
+
+How a player decides when to move from one playlist item to the next depends on the source type and `display.loop`:
+
+- **Code-based and static sources** (HTML, image, generative). No natural end-of-stream exists. Players advance after `duration` seconds — resolved from the item's `duration`, then `defaults.duration`. When neither is set, the player **SHOULD** continue rendering until externally instructed.
+- **Time-based sources** (video, audio).
+  - `loop: true` (default): the source repeats continuously. If `duration` is set, the player advances when it elapses; the source repeats during that interval.
+  - `loop: false`: the player **MUST** advance to the next playlist item at end-of-stream. If `duration` is also set, the player **MUST** advance on whichever trigger fires first.
+
+Transitions between items are implementation-defined.
 
 ---
 
