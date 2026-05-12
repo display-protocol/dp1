@@ -36,7 +36,7 @@ If signatures are present, add `--pubkey` as required by your validation flow.
 - Core specification: [`core/v1.1.0/spec.md`](core/v1.1.0/spec.md)
 - Ref manifest specification: [`core/v1.1.0/ref-manifest.md`](core/v1.1.0/ref-manifest.md)
 - Extension registry: [`extensions/registry.json`](extensions/registry.json)
-- Feed implementation and OpenAPI: [display-protocol/dp1-feed](https://github.com/display-protocol/dp1-feed)
+- Feed implementation and OpenAPI: [display-protocol/dp1-feed-v2](https://github.com/display-protocol/dp1-feed-v2)
 - Validator implementation: [display-protocol/dp1-validator](https://github.com/display-protocol/dp1-validator)
 
 ## Reference hardware path
