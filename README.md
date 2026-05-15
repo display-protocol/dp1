@@ -41,7 +41,7 @@ If signatures are present, add `--pubkey` as required by your validation flow.
 
 ## Reference hardware path
 
-FF1 is a reference hardware/player path for DP-1, not the definition of DP-1 itself.
+The Art Computer (model FF1) is a reference hardware/player path for DP-1, not the definition of DP-1 itself.
 
 ## Guided integration flow
 
