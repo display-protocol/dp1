@@ -3,15 +3,15 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.2",
-  "lastUpdated": "2026-04-13T00:00:00Z",
+  "version": "1.0.3",
+  "lastUpdated": "2026-05-20T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
       "name": "Channel Extension",
       "version": "1.0.0",
       "status": "released",
-      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, and verifiable identities.",
+      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema).",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist-group"
@@ -26,7 +26,8 @@
         "Multi-curator exhibitions with verifiable identities",
         "Publisher attribution for institutions and collectives",
         "DID-based entity format (curators and publisher)",
-        "Multi-signature support (aligned with DP-1 v1.1.0)",
+        "Multi-signature support (aligned with DP-1 v1.1.0), including `publisher` as a signature role alongside curator, feed, agent, institution, and licensor",
+        "Player verification: conforming implementations MUST verify at least one `feed` and one `publisher` signature before accepting a channel (specified in channel.md; JSON Schema validates structure and role enum only)",
         "Enhanced metadata (summary, coverImage)"
       ],
       "maintainer": {
@@ -68,6 +69,14 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.3",
+      "date": "2026-05-20T00:00:00Z",
+      "changes": [
+        "Channel extension: `publisher` is a valid `signatures[].role` value in schema.json; registry description and features updated.",
+        "Channel extension: documented player norm—verify at least one `feed` and one `publisher` signature before treating a channel as valid; rule remains prose-only (not enforced by JSON Schema)."
+      ]
+    },
     {
       "version": "1.0.2",
       "date": "2026-04-13T00:00:00Z",
