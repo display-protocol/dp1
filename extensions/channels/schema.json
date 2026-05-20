@@ -137,7 +137,7 @@
         "role": {
           "type": "string",
           "description": "Role of the signing entity",
-          "enum": ["curator", "feed", "agent", "institution", "licensor"]
+          "enum": ["curator", "feed", "agent", "institution", "licensor", "publisher"]
         },
         "sig": {
           "type": "string",
