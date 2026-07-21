@@ -297,7 +297,7 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 2. Else if `previous_item` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it). This covers `max_instant` unchanged, timed cohort becoming empty (clock rollback), or any other recompute where the previous item remains eligible.
 3. Else begin at the **first** item of the new active set.
 
-**Playhead handoff (normative):** Because the player **MUST NOT** be required to interpret `displayAt` / `byDisplayAt`, every control-layer push that starts or changes the playhead **MUST** tell the player which item to begin with (for example start `id`, `source`, or index within the pushed active set). A list-only push where the player always starts at index 0 is **not** sufficient when evergreen items precede the timed cohort (Daily midnight).
+**Playhead handoff (normative):** Because the player **MUST NOT** be required to interpret `displayAt` / `byDisplayAt`, every control-layer active-set push that is **not** skipped under the unchanged-set rule above **MUST** include an explicit start item for the player (for example start `id`, `source`, or index within the **pushed active set**), selected by the cursor rules: rule 1 → first timed-cohort item; rule 2 → continue `previous_item`; rule 3 → first item of the new active set. A list-only push where the player always starts at index 0 is **not** sufficient — including when membership changes but `max_instant` does not (for example `dynamicQuery` appends evergreen while Day N is playing), and when evergreen items precede the timed cohort (Daily midnight).
 
 #### 3.5.5 Duration, loop, and edge cases
 
@@ -800,13 +800,13 @@ type ContractInfo {
 - Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
 - Timer threshold: immediate active-set push; does not wait for `duration`/`loop`
 - Cursor rule 1: when `max_instant` changes to non-empty, start at first timed-cohort item (playhead handoff; not leading evergreen)
-- Cursor rule 2: continue current item when `max_instant` unchanged (same-day playlist refresh)
+- Cursor rule 2: continue current item when `max_instant` unchanged (same-day playlist refresh); if the list is still pushed (membership/order changed), handoff MUST name that continued item
 - Clock/timezone change on playback device triggers recompute (§3.5.4 step 3)
 - Multiple items same `displayAt` instant in timed cohort (§3.5.3 example B+C)
 - Empty active set: stop previous playback (no hold-last-frame of removed item)
 - Future-only `displayAt`: active set is evergreen items only
 - Fast-start: no flash of archive/future static items before filter (§3.5.6)
-- Composition: `byDisplayAt` + `dynamicQuery`; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership)
+- Composition: `byDisplayAt` + `dynamicQuery`; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership); membership change with unchanged `max_instant` → push with continue handoff
 ---
 
 ## 8 · Versioning & Future Extensions
@@ -877,7 +877,7 @@ Current version: **0.2.0**
 - Composition with `dynamicQuery`: control layer owns playback lists; static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership); §4.6.1/§4.6.2 fallback scoped to last pushed active set.
 - Offset wire form: colon required (`+07:00`); compact `+0700` rejected by schema.
 - `now` defined; material clock change examples; idempotent push when active set unchanged; note intermission before source on cohort change.
-- §7.1 badge aligned to v0.2; Appendix A `dynamicQuery.required` fixed; §7.3 scheduling scenarios expanded; playhead handoff required on active-set push.
+- §7.1 badge aligned to v0.2; Appendix A `dynamicQuery.required` fixed; §7.3 scheduling scenarios expanded; playhead handoff required on every non-skipped active-set push (including rule-2 continue).
 - `DisplayAt` schema `oneOf` uses mutually exclusive `pattern`s for local datetime vs absolute `date-time` (portable without Format-Assertion; date-only rejected).
 - Compliance badge and §7.3 scenarios updated for v0.2 scheduling.
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
