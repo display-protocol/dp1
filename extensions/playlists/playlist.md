@@ -282,8 +282,8 @@ After computing the active set, the device control layer **MUST**:
 
 1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any).
 2. If `next_instant` exists, set a timer for (`next_instant` − now).
-3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, **or** when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, or large time step): recompute the active set, **push the new list to the player immediately**, and set a new timer.
-4. If there is no future `displayAt` instant, do not set a timer; hold the current active set until the playlist changes.
+3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, **or** when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, or large time step): recompute the active set, **push the new list to the player immediately**, and set a new timer (or clear the timer if step 4 applies).
+4. If there is no future `displayAt` instant, **MUST NOT** arm a transition timer. The current active set remains in effect until a step-3 trigger (wake/boot, material clock or timezone change) or the playlist document changes — step 4 does **not** freeze the set against those recomputes.
 
 There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
 
@@ -291,8 +291,8 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 
 **Playback cursor after an active-set push (normative):** Let `previous_id` be the item currently playing (if any), and let the timed cohort be as defined in §3.5.3.
 
-1. If the timed cohort’s `max_instant` **changed** (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro).
-2. Else if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it).
+1. If the timed cohort’s `max_instant` **changed** to a **non-empty** new value (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro).
+2. Else if the timed cohort became **empty** (for example clock rollback cleared *past*) **or** `max_instant` did not change: if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it).
 3. Else begin at the **first** item of the new active set.
 
 #### 3.5.5 Duration, loop, and edge cases
@@ -306,7 +306,7 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 
 #### 3.5.6 Composition with `dynamicQuery`
 
-When both `schedule.byDisplayAt` and `dynamicQuery` are present, the **device control layer owns the playback list**. Enrichment from §4 still produces accepted dynamic items, but those items enter the **effective item list** used by §3.5.3 — they are **not** merged into an unfiltered player-owned playlist.
+When both `schedule.byDisplayAt` is `true` and `dynamicQuery` is present, the **device control layer owns the playback list**. Enrichment from §4 still produces accepted dynamic items, but those items enter the **effective item list** used by §3.5.3 — they are **not** merged into an unfiltered player-owned playlist.
 
 1. Fast-start static items (§4.6.1) **MUST** be filtered to an active set **before** they are sent for playback — do not flash archive or future static items, then filter later.
 2. `dynamicQuery` **MAY** still be executed by the player (per §4) or by the control layer, but accepted dynamic items **MUST** be available to the control layer so it can form the full effective item list (static + accepted dynamic items).
@@ -754,7 +754,7 @@ type ContractInfo {
 - Parse and display all extended playlist fields
 - Verify playlist signatures per DP-1 §7.1
 - Handle missing optional fields gracefully
-- When `schedule.byDisplayAt` is present, implement active-set filtering and timer push per §3.5 (device control layer) or document that scheduling is out of scope for the badge claim
+- When `schedule.byDisplayAt` is `true`, implement active-set filtering and timer push per §3.5 (device control layer) or document that scheduling is out of scope for the badge claim
 - Pass reference test suite (10+ sample playlists)
 
 ### 7.2 Optional Badge: "DP-1 Playlist Dynamic"
