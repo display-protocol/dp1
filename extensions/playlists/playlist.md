@@ -254,7 +254,7 @@ When `schedule.byDisplayAt` is `true`, the device control layer **MUST** compute
 4. **MUST** form the active set as: timed cohort **plus** every item with **no** `displayAt` (evergreen / always eligible).
 5. **MUST** preserve original playlist order among the selected items.
 6. **MUST** send **only** the active set to the player for playback. Older archive and future items **MUST** remain in the full playlist document for catalog UIs but **MUST NOT** be included in the playback list.
-7. **MUST** arm a transition timer per §3.5.4.
+7. **MUST** arm or clear the transition timer per §3.5.4.
 
 **One-sentence summary:** Active set = items from the most recent release that has already happened + items with no time restriction.
 
@@ -282,8 +282,8 @@ After computing the active set, the device control layer **MUST**:
 
 1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any).
 2. If `next_instant` exists, set a timer for (`next_instant` − now).
-3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, **or** when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, or large time step): recompute the active set, **push the new list to the player immediately**, and set a new timer (or clear the timer if step 4 applies).
-4. If there is no future `displayAt` instant, **MUST NOT** arm a transition timer. The current active set remains in effect until a step-3 trigger (wake/boot, material clock or timezone change) or the playlist document changes — step 4 does **not** freeze the set against those recomputes.
+3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, or large time step), **or** when the playlist document changes (live refresh, app push, etc.): recompute the active set, **push the new list to the player immediately**, and set a new timer (or clear the timer if step 4 applies).
+4. If there is no future `displayAt` instant, **MUST NOT** arm a transition timer. The current active set remains in effect until a step-3 trigger fires — step 4 does **not** freeze the set against those recomputes.
 
 There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
 
@@ -292,7 +292,7 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 **Playback cursor after an active-set push (normative):** Let `previous_id` be the item currently playing (if any), and let the timed cohort be as defined in §3.5.3.
 
 1. If the timed cohort’s `max_instant` **changed** to a **non-empty** new value (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro).
-2. Else if the timed cohort became **empty** (for example clock rollback cleared *past*) **or** `max_instant` did not change: if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it).
+2. Else if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it). This covers `max_instant` unchanged, timed cohort becoming empty (clock rollback), or any other recompute where the previous item remains eligible.
 3. Else begin at the **first** item of the new active set.
 
 #### 3.5.5 Duration, loop, and edge cases
