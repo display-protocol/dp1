@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
   "title": "DP-1 Playlist Extension",
   "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, and displayAt scheduling",
   "type": "object",

@@ -1,11 +1,12 @@
-# DP-1 Playlist Extension (v0.1.0)
+# DP-1 Playlist Extension (v0.1.1)
 
 *Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and time-based scheduling.*
 
-**Specification version:** 0.1.0  
+**Specification version:** 0.1.1  
 **Status:** Draft Extension  
 **DP-1 compatibility:** v1.0.0+  
-**Published:** 2026-03-11
+**Published:** 2026-03-11  
+**Updated:** 2026-07-21
 
 ---
 
@@ -473,7 +474,7 @@ Players **MUST** hydrate template placeholders directly in the `query` string be
 - Players **MUST** replace all `{{...}}` templates in the `query` field before sending request
 - If a template cannot be resolved, players **MUST** fail gracefully (skip query, show static content)
 - If no `{{...}}` templates are present in query, it is used as-is (static query)
-- Custom variables beyond the standard set are **NOT** supported in v0.1.0
+- Custom variables beyond the standard set are **NOT** supported in v0.1.1
 
 **Example hydration (GraphQL):**
 
@@ -746,14 +747,13 @@ Playlist extension follows SemVer:
 - **Minor:** Additive features, backward-compatible
 - **Patch:** Bug fixes, clarifications, editorial changes
 
-Current version: **0.1.0**
+Current version: **0.1.1**
 
 ### 8.2 Proposed Future Features
 
 **Potential v0.2.0 additions:**
 - Additional template placeholders
 - Support for additional resolution profiles (e.g., `grpc-v1`)
-- Playlist scheduling metadata
 - Enhanced analytics/tracking fields
 
 **Potential v1.0.0 changes:**
@@ -793,12 +793,14 @@ Current version: **0.1.0**
 
 ## 11 · Changelog
 
-### Amendment (2026-07-21) — displayAt scheduling
+### v0.1.1 (2026-07-21) — displayAt scheduling
 
+- Bumped Playlist Extension from **0.1.0** to **0.1.1**.
 - Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 datetime string).
 - Normative intent: when `byDisplayAt` is `true`, resolve each `displayAt` to an instant (§3.5.2), filter to the active set (most recent release ≤ now + evergreen items), preserve order, and advance via timer on the next future instant.
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
 - JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+- Published resource URLs now use `/extensions/playlists/v0.1.1/`.
 
 ### Amendment (2026-04-13) — Note (experimental)
 
@@ -852,7 +854,7 @@ Current version: **0.1.0**
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://feralfile.com/schemas/dp1-playlist-0.1.0.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
   "title": "DP-1 Playlist Extension",
   "description": "Extended fields for DP-1 playlists",
   "type": "object",

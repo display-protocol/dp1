@@ -37,7 +37,7 @@
     {
       "id": "playlists",
       "name": "Playlist Extension",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "draft",
       "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, and displayAt scheduling (schedule.byDisplayAt + item displayAt). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
       "compatibility": {
@@ -46,9 +46,9 @@
       },
       "published": "2026-03-11T00:00:00Z",
       "resources": {
-        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist.md",
-        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
-        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist_with_extension.json",
+        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/playlist.md",
+        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
+        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/playlist_with_extension.json",
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/playlists"
       },
       "features": [
@@ -73,10 +73,11 @@
       "version": "1.0.3",
       "date": "2026-07-21T00:00:00Z",
       "changes": [
+        "Playlist extension: bump to v0.1.1.",
         "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 datetime) for time-based active-set filtering.",
         "Playlist extension: document timezone rules (with timezone = absolute; without / date-only = device local), active set logic, and timer-based transitions.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
-        "Registry: Playlist Extension description and features list updated for displayAt scheduling; status remains draft extension v0.1.0."
+        "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.1.1)."
       ]
     },
     {
