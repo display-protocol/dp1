@@ -284,18 +284,20 @@ After computing the active set, the device control layer **MUST**:
 
 1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any).
 2. If `next_instant` exists, set a timer for (`next_instant` − now).
-3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, DST transition, or |Δ| ≥ 1 s versus the clock used for the prior `now`), **or** when the playlist document changes (live refresh, app push, etc.): recompute the active set, **push the new list to the player immediately**, and set a new timer (or clear the timer if step 4 applies). Routine NTP drift below 1 s **MAY** be ignored until the next wake/boot or timer fire.
+3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, DST transition, or |Δ| ≥ 1 s versus the clock used for the prior `now`), **or** when the playlist document changes (live refresh, app push, etc.): recompute the active set; then **push** per the apply policy below (unless the unchanged-set skip applies), and set a new timer (or clear the timer if step 4 applies). Routine NTP drift below 1 s **MAY** be ignored until the next wake/boot or timer fire.
 4. If there is no future `displayAt` instant, **MUST NOT** arm a transition timer. The current active set remains in effect until a step-3 trigger fires — step 4 does **not** freeze the set against those recomputes.
 
 There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
 
 **Apply policy when the active set changes (normative):** When membership or order of the active set changes, pushing the new list **MUST** replace the player’s current playback list **immediately**. It **MUST NOT** wait for the current item’s `duration` or `loop` cycle to finish. Crossing a `displayAt` threshold is **not** duration expiry: even if the current item would otherwise loop indefinitely or has `duration` longer than the remaining time until the next release, the new active set **MUST** take effect when the timer fires (artwork changes). When a step-3 recompute yields the **same** active set (same items in the same order), the control layer **MAY** skip a redundant player push and **SHOULD** preserve in-progress playback and cursor position.
 
-**Playback cursor after an active-set push (normative):** Let `previous_id` be the item currently playing (if any), and let the timed cohort be as defined in §3.5.3.
+**Playback cursor after an active-set push (normative):** Let `previous_item` be the item currently playing (if any). Item identity for “same item” **MUST** use `id` when present; otherwise `source`; otherwise the item’s index in the full effective list. Let the timed cohort be as defined in §3.5.3.
 
 1. If the timed cohort’s `max_instant` **changed** to a **non-empty** new value (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro). If that item has a `note` (§3.4), the player **SHOULD** show the intermission **before** loading its `source` (timer threshold does not skip `note`).
-2. Else if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it). This covers `max_instant` unchanged, timed cohort becoming empty (clock rollback), or any other recompute where the previous item remains eligible.
+2. Else if `previous_item` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it). This covers `max_instant` unchanged, timed cohort becoming empty (clock rollback), or any other recompute where the previous item remains eligible.
 3. Else begin at the **first** item of the new active set.
+
+**Playhead handoff (normative):** Because the player **MUST NOT** be required to interpret `displayAt` / `byDisplayAt`, every control-layer push that starts or changes the playhead **MUST** tell the player which item to begin with (for example start `id`, `source`, or index within the pushed active set). A list-only push where the player always starts at index 0 is **not** sufficient when evergreen items precede the timed cohort (Daily midnight).
 
 #### 3.5.5 Duration, loop, and edge cases
 
@@ -312,7 +314,7 @@ When both `schedule.byDisplayAt` is `true` and `dynamicQuery` is present, the **
 
 1. Fast-start static items (§4.6.1) **MUST** be filtered to an active set **before** they are sent for playback — do not flash archive or future static items, then filter later.
 2. **Effective list order (normative):** Static `items` from the signed playlist document **MUST** appear first, in document order; accepted dynamic items **MUST** be appended after the static block, in the order returned by the indexer (after mapping). §3.5.3 step 5 preserves order within this combined list.
-3. **`displayAt` on dynamic items (trust):** Only `displayAt` values on **static** items in the signed playlist document **MUST** affect active-set filtering and timers. If an indexer response includes `displayAt`, implementations **MUST** ignore it for scheduling (the field **MAY** still be stored on the item for catalog UIs). Dynamic items **MUST NOT** shift `max_instant` or arm timers unless the curator signed that schedule on a static item.
+3. **`displayAt` on dynamic items (trust):** Only `displayAt` values on **static** items in the signed playlist document **MUST** affect active-set filtering and timers. If an indexer response includes `displayAt`, implementations **MUST** ignore it for scheduling (the field **MAY** still be stored on the item for catalog UIs). For §3.5.3 membership, such dynamic items **MUST** be treated as having **no** scheduling `displayAt` (evergreen / always eligible), not as invalid or excluded. Dynamic items **MUST NOT** shift `max_instant` or arm timers.
 4. `dynamicQuery` **MAY** be executed by the player (per §4) or by the control layer. Accepted dynamic items **MUST** be available to the control layer **before** any player-side display update from enrichment. When the player executes the query, it **MUST** hand accepted items to the control layer (implementation-defined channel) so the control layer can form the effective list and push the filtered active set per §3.5.4.
 5. After enrichment, the device control layer **MUST** recompute the active set over that effective list, **MUST** retarget the transition timer, and **MUST** push per §3.5.4 (including cursor rules).
 6. **Exception to §4.6.1:** when `byDisplayAt` is `true`, players **MUST NOT** render the unfiltered static catalog or an unfiltered static+dynamic merge. They **MUST** play only active-set lists received from the control layer. The §4.6.1 phrase “update display without disrupting current playback” **MUST NOT** delay or refuse an active-set replace required by §3.5.4 / this section. When `dynamicQuery` fails, fallback **MUST** be the last active set pushed by the control layer (or idle if empty), not the unfiltered static catalog (§4.4, §4.6.2).
@@ -357,7 +359,8 @@ See also `extensions/playlists/examples/daily-by-display-at.json` (same item ord
 | Playback-device local time | Active set (original order) | Cursor on push |
 |:--------------------------|:----------------------------|:---------------|
 | 2026-07-20, 10:00 (pre-Day 1) | Evergreen Intro only | First item → Evergreen Intro |
-| 2026-07-21, 10:00 | Evergreen Intro, Day 1 Work | First timed-cohort item → Day 1 Work |
+| 2026-07-21, 00:00 (first entry into Day 1 cohort) | Evergreen Intro, Day 1 Work | Cohort changed → Day 1 Work (playhead handoff; not Intro) |
+| 2026-07-21, 10:00 (same-day refresh; Day 1 already playing) | Evergreen Intro, Day 1 Work | `max_instant` unchanged → continue Day 1 if still present |
 | 2026-07-22, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 2 Work | Cohort changed → Day 2 Work (not Intro restart) |
 | 2026-07-23, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 3 Work | Cohort changed → Day 3 Work |
 | 2026-07-24, 10:00 (post-Day 3; no future `displayAt`) | Evergreen Intro, Day 3 Work | `max_instant` unchanged → continue current item if still present |
@@ -796,13 +799,14 @@ type ContractInfo {
 - `displayAt` timezone forms: bare local vs `Z` / offset absolute equality; date-only rejected; compact offset rejected
 - Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
 - Timer threshold: immediate active-set push; does not wait for `duration`/`loop`
+- Cursor rule 1: when `max_instant` changes to non-empty, start at first timed-cohort item (playhead handoff; not leading evergreen)
 - Cursor rule 2: continue current item when `max_instant` unchanged (same-day playlist refresh)
 - Clock/timezone change on playback device triggers recompute (§3.5.4 step 3)
 - Multiple items same `displayAt` instant in timed cohort (§3.5.3 example B+C)
 - Empty active set: stop previous playback (no hold-last-frame of removed item)
 - Future-only `displayAt`: active set is evergreen items only
 - Fast-start: no flash of archive/future static items before filter (§3.5.6)
-- Composition: `byDisplayAt` + `dynamicQuery`; ignore unsigned `displayAt` on dynamic items
+- Composition: `byDisplayAt` + `dynamicQuery`; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership)
 ---
 
 ## 8 · Versioning & Future Extensions
@@ -870,10 +874,10 @@ Current version: **0.2.0**
 - Empty active set: push empty/idle; do not hold last frame of a removed item.
 - Recompute also on material playback-device clock or timezone changes.
 - Signatures verify the full catalog before filtering; the pushed active set is not separately signed.
-- Composition with `dynamicQuery`: control layer owns playback lists; static-first effective list order; ignore unsigned `displayAt` on dynamic items; §4.6.1/§4.6.2 fallback scoped to last pushed active set.
+- Composition with `dynamicQuery`: control layer owns playback lists; static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership); §4.6.1/§4.6.2 fallback scoped to last pushed active set.
 - Offset wire form: colon required (`+07:00`); compact `+0700` rejected by schema.
 - `now` defined; material clock change examples; idempotent push when active set unchanged; note intermission before source on cohort change.
-- §10 badge aligned to v0.2; Appendix A `dynamicQuery.required` fixed; §7.3 scheduling scenarios expanded.
+- §7.1 badge aligned to v0.2; Appendix A `dynamicQuery.required` fixed; §7.3 scheduling scenarios expanded; playhead handoff required on active-set push.
 - `DisplayAt` schema `oneOf` uses mutually exclusive `pattern`s for local datetime vs absolute `date-time` (portable without Format-Assertion; date-only rejected).
 - Compliance badge and §7.3 scenarios updated for v0.2 scheduling.
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
@@ -921,9 +925,9 @@ Current version: **0.2.0**
 - Rate limiting and caching recommendations
 
 **Compliance:**
-- Extension badge: "DP-1 Playlist v0.2"
+- Extension badge: "DP-1 Playlist v0.1"
 - Optional badge: "DP-1 Playlist Dynamic"
-- Test suite with scheduling scenarios per §7.3 (10+ sample playlists recommended)
+- Test suite with 8+ scenarios
 
 ---
 
