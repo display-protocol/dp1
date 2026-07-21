@@ -1,8 +1,8 @@
-# DP-1 Playlist Extension (v0.1.1)
+# DP-1 Playlist Extension (v0.2.0)
 
 *Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and time-based scheduling.*
 
-**Specification version:** 0.1.1  
+**Specification version:** 0.2.0  
 **Status:** Draft Extension  
 **DP-1 compatibility:** v1.0.0+  
 **Published:** 2026-03-11  
@@ -17,7 +17,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 1. **Dynamic Query**: Machine-executable interface for fetching playlist items dynamically from external indexers
 2. **Enhanced Metadata**: Additional fields for curators, summary, and cover images
 3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
-4. **displayAt Scheduling**: Optional time-based filtering so players can determine which items are active at a given time (for example, Daily-style one artwork per day)
+4. **displayAt Scheduling**: Optional time-based filtering so the device control layer can determine which items are active at a given time (for example, Daily-style one artwork per day)
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -42,8 +42,9 @@ These extensions enable playlists to transition from static collections to live,
 | **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for the active set. |
-| **Active Set** | When `schedule.byDisplayAt` is `true`, the subset of playlist items eligible to play at the current time. |
+| **Active Set** | When `schedule.byDisplayAt` is `true`, the subset of playlist items the device control layer sends to the player at the current time. |
 | **Schedule** | Playlist-level object that opts into scheduling behavior (currently `byDisplayAt`). |
+| **Playback device** | The display device whose control layer runs `byDisplayAt` filtering and whose local clock defines timezone-less `displayAt` values. |
 
 ---
 
@@ -97,7 +98,7 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
-| `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, filter items by `displayAt`. |
+| `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, the device control layer filters items by `displayAt` before playback. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
@@ -178,12 +179,22 @@ The **`note`** object is an **optional** intermission card: short, **artist-auth
 
 Time-based scheduling lets a playlist carry its full catalog (including archive and future items) while the player only plays items that are **active** at the current time. This supports Daily-style playlists (one artwork per day) without Daily-specific player logic.
 
+**Architecture (normative split):**
+
+| Component | Responsibility |
+|:----------|:---------------|
+| **Publisher / app** | Ship the **full** playlist (`items` include archive and future; `schedule.byDisplayAt: true` when filtering is desired). |
+| **Device control layer** (e.g. controld) | Parse `displayAt`, compute the active set, manage the timer, and **push only the active set** to the player. |
+| **Player** | Play the received list with normal `duration` / `loop` rules. The player **MUST NOT** be required to interpret `displayAt` or `byDisplayAt`. |
+
+Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list sent for playback **MUST** be the active set when `byDisplayAt` is `true`.
+
 #### 3.5.1 Playlist-level `schedule.byDisplayAt`
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
 | `schedule` | object | OPTIONAL | Playlist-level scheduling controls. |
-| `schedule.byDisplayAt` | boolean | OPTIONAL | When `true`, the player filters items to an **active set** based on each item’s `displayAt`. When `false` or absent, play all items normally (core behavior) and ignore `displayAt` for filtering. |
+| `schedule.byDisplayAt` | boolean | OPTIONAL | When `true`, the device control layer **MUST** filter items to an **active set** based on each item’s `displayAt` before playback. When `false` or absent, play all items normally (core behavior) and ignore `displayAt` for filtering. |
 
 ```json
 {
@@ -197,23 +208,25 @@ Time-based scheduling lets a playlist carry its full catalog (including archive 
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `displayAt` | string (ISO 8601) | OPTIONAL | When this item becomes eligible for the active set. |
+| `displayAt` | string (ISO 8601 subset) | OPTIONAL | When this item becomes eligible for the active set. Accepted wire forms: date only (`YYYY-MM-DD`), local datetime with seconds and no timezone (`YYYY-MM-DDThh:mm:ss[.frac]`), or absolute RFC 3339 `date-time` (with `Z` or numeric offset). |
 
 **Field location:** `displayAt` is a **top-level** field on the item (same level as `source`). It is **not** inside `display`. The `display` object is for render preferences (scaling, loop, margin); `displayAt` is scheduling metadata.
 
-**Timezone rules:**
+**Timezone rules (normative):** Implementations that filter by `displayAt` **MUST** resolve wire values as follows:
 
 | Format | Example | Behavior |
 |:-------|:--------|:---------|
 | With timezone (`Z`) | `2026-07-21T00:00:00Z` | Absolute — global sync |
 | With offset | `2026-07-21T09:00:00+07:00` | Absolute — global sync |
-| Without timezone | `2026-07-21T00:00:00` | Device local time |
-| Date only | `2026-07-21` | Treat as `T00:00:00` device local |
+| Without timezone | `2026-07-21T00:00:00` | Playback-device local time |
+| Date only | `2026-07-21` | Treat as `T00:00:00` playback-device local |
+
+**Clock authority:** “Device local” **MUST** mean the local timezone of the **playback device** that runs the schedule filter (the device control layer on the wall display), **not** the casting client or phone. Absolute (`Z` / offset) values **MUST** compare as the same UTC instant on every device.
 
 **Publisher controls behavior:**
 
 - Global release (same instant worldwide): include timezone (`Z` or offset)
-- Local release (each device’s local time): omit timezone
+- Local release (each playback device’s local time): omit timezone
 
 **Example item:**
 
@@ -232,18 +245,19 @@ Time-based scheduling lets a playlist carry its full catalog (including archive 
 
 #### 3.5.3 Active set logic
 
-When `schedule.byDisplayAt` is `true`, the player (or the device control layer that feeds the player) computes the **active set** as follows:
+When `schedule.byDisplayAt` is `true`, the device control layer **MUST** compute the **active set** from the **effective item list** (see §3.5.6 for `dynamicQuery`) as follows:
 
-1. Resolve each item’s `displayAt` to an **instant** using the timezone rules in §3.5.2 (date-only → `T00:00:00` device local; no timezone → device local; with `Z`/offset → absolute). Compare against `now` using those instants — **not** lexical string comparison.
-2. Find `max_instant` = the maximum resolved instant among items where that instant ≤ now.
-3. **Active** = items whose resolved instant equals `max_instant` (same release, even if the wire strings differ, e.g. `2026-07-21T00:00:00Z` and `2026-07-21T07:00:00+07:00`), **plus** items that have no `displayAt` (evergreen / always eligible).
-4. Preserve original playlist order.
-5. The player receives **only** the active set and plays it with normal `duration` / `loop` rules.
-6. Set a timer for the next resolved instant that is greater than now; when the timer fires, recompute the active set and push the updated list.
+1. **MUST** resolve each item’s `displayAt` to an **instant** using §3.5.2. Comparisons against `now` **MUST** use those instants — **not** lexical string comparison of the wire values.
+2. Let *past* be the set of items that have a resolvable `displayAt` whose instant ≤ now. If *past* is empty, there is no same-release timed cohort; skip to step 4 with an empty timed cohort.
+3. Otherwise **MUST** set `max_instant` to the maximum resolved instant in *past*, and take the **timed cohort** = all items whose resolved instant equals `max_instant` (same release even when wire strings differ, e.g. `2026-07-21T00:00:00Z` and `2026-07-21T07:00:00+07:00`).
+4. **MUST** form the active set as: timed cohort **plus** every item with **no** `displayAt` (evergreen / always eligible).
+5. **MUST** preserve original playlist order among the selected items.
+6. **MUST** send **only** the active set to the player for playback. Older archive and future items **MUST** remain in the full playlist document for catalog UIs but **MUST NOT** be included in the playback list.
+7. **MUST** arm a transition timer per §3.5.4.
 
 **One-sentence summary:** Active set = items from the most recent release that has already happened + items with no time restriction.
 
-**Concrete example** (now = 2026-07-22 14:00 device local):
+**Concrete example** (now = 2026-07-22 14:00 playback-device local):
 
 ```text
 Playlist items (in order):
@@ -255,41 +269,55 @@ Playlist items (in order):
   [5] Work D     — displayAt: 2026-07-23
 ```
 
-- Items with `displayAt` ≤ now: A, B, C → `max_displayAt` = 2026-07-22
-- Same-release items: B, C
+- Items with resolved instant ≤ now: A, B, C → `max_instant` = start of 2026-07-22 (playback-device local)
+- Timed cohort (same `max_instant`): B, C
 - Evergreen: Intro, Outro
 - Active set (original order): **Intro, Work B, Work C, Outro**
 - Excluded: Work A (older archive), Work D (future)
 
 #### 3.5.4 Timer-based transitions
 
-After computing the active set:
+After computing the active set, the device control layer **MUST**:
 
-1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now.
-2. Set a timer for (`next_instant` − now).
-3. When the timer fires: recompute the active set, push to the player, set a new timer.
-4. If there is no future `displayAt` instant, do not set a timer; hold the current active set.
+1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any).
+2. If `next_instant` exists, set a timer for (`next_instant` − now).
+3. When the timer fires (or when the device wakes / boots while a scheduled playlist is loaded): recompute the active set, **push the new list to the player immediately**, and set a new timer.
+4. If there is no future `displayAt` instant, do not set a timer; hold the current active set until the playlist changes.
 
 There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
 
+**Apply policy when the active set changes (normative):** Pushing a new active set **MUST** replace the player’s current playback list **immediately**. It **MUST NOT** wait for the current item’s `duration` or `loop` cycle to finish. Crossing a `displayAt` threshold is **not** duration expiry: even if the current item would otherwise loop indefinitely or has `duration` longer than the remaining time until the next release, the new active set **MUST** take effect when the timer fires (artwork changes).
+
 #### 3.5.5 Duration, loop, and edge cases
 
-- `duration` and `loop` apply **within** the active set.
-- Crossing a new `displayAt` threshold **recomputes** the active set; it is not the same as duration expiry.
-- If every `displayAt` is still in the future, the active set is only items without `displayAt`.
+- `duration` and `loop` **MUST** apply **only within** the current active set (advancing among concurrently active items).
+- If every resolvable `displayAt` is still in the future, the active set **MUST** be only items without `displayAt`.
 - If the active set is empty, the player **MAY** idle or hold the last frame (implementation-defined).
-- Multiple items with the same `displayAt` are all included.
+- Multiple items with the same resolved `displayAt` instant **MUST** all be included.
+- An item whose `displayAt` cannot be resolved to an instant (invalid calendar/clock value after accepting the wire pattern) **MUST** be treated as **not eligible** for the timed cohort and **MUST NOT** contribute a timer candidate (it is excluded until corrected; it is **not** evergreen).
 - Implementations that do not understand `byDisplayAt` **SHOULD** ignore it and play the full list (degraded but functional).
 
-#### 3.5.6 Example: Daily playlist
+#### 3.5.6 Composition with `dynamicQuery`
 
-See also `extensions/playlists/examples/daily-by-display-at.json`.
+When both `schedule.byDisplayAt` and `dynamicQuery` are present:
+
+1. Fast-start static items (§4.6.1) **MUST** still be filtered to an active set before they are sent for playback — do not flash archive or future static items, then filter later.
+2. After dynamic enrichment merges or appends items, the device control layer **MUST** recompute the active set over the **full effective item list** (static + accepted dynamic items) and **MUST** retarget the transition timer.
+3. Recompute after enrichment **MUST** follow the same immediate-push apply policy as §3.5.4 (replace the playback list; do not wait for duration/loop solely because enrichment completed). Mid-item disruption rules from §4.6.1 still apply only to *how* the player swaps media after it receives the new list — the control layer **MUST** still send the updated active set promptly.
+
+#### 3.5.7 Example: Daily playlist
+
+See also `extensions/playlists/examples/daily-by-display-at.json` (same item order and days as below).
 
 ```json
 {
   "title": "Daily",
   "schedule": { "byDisplayAt": true },
   "items": [
+    {
+      "title": "Evergreen Intro",
+      "source": "https://cdn.example.com/intro.html"
+    },
     {
       "title": "Day 1 Work",
       "source": "https://cdn.example.com/day1.html",
@@ -303,19 +331,22 @@ See also `extensions/playlists/examples/daily-by-display-at.json`.
       "note": { "text": "Exploring generative landscapes." }
     },
     {
-      "title": "Evergreen Intro",
-      "source": "https://cdn.example.com/intro.html"
+      "title": "Day 3 Work",
+      "source": "https://cdn.example.com/day3.html",
+      "displayAt": "2026-07-23T00:00:00",
+      "note": { "text": "A study in color and form." }
     }
   ]
 }
 ```
 
-**Behavior** (device local time; no timezone on `displayAt`):
+**Behavior** (playback-device local time; no timezone on `displayAt`):
 
-| Device local time | Active set |
-|:------------------|:-----------|
-| 2026-07-21, 10:00 | Day 1 Work, Evergreen Intro |
-| 2026-07-22, 00:00 (timer fires) | Day 2 Work, Evergreen Intro |
+| Playback-device local time | Active set (original order) |
+|:--------------------------|:----------------------------|
+| 2026-07-21, 10:00 | Evergreen Intro, Day 1 Work |
+| 2026-07-22, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 2 Work |
+| 2026-07-23, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 3 Work |
 
 ---
 
@@ -474,7 +505,7 @@ Players **MUST** hydrate template placeholders directly in the `query` string be
 - Players **MUST** replace all `{{...}}` templates in the `query` field before sending request
 - If a template cannot be resolved, players **MUST** fail gracefully (skip query, show static content)
 - If no `{{...}}` templates are present in query, it is used as-is (static query)
-- Custom variables beyond the standard set are **NOT** supported in v0.1.1
+- Custom variables beyond the standard set are **NOT** supported in v0.2.0
 
 **Example hydration (GraphQL):**
 
@@ -747,11 +778,11 @@ Playlist extension follows SemVer:
 - **Minor:** Additive features, backward-compatible
 - **Patch:** Bug fixes, clarifications, editorial changes
 
-Current version: **0.1.1**
+Current version: **0.2.0**
 
 ### 8.2 Proposed Future Features
 
-**Potential v0.2.0 additions:**
+**Potential v0.3.0 additions:**
 - Additional template placeholders
 - Support for additional resolution profiles (e.g., `grpc-v1`)
 - Enhanced analytics/tracking fields
@@ -793,14 +824,16 @@ Current version: **0.1.1**
 
 ## 11 · Changelog
 
-### v0.1.1 (2026-07-21) — displayAt scheduling
+### v0.2.0 (2026-07-21) — displayAt scheduling
 
-- Bumped Playlist Extension from **0.1.0** to **0.1.1**.
-- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 datetime string).
-- Normative intent: when `byDisplayAt` is `true`, resolve each `displayAt` to an instant (§3.5.2), filter to the active set (most recent release ≤ now + evergreen items), preserve order, and advance via timer on the next future instant.
+- Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `schedule` / `displayAt` per §8.1).
+- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: date, local datetime with seconds, or RFC 3339 `date-time`).
+- Normative split: device control layer filters and timers; player plays the pre-filtered active set only (no Daily-specific player logic).
+- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare/date-only = **playback-device** local), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
+- Composition with `dynamicQuery`: filter static items on fast-start; recompute over the merged list after enrichment (§3.5.6).
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
-- JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
-- Published resource URLs now use `/extensions/playlists/v0.1.1/`.
+- JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; `DisplayAt` as `oneOf` date / local datetime / `date-time`; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+- Published resource URLs now use `/extensions/playlists/v0.2.0/`.
 
 ### Amendment (2026-04-13) — Note (experimental)
 
@@ -851,10 +884,12 @@ Current version: **0.1.1**
 
 ## Appendix A · JSON Schema
 
+Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragment below mirrors the shipped `$id` and the `schedule` / `displayAt` defs; prefer the file on disk when validating.
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
   "title": "DP-1 Playlist Extension",
   "description": "Extended fields for DP-1 playlists",
   "type": "object",
@@ -945,17 +980,40 @@ Current version: **0.1.1**
   "$defs": {
     "Schedule": {
       "type": "object",
-      "description": "Playlist-level scheduling controls",
+      "description": "Playlist-level scheduling controls. When byDisplayAt is true, the device control layer filters items to an active set based on each item's displayAt and pushes only that set to the player.",
       "properties": {
         "byDisplayAt": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, the device control layer MUST filter playlist items to the active set for the current time using displayAt and push only that set to the player. When false or absent, play all items (core behavior) and ignore displayAt for filtering."
         }
       }
     },
     "DisplayAt": {
-      "type": "string",
-      "description": "ISO 8601 datetime (with/without timezone, or date only)",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display.",
+      "oneOf": [
+        {
+          "title": "Date only (playback-device local midnight)",
+          "type": "string",
+          "format": "date"
+        },
+        {
+          "title": "Local datetime without timezone (playback-device local)",
+          "type": "string",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$"
+        },
+        {
+          "title": "Absolute datetime with timezone",
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+        }
+      ],
+      "examples": [
+        "2026-07-21",
+        "2026-07-21T00:00:00",
+        "2026-07-21T00:00:00Z",
+        "2026-07-21T09:00:00+07:00"
+      ]
     },
     "Note": {
       "type": "object",

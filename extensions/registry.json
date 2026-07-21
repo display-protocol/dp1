@@ -37,7 +37,7 @@
     {
       "id": "playlists",
       "name": "Playlist Extension",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "status": "draft",
       "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, and displayAt scheduling (schedule.byDisplayAt + item displayAt). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
       "compatibility": {
@@ -46,9 +46,9 @@
       },
       "published": "2026-03-11T00:00:00Z",
       "resources": {
-        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/playlist.md",
-        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
-        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/playlist_with_extension.json",
+        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/playlist.md",
+        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
+        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/playlist_with_extension.json",
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/playlists"
       },
       "features": [
@@ -60,7 +60,7 @@
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
         "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
-        "displayAt scheduling: playlist schedule.byDisplayAt filters items to an active set by item displayAt (ISO 8601; timezone or device-local); timer-driven transitions for Daily-style playlists"
+        "displayAt scheduling: when schedule.byDisplayAt is true, the device control layer filters to an active set by item displayAt (ISO 8601; Z/offset absolute, bare/date-only = playback-device local), timers push the new list immediately to the player (player has no Daily-specific logic)"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -73,11 +73,12 @@
       "version": "1.0.3",
       "date": "2026-07-21T00:00:00Z",
       "changes": [
-        "Playlist extension: bump to v0.1.1.",
-        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 datetime) for time-based active-set filtering.",
-        "Playlist extension: document timezone rules (with timezone = absolute; without / date-only = device local), active set logic, and timer-based transitions.",
+        "Playlist extension: bump to v0.2.0 (minor additive release).",
+        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 subset) for time-based active-set filtering by the device control layer (immediate push on threshold; playback-device local for bare/date-only).",
+        "Playlist extension: DisplayAt schema uses oneOf (format date, local datetime with seconds, format date-time).",
+        "Playlist extension: document timezone rules, active set logic, timer-based transitions, and composition with dynamicQuery.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
-        "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.1.1)."
+        "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."
       ]
     },
     {

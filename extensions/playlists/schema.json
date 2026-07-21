@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.1/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
   "title": "DP-1 Playlist Extension",
   "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, and displayAt scheduling",
   "type": "object",
@@ -52,18 +52,34 @@
   "$defs": {
     "Schedule": {
       "type": "object",
-      "description": "Playlist-level scheduling controls. When byDisplayAt is true, players filter items to an active set based on each item's displayAt.",
+      "description": "Playlist-level scheduling controls. When byDisplayAt is true, the device control layer filters items to an active set based on each item's displayAt and pushes only that set to the player.",
       "properties": {
         "byDisplayAt": {
           "type": "boolean",
-          "description": "When true, filter playlist items to the active set for the current time using displayAt. When false or absent, play all items (core behavior) and ignore displayAt for filtering."
+          "description": "When true, the device control layer MUST filter playlist items to the active set for the current time using displayAt and push only that set to the player. When false or absent, play all items (core behavior) and ignore displayAt for filtering."
         }
       }
     },
     "DisplayAt": {
-      "type": "string",
-      "description": "ISO 8601 datetime when this item becomes eligible for the active set. With timezone (Z or offset): absolute/global time. Without timezone: device local time. Date only (YYYY-MM-DD): treat as T00:00:00 device local. Top-level item field (same level as source), not inside display.",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$",
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display.",
+      "oneOf": [
+        {
+          "title": "Date only (playback-device local midnight)",
+          "type": "string",
+          "format": "date"
+        },
+        {
+          "title": "Local datetime without timezone (playback-device local)",
+          "type": "string",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$"
+        },
+        {
+          "title": "Absolute datetime with timezone",
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+        }
+      ],
       "examples": [
         "2026-07-21",
         "2026-07-21T00:00:00",
