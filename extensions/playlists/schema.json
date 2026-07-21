@@ -61,12 +61,12 @@
       }
     },
     "DisplayAt": {
-      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display.",
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary.",
       "oneOf": [
         {
           "title": "Date only (playback-device local midnight)",
           "type": "string",
-          "format": "date"
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
         },
         {
           "title": "Local datetime without timezone (playback-device local)",
@@ -76,8 +76,7 @@
         {
           "title": "Absolute datetime with timezone",
           "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
         }
       ],
       "examples": [

@@ -189,6 +189,8 @@ Time-based scheduling lets a playlist carry its full catalog (including archive 
 
 Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list sent for playback **MUST** be the active set when `byDisplayAt` is `true`.
 
+**Signatures vs filtered push:** Signature verification **MUST** use the **full, unmodified** playlist document (including archive and future items) per §5 / DP-1 §7.1 **before** filtering. The active set pushed to the player is a **runtime playback subset** and **MUST NOT** be treated as a separately signed playlist. Players that receive only the active set from a control layer that has already verified the full document **MUST NOT** require a signature covering that subset alone.
+
 #### 3.5.1 Playlist-level `schedule.byDisplayAt`
 
 | Field | Type | Required | Description |
@@ -281,29 +283,36 @@ After computing the active set, the device control layer **MUST**:
 
 1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any).
 2. If `next_instant` exists, set a timer for (`next_instant` − now).
-3. When the timer fires (or when the device wakes / boots while a scheduled playlist is loaded): recompute the active set, **push the new list to the player immediately**, and set a new timer.
+3. When the timer fires, when the device wakes / boots while a scheduled playlist is loaded, **or** when the playback device’s clock or timezone changes materially (manual clock set, timezone switch, or large time step): recompute the active set, **push the new list to the player immediately**, and set a new timer.
 4. If there is no future `displayAt` instant, do not set a timer; hold the current active set until the playlist changes.
 
 There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
 
 **Apply policy when the active set changes (normative):** Pushing a new active set **MUST** replace the player’s current playback list **immediately**. It **MUST NOT** wait for the current item’s `duration` or `loop` cycle to finish. Crossing a `displayAt` threshold is **not** duration expiry: even if the current item would otherwise loop indefinitely or has `duration` longer than the remaining time until the next release, the new active set **MUST** take effect when the timer fires (artwork changes).
 
+**Playback cursor after an active-set push (normative):** Let `previous_id` be the item currently playing (if any), and let the timed cohort be as defined in §3.5.3.
+
+1. If the timed cohort’s `max_instant` **changed** (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro).
+2. Else if `previous_id` is still present in the new active set, playback **SHOULD** continue that item (or resume its in-progress media if the player supports it).
+3. Else begin at the **first** item of the new active set.
+
 #### 3.5.5 Duration, loop, and edge cases
 
 - `duration` and `loop` **MUST** apply **only within** the current active set (advancing among concurrently active items).
 - If every resolvable `displayAt` is still in the future, the active set **MUST** be only items without `displayAt`.
-- If the active set is empty, the player **MAY** idle or hold the last frame (implementation-defined).
+- If the active set is empty, the control layer **MUST** still push an empty playback list (or an explicit idle command). The player **MUST** stop presenting items from the previous active set and **MAY** show an idle or blank state. Holding the last frame of an item that is no longer in the playback list **MUST NOT** be treated as satisfying the replace policy in §3.5.4.
 - Multiple items with the same resolved `displayAt` instant **MUST** all be included.
 - An item whose `displayAt` cannot be resolved to an instant (invalid calendar/clock value after accepting the wire pattern) **MUST** be treated as **not eligible** for the timed cohort and **MUST NOT** contribute a timer candidate (it is excluded until corrected; it is **not** evergreen).
 - Implementations that do not understand `byDisplayAt` **SHOULD** ignore it and play the full list (degraded but functional).
 
 #### 3.5.6 Composition with `dynamicQuery`
 
-When both `schedule.byDisplayAt` and `dynamicQuery` are present:
+When both `schedule.byDisplayAt` and `dynamicQuery` are present, the **device control layer owns the playback list**. Enrichment from §4 still produces accepted dynamic items, but those items enter the **effective item list** used by §3.5.3 — they are **not** merged into an unfiltered player-owned playlist.
 
-1. Fast-start static items (§4.6.1) **MUST** still be filtered to an active set before they are sent for playback — do not flash archive or future static items, then filter later.
-2. After dynamic enrichment merges or appends items, the device control layer **MUST** recompute the active set over the **full effective item list** (static + accepted dynamic items) and **MUST** retarget the transition timer.
-3. Recompute after enrichment **MUST** follow the same immediate-push apply policy as §3.5.4 (replace the playback list; do not wait for duration/loop solely because enrichment completed). Mid-item disruption rules from §4.6.1 still apply only to *how* the player swaps media after it receives the new list — the control layer **MUST** still send the updated active set promptly.
+1. Fast-start static items (§4.6.1) **MUST** be filtered to an active set **before** they are sent for playback — do not flash archive or future static items, then filter later.
+2. `dynamicQuery` **MAY** still be executed by the player (per §4) or by the control layer, but accepted dynamic items **MUST** be available to the control layer so it can form the full effective item list (static + accepted dynamic items).
+3. After enrichment, the device control layer **MUST** recompute the active set over that effective list, **MUST** retarget the transition timer, and **MUST** push per §3.5.4 (including cursor rules).
+4. **Exception to §4.6.1:** when `byDisplayAt` is `true`, players **MUST NOT** render the unfiltered static catalog or an unfiltered static+dynamic merge. They **MUST** play only active-set lists received from the control layer. The §4.6.1 phrase “update display without disrupting current playback” **MUST NOT** delay or refuse an active-set replace required by §3.5.4 / this section.
 
 #### 3.5.7 Example: Daily playlist
 
@@ -342,11 +351,11 @@ See also `extensions/playlists/examples/daily-by-display-at.json` (same item ord
 
 **Behavior** (playback-device local time; no timezone on `displayAt`):
 
-| Playback-device local time | Active set (original order) |
-|:--------------------------|:----------------------------|
-| 2026-07-21, 10:00 | Evergreen Intro, Day 1 Work |
-| 2026-07-22, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 2 Work |
-| 2026-07-23, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 3 Work |
+| Playback-device local time | Active set (original order) | Cursor on push |
+|:--------------------------|:----------------------------|:---------------|
+| 2026-07-21, 10:00 | Evergreen Intro, Day 1 Work | First timed-cohort item → Day 1 Work |
+| 2026-07-22, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 2 Work | Cohort changed → Day 2 Work (not Intro restart) |
+| 2026-07-23, 00:00 (timer fires → immediate push) | Evergreen Intro, Day 3 Work | Cohort changed → Day 3 Work |
 
 ---
 
@@ -360,7 +369,7 @@ The `dynamicQuery` extension enables playlists to fetch items dynamically from e
 Defines a rigid contract for request construction and response parsing, moving beyond opaque metadata.
 
 **Fast Start, Rich Upgrade**  
-Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view.
+Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view. When `schedule.byDisplayAt` is `true`, that fast-start list is the **filtered active set** owned by the device control layer (§3.5.6), not the unfiltered catalog.
 
 **Deterministic Resolution**  
 Standardized template variables and protocol profiles ensure different players produce identical requests for the same user context.
@@ -606,6 +615,8 @@ Players **MUST** transform response items using the mapping before validating ag
 3. Merge or append dynamic items to playlist (implementation-defined)
 4. Update display without disrupting current playback
 
+**Exception when `schedule.byDisplayAt` is `true`:** Playback lists are owned by the device control layer per §3.5. Players **MUST NOT** send the unfiltered static catalog or an unfiltered static+dynamic merge to the screen. Fast-start and enrichment still apply, but only the control layer’s active-set pushes are played. Accepted dynamic items **MUST** be available to the control layer for §3.5.6 recompute. The “without disrupting current playback” rule **MUST NOT** override §3.5.4 / §3.5.6 immediate replace when the active set changes.
+
 #### 4.6.2 Error Handling
 
 Players **MUST** handle failures gracefully:
@@ -663,7 +674,9 @@ Playlists with extensions **MUST** be signed per DP-1 §7.1.
 **Signature coverage:**
 - Playlist signature covers the **entire playlist object** including all extension fields
 - The `dynamicQuery` block is part of the signed payload
+- The `schedule` object and every item’s `displayAt` (when present) are part of the signed payload
 - Signature verification **MUST** occur before executing dynamic queries
+- When `schedule.byDisplayAt` is `true`, verification **MUST** use the full catalog document **before** active-set filtering; the filtered playback list pushed to the player is **not** a separately signed object (§3.5)
 
 **Canonical form:**
 - JSON Canonicalization Scheme (JCS, RFC 8785)
@@ -736,12 +749,13 @@ type ContractInfo {
 
 ## 7 · Compliance & Testing
 
-### 7.1 Extension Badge: "DP-1 Playlist v0.1"
+### 7.1 Extension Badge: "DP-1 Playlist v0.2"
 
 **Requirements:**
 - Parse and display all extended playlist fields
 - Verify playlist signatures per DP-1 §7.1
 - Handle missing optional fields gracefully
+- When `schedule.byDisplayAt` is present, implement active-set filtering and timer push per §3.5 (device control layer) or document that scheduling is out of scope for the badge claim
 - Pass reference test suite (10+ sample playlists)
 
 ### 7.2 Optional Badge: "DP-1 Playlist Dynamic"
@@ -766,7 +780,12 @@ type ContractInfo {
 - Indexer failure handling (network error, invalid response)
 - User consent workflow for wallet address sharing
 - Signature verification including `dynamicQuery` block
-
+- `schedule.byDisplayAt`: active set = latest past cohort + evergreen (order preserved)
+- `displayAt` timezone forms: date-only / bare local vs `Z` / offset absolute equality
+- Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
+- Timer threshold: immediate active-set push; cursor starts at first new timed-cohort item
+- Empty active set: stop previous playback (no hold-last-frame of removed item)
+- Composition: `byDisplayAt` + `dynamicQuery` enrichment recomputes via control layer (§3.5.6)
 ---
 
 ## 8 · Versioning & Future Extensions
@@ -830,7 +849,13 @@ Current version: **0.2.0**
 - Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: date, local datetime with seconds, or RFC 3339 `date-time`).
 - Normative split: device control layer filters and timers; player plays the pre-filtered active set only (no Daily-specific player logic).
 - When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare/date-only = **playback-device** local), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
-- Composition with `dynamicQuery`: filter static items on fast-start; recompute over the merged list after enrichment (§3.5.6).
+- Playback cursor on cohort change: start at the first timed-cohort item (Daily midnight surfaces the new day work, not a leading evergreen restart).
+- Empty active set: push empty/idle; do not hold last frame of a removed item.
+- Recompute also on material playback-device clock or timezone changes.
+- Signatures verify the full catalog before filtering; the pushed active set is not separately signed.
+- Composition with `dynamicQuery`: control layer owns playback lists; §4.6.1 non-disruption does not override active-set replace (§3.5.6).
+- `DisplayAt` schema `oneOf` uses mutually exclusive `pattern`s (portable without Format-Assertion).
+- Compliance badge and §7.3 scenarios updated for v0.2 scheduling.
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
 - JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; `DisplayAt` as `oneOf` date / local datetime / `date-time`; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
 - Published resource URLs now use `/extensions/playlists/v0.2.0/`.
@@ -989,12 +1014,12 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
       }
     },
     "DisplayAt": {
-      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display.",
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary.",
       "oneOf": [
         {
           "title": "Date only (playback-device local midnight)",
           "type": "string",
-          "format": "date"
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
         },
         {
           "title": "Local datetime without timezone (playback-device local)",
@@ -1004,8 +1029,7 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
         {
           "title": "Absolute datetime with timezone",
           "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
         }
       ],
       "examples": [
