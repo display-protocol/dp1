@@ -101,7 +101,7 @@ These extensions enable playlists to transition from static collections to live,
 | `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, the device control layer filters items by `displayAt` before playback. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
-Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
+Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` date or datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
 ### 3.3 Entity Format (Curators)
 
@@ -442,8 +442,8 @@ REST-style profile supporting standard HTTP methods with JSON payloads.
 **Request format:**
 - Method: `GET` or `POST`
 - Headers: Custom headers from `headers` field
-- Query string (GET): Players hydrate `{{...}}` templates in `query` field, then append to endpoint URL
-- Body (POST): Players hydrate `{{...}}` templates in `query` field, then parse as JSON body
+- Query string (GET): The `dynamicQuery` executor hydrates `{{...}}` templates in `query` field, then appends to endpoint URL
+- Body (POST): The `dynamicQuery` executor hydrates `{{...}}` templates in `query` field, then parses as JSON body
 
 **Response format:**
 - JSON object
@@ -495,7 +495,7 @@ Profile for executing GraphQL queries with versioned schema.
 **Request format:**
 - Method: `POST`
 - Headers: `Content-Type: application/json`
-- Players hydrate `{{...}}` templates in `query` field
+- The `dynamicQuery` executor hydrates `{{...}}` templates in `query` field
 - Body: GraphQL query sent in standard envelope format
 
 **Response format:**
@@ -526,7 +526,7 @@ Profile for executing GraphQL queries with versioned schema.
 
 ### 4.4 Template Variable Hydration
 
-Players **MUST** hydrate template placeholders directly in the `query` string before execution.
+The component that executes `dynamicQuery` (the player, or the device control layer when it is the sole executor per §3.5.6.4) **MUST** hydrate template placeholders directly in the `query` string before execution.
 
 **Standard Template Variables:**
 
@@ -539,8 +539,8 @@ Players **MUST** hydrate template placeholders directly in the `query` string be
 
 **Hydration rules:**
 - Template variables use double curly braces: `{{variable_name}}`
-- Players **MUST** replace all `{{...}}` templates in the `query` field before sending request
-- If a template cannot be resolved, players **MUST** fail gracefully (skip query, show static content). When `schedule.byDisplayAt` is `true`, “static content” means the **last active set** pushed by the device control layer (or idle if empty), not the unfiltered static catalog (§3.5.6).
+- The `dynamicQuery` executor **MUST** replace all `{{...}}` templates in the `query` field before sending the request
+- If a template cannot be resolved, the executor **MUST** fail gracefully (skip query; player shows static content / last pushed active set). When `schedule.byDisplayAt` is `true`, “static content” means the **last active set** pushed by the device control layer (or idle if empty), not the unfiltered static catalog (§3.5.6).
 - If no `{{...}}` templates are present in query, it is used as-is (static query)
 - Custom variables beyond the standard set are **NOT** supported in v0.2.0
 
@@ -607,10 +607,10 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `display` (object)
 - `provenance` (object)
 - `note` (object; experimental intermission per §3.4)
-- `displayAt` (string; ISO 8601 scheduling datetime per §3.5) — **ignored for scheduling when the item came from `dynamicQuery`** (§3.5.6)
+- `displayAt` (string; ISO 8601 scheduling date or datetime per §3.5) — **ignored for scheduling when the item came from `dynamicQuery`** (§3.5.6)
 - All other PlaylistItem fields per DP-1 §3.2
 
-**Validation path:** Core `itemSchema` versions validate base PlaylistItem fields. Extension overlay fields (`note`, `displayAt`) on **static** signed items are validated by `extensions/playlists/schema.json` via `allOf`. Dynamic items **SHOULD** be validated the same way before acceptance, but only static `displayAt` values affect active-set filtering.
+**Validation path:** Core `itemSchema` versions validate base PlaylistItem fields. Extension overlay fields (`note`, `displayAt`) on **static** signed items are validated by `extensions/playlists/schema.json` via `allOf`. Dynamic items **SHOULD** be validated against core PlaylistItem fields (and `note` when present) before acceptance. If a dynamic item includes `displayAt` that fails the `DisplayAt` pattern, implementations **MUST** strip or ignore that field and **MUST NOT** reject the whole item for that reason alone — the item remains evergreen for §3.5.6 membership. Only static `displayAt` values affect active-set filtering.
 
 **Field mapping (optional):**
 
@@ -628,13 +628,13 @@ If the indexer returns different field names, use `itemMap`:
 }
 ```
 
-Players **MUST** transform response items using the mapping before validating against the specified DP-1 schema version.
+The `dynamicQuery` executor **MUST** transform response items using the mapping before validating against the specified DP-1 schema version.
 
 ### 4.6 Player Implementation Requirements
 
 #### 4.6.1 Rendering Strategy
 
-When `schedule.byDisplayAt` is `true`, the bullets below apply **only** as inputs to the device control layer (§3.5.6). Players **MUST NOT** send the unfiltered static catalog or an unfiltered static+dynamic merge to the screen; they **MUST** play only active-set lists the control layer pushes.
+When `schedule.byDisplayAt` is `true`, players **MUST NOT** send the unfiltered static catalog or an unfiltered static+dynamic merge to the screen; they **MUST** play only active-set lists the control layer pushes. Enrichment still feeds the control layer’s effective list (§3.5.6); the fast-start and enrichment bullets below include that carve-out.
 
 **Fast start:**
 1. Players **MUST** render static playlist items immediately (target <2s). When `byDisplayAt` is `true`, that target applies to the **first filtered active-set push** from the control layer (empty/idle counts); players **MUST NOT** flash the unfiltered static catalog while waiting (§3.5.6.1).
@@ -659,7 +659,7 @@ Players **MUST** handle failures gracefully:
 | Invalid response | Log error, continue with static content, do not crash. When `byDisplayAt` is `true`, continue the **last pushed active set** (or idle if empty). |
 | Missing template placeholder | Skip query execution, show static content. When `byDisplayAt` is `true`, show the **last pushed active set** (or idle if empty). |
 | Signature verification failed | Reject entire playlist per DP-1 §7.1. |
-| Schema validation failed | Log error, discard invalid items, show valid items only. |
+| Schema validation failed | Log error, discard invalid items, show valid items only. When `byDisplayAt` is `true`, continue the **last pushed active set** (or idle if empty) and hand only accepted items to the control layer — do not paint an unfiltered partial catalog. Invalid dynamic `displayAt` alone **MUST NOT** discard an otherwise-valid item (§4.5). |
 
 **Players MUST ensure the screen never goes dark due to dynamic query failures.**
 
@@ -828,6 +828,7 @@ type ContractInfo {
 - Future-only `displayAt`: active set is evergreen items only
 - Fast-start: wait for first filtered push; no flash of archive/future static items (§3.5.6.1)
 - Composition: `byDisplayAt` + `dynamicQuery`; single executor; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership); membership change with unchanged `max_instant` → push with continue handoff
+- Schema validation under `byDisplayAt`: last pushed active set (or idle); invalid dynamic `displayAt` alone does not discard the item
 - Favorites / non-scheduled copy: strip `displayAt` (or keep `byDisplayAt` false) so past items remain playable
 
 ---
