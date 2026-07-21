@@ -2,20 +2,26 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
   "title": "DP-1 Playlist Extension",
-  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional intermission notes",
+  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, and displayAt scheduling",
   "type": "object",
   "properties": {
     "note": {
       "$ref": "#/$defs/Note"
     },
+    "schedule": {
+      "$ref": "#/$defs/Schedule"
+    },
     "items": {
       "type": "array",
-      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note.",
+      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note and displayAt.",
       "items": {
         "type": "object",
         "properties": {
           "note": {
             "$ref": "#/$defs/Note"
+          },
+          "displayAt": {
+            "$ref": "#/$defs/DisplayAt"
           }
         }
       }
@@ -44,6 +50,27 @@
     }
   },
   "$defs": {
+    "Schedule": {
+      "type": "object",
+      "description": "Playlist-level scheduling controls. When byDisplayAt is true, players filter items to an active set based on each item's displayAt.",
+      "properties": {
+        "byDisplayAt": {
+          "type": "boolean",
+          "description": "When true, filter playlist items to the active set for the current time using displayAt. When false or absent, play all items (core behavior) and ignore displayAt for filtering."
+        }
+      }
+    },
+    "DisplayAt": {
+      "type": "string",
+      "description": "ISO 8601 datetime when this item becomes eligible for the active set. With timezone (Z or offset): absolute/global time. Without timezone: device local time. Date only (YYYY-MM-DD): treat as T00:00:00 device local. Top-level item field (same level as source), not inside display.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$",
+      "examples": [
+        "2026-07-21",
+        "2026-07-21T00:00:00",
+        "2026-07-21T00:00:00Z",
+        "2026-07-21T09:00:00+07:00"
+      ]
+    },
     "Note": {
       "type": "object",
       "description": "Experimental intermission card: short artist-authored text between works. May be removed or changed in a future Playlist Extension version.",

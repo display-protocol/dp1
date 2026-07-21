@@ -1,6 +1,6 @@
 # DP-1 Playlist Extension (v0.1.0)
 
-*Extensions to DP-1 playlists for dynamic item fetching and enhanced metadata.*
+*Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and time-based scheduling.*
 
 **Specification version:** 0.1.0  
 **Status:** Draft Extension  
@@ -16,6 +16,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 1. **Dynamic Query**: Machine-executable interface for fetching playlist items dynamically from external indexers
 2. **Enhanced Metadata**: Additional fields for curators, summary, and cover images
 3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
+4. **displayAt Scheduling**: Optional time-based filtering so players can determine which items are active at a given time (for example, Daily-style one artwork per day)
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -39,6 +40,9 @@ These extensions enable playlists to transition from static collections to live,
 | **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
 | **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
+| **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for the active set. |
+| **Active Set** | When `schedule.byDisplayAt` is `true`, the subset of playlist items eligible to play at the current time. |
+| **Schedule** | Playlist-level object that opts into scheduling behavior (currently `byDisplayAt`). |
 
 ---
 
@@ -92,9 +96,10 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
+| `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, filter items by `displayAt`. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
-Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). This field is **not** part of canonical DP-1 core; it is defined only by this extension. In JSON Schema, item-level `note` is validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for `note`.
+Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
 ### 3.3 Entity Format (Curators)
 
@@ -167,6 +172,149 @@ The **`note`** object is an **optional** intermission card: short, **artist-auth
   }
 }
 ```
+
+### 3.5 displayAt Scheduling
+
+Time-based scheduling lets a playlist carry its full catalog (including archive and future items) while the player only plays items that are **active** at the current time. This supports Daily-style playlists (one artwork per day) without Daily-specific player logic.
+
+#### 3.5.1 Playlist-level `schedule.byDisplayAt`
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `schedule` | object | OPTIONAL | Playlist-level scheduling controls. |
+| `schedule.byDisplayAt` | boolean | OPTIONAL | When `true`, the player filters items to an **active set** based on each item’s `displayAt`. When `false` or absent, play all items normally (core behavior) and ignore `displayAt` for filtering. |
+
+```json
+{
+  "title": "Daily",
+  "schedule": { "byDisplayAt": true },
+  "items": [ ... ]
+}
+```
+
+#### 3.5.2 Item-level `displayAt`
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `displayAt` | string (ISO 8601) | OPTIONAL | When this item becomes eligible for the active set. |
+
+**Field location:** `displayAt` is a **top-level** field on the item (same level as `source`). It is **not** inside `display`. The `display` object is for render preferences (scaling, loop, margin); `displayAt` is scheduling metadata.
+
+**Timezone rules:**
+
+| Format | Example | Behavior |
+|:-------|:--------|:---------|
+| With timezone (`Z`) | `2026-07-21T00:00:00Z` | Absolute — global sync |
+| With offset | `2026-07-21T09:00:00+07:00` | Absolute — global sync |
+| Without timezone | `2026-07-21T00:00:00` | Device local time |
+| Date only | `2026-07-21` | Treat as `T00:00:00` device local |
+
+**Publisher controls behavior:**
+
+- Global release (same instant worldwide): include timezone (`Z` or offset)
+- Local release (each device’s local time): omit timezone
+
+**Example item:**
+
+```json
+{
+  "title": "Study in Blue",
+  "source": "https://example.com/art/blue.html",
+  "displayAt": "2026-07-21T00:00:00Z",
+  "note": { "text": "Curated by Casey Reas." },
+  "display": {
+    "scaling": "fit",
+    "loop": true
+  }
+}
+```
+
+#### 3.5.3 Active set logic
+
+When `schedule.byDisplayAt` is `true`, the player (or the device control layer that feeds the player) computes the **active set** as follows:
+
+1. Resolve each item’s `displayAt` to an **instant** using the timezone rules in §3.5.2 (date-only → `T00:00:00` device local; no timezone → device local; with `Z`/offset → absolute). Compare against `now` using those instants — **not** lexical string comparison.
+2. Find `max_instant` = the maximum resolved instant among items where that instant ≤ now.
+3. **Active** = items whose resolved instant equals `max_instant` (same release, even if the wire strings differ, e.g. `2026-07-21T00:00:00Z` and `2026-07-21T07:00:00+07:00`), **plus** items that have no `displayAt` (evergreen / always eligible).
+4. Preserve original playlist order.
+5. The player receives **only** the active set and plays it with normal `duration` / `loop` rules.
+6. Set a timer for the next resolved instant that is greater than now; when the timer fires, recompute the active set and push the updated list.
+
+**One-sentence summary:** Active set = items from the most recent release that has already happened + items with no time restriction.
+
+**Concrete example** (now = 2026-07-22 14:00 device local):
+
+```text
+Playlist items (in order):
+  [0] Intro      — no displayAt
+  [1] Work A     — displayAt: 2026-07-21
+  [2] Work B     — displayAt: 2026-07-22
+  [3] Work C     — displayAt: 2026-07-22  (same day as B)
+  [4] Outro      — no displayAt
+  [5] Work D     — displayAt: 2026-07-23
+```
+
+- Items with `displayAt` ≤ now: A, B, C → `max_displayAt` = 2026-07-22
+- Same-release items: B, C
+- Evergreen: Intro, Outro
+- Active set (original order): **Intro, Work B, Work C, Outro**
+- Excluded: Work A (older archive), Work D (future)
+
+#### 3.5.4 Timer-based transitions
+
+After computing the active set:
+
+1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now.
+2. Set a timer for (`next_instant` − now).
+3. When the timer fires: recompute the active set, push to the player, set a new timer.
+4. If there is no future `displayAt` instant, do not set a timer; hold the current active set.
+
+There is no polling and no midnight-specific logic. Scheduling is driven by the actual `displayAt` values (midnight, 09:00, global launch, etc.).
+
+#### 3.5.5 Duration, loop, and edge cases
+
+- `duration` and `loop` apply **within** the active set.
+- Crossing a new `displayAt` threshold **recomputes** the active set; it is not the same as duration expiry.
+- If every `displayAt` is still in the future, the active set is only items without `displayAt`.
+- If the active set is empty, the player **MAY** idle or hold the last frame (implementation-defined).
+- Multiple items with the same `displayAt` are all included.
+- Implementations that do not understand `byDisplayAt` **SHOULD** ignore it and play the full list (degraded but functional).
+
+#### 3.5.6 Example: Daily playlist
+
+See also `extensions/playlists/examples/daily-by-display-at.json`.
+
+```json
+{
+  "title": "Daily",
+  "schedule": { "byDisplayAt": true },
+  "items": [
+    {
+      "title": "Day 1 Work",
+      "source": "https://cdn.example.com/day1.html",
+      "displayAt": "2026-07-21T00:00:00",
+      "note": { "text": "Curated by Casey Reas." }
+    },
+    {
+      "title": "Day 2 Work",
+      "source": "https://cdn.example.com/day2.html",
+      "displayAt": "2026-07-22T00:00:00",
+      "note": { "text": "Exploring generative landscapes." }
+    },
+    {
+      "title": "Evergreen Intro",
+      "source": "https://cdn.example.com/intro.html"
+    }
+  ]
+}
+```
+
+**Behavior** (device local time; no timezone on `displayAt`):
+
+| Device local time | Active set |
+|:------------------|:-----------|
+| 2026-07-21, 10:00 | Day 1 Work, Evergreen Intro |
+| 2026-07-22, 00:00 (timer fires) | Day 2 Work, Evergreen Intro |
 
 ---
 
@@ -390,6 +538,7 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `display` (object)
 - `provenance` (object)
 - `note` (object; experimental intermission per §3.4)
+- `displayAt` (string; ISO 8601 scheduling datetime per §3.5)
 - All other PlaylistItem fields per DP-1 §3.2
 
 **Field mapping (optional):**
@@ -644,6 +793,13 @@ Current version: **0.1.0**
 
 ## 11 · Changelog
 
+### Amendment (2026-07-21) — displayAt scheduling
+
+- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 datetime string).
+- Normative intent: when `byDisplayAt` is `true`, resolve each `displayAt` to an instant (§3.5.2), filter to the active set (most recent release ≤ now + evergreen items), preserve order, and advance via timer on the next future instant.
+- Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
+- JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+
 ### Amendment (2026-04-13) — Note (experimental)
 
 - Documented optional **`note`** on the playlist and on each **`PlaylistItem`**: `text` (required, ≤500 characters), `duration` (optional, default 20 seconds when omitted).
@@ -704,6 +860,9 @@ Current version: **0.1.0**
     "note": {
       "$ref": "#/$defs/Note"
     },
+    "schedule": {
+      "$ref": "#/$defs/Schedule"
+    },
     "items": {
       "type": "array",
       "items": {
@@ -711,6 +870,9 @@ Current version: **0.1.0**
         "properties": {
           "note": {
             "$ref": "#/$defs/Note"
+          },
+          "displayAt": {
+            "$ref": "#/$defs/DisplayAt"
           }
         }
       }
@@ -779,6 +941,20 @@ Current version: **0.1.0**
     }
   },
   "$defs": {
+    "Schedule": {
+      "type": "object",
+      "description": "Playlist-level scheduling controls",
+      "properties": {
+        "byDisplayAt": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DisplayAt": {
+      "type": "string",
+      "description": "ISO 8601 datetime (with/without timezone, or date only)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+    },
     "Note": {
       "type": "object",
       "description": "Experimental intermission card (may change or be deprecated)",
