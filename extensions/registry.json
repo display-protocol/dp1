@@ -60,7 +60,7 @@
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
         "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
-        "displayAt scheduling: when schedule.byDisplayAt is true, the device control layer filters to an active set by item displayAt (ISO 8601; Z/offset absolute, bare/date-only = playback-device local), timers push the new list immediately to the player (player has no Daily-specific logic)"
+        "displayAt scheduling: when schedule.byDisplayAt is true, the device control layer filters to an active set by item displayAt (ISO 8601 datetime; Z/offset absolute, bare local = playback-device local; date-only not accepted), timers push the new list immediately to the player (player has no Daily-specific logic)"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -74,8 +74,8 @@
       "date": "2026-07-21T00:00:00Z",
       "changes": [
         "Playlist extension: bump to v0.2.0 (minor additive release).",
-        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 subset) for time-based active-set filtering by the device control layer (immediate push on threshold; playback-device local for bare/date-only).",
-        "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (date / local datetime / date-time; portable without Format-Assertion).",
+        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 datetime subset; date-only not accepted) for time-based active-set filtering by the device control layer (immediate push on threshold; playback-device local for bare local).",
+        "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (local datetime / date-time; portable without Format-Assertion).",
         "Playlist extension: document timezone rules, active set logic, timer-based transitions, playback cursor on cohort change, signatures-before-filter, and composition with dynamicQuery.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
         "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."

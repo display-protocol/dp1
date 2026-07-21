@@ -210,7 +210,7 @@ Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `displayAt` | string (ISO 8601 subset) | OPTIONAL | When this item becomes eligible for the active set. Accepted wire forms: date only (`YYYY-MM-DD`), local datetime with seconds and no timezone (`YYYY-MM-DDThh:mm:ss[.frac]`), or absolute RFC 3339 `date-time` (with `Z` or numeric offset). |
+| `displayAt` | string (ISO 8601 subset) | OPTIONAL | When this item becomes eligible for the active set. Accepted wire forms: local datetime with seconds and no timezone (`YYYY-MM-DDThh:mm:ss[.frac]`), or absolute RFC 3339 `date-time` (with `Z` or numeric offset). Date-only (`YYYY-MM-DD`) is **not** accepted. |
 
 **Field location:** `displayAt` is a **top-level** field on the item (same level as `source`). It is **not** inside `display`. The `display` object is for render preferences (scaling, loop, margin); `displayAt` is scheduling metadata.
 
@@ -221,7 +221,6 @@ Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list
 | With timezone (`Z`) | `2026-07-21T00:00:00Z` | Absolute — global sync |
 | With offset | `2026-07-21T09:00:00+07:00` | Absolute — global sync |
 | Without timezone | `2026-07-21T00:00:00` | Playback-device local time |
-| Date only | `2026-07-21` | Treat as `T00:00:00` playback-device local |
 
 **Clock authority:** “Device local” **MUST** mean the local timezone of the **playback device** that runs the schedule filter (the device control layer on the wall display), **not** the casting client or phone. Absolute (`Z` / offset) values **MUST** compare as the same UTC instant on every device.
 
@@ -264,14 +263,14 @@ When `schedule.byDisplayAt` is `true`, the device control layer **MUST** compute
 ```text
 Playlist items (in order):
   [0] Intro      — no displayAt
-  [1] Work A     — displayAt: 2026-07-21
-  [2] Work B     — displayAt: 2026-07-22
-  [3] Work C     — displayAt: 2026-07-22  (same day as B)
+  [1] Work A     — displayAt: 2026-07-21T00:00:00
+  [2] Work B     — displayAt: 2026-07-22T00:00:00
+  [3] Work C     — displayAt: 2026-07-22T00:00:00  (same instant as B)
   [4] Outro      — no displayAt
-  [5] Work D     — displayAt: 2026-07-23
+  [5] Work D     — displayAt: 2026-07-23T00:00:00
 ```
 
-- Items with resolved instant ≤ now: A, B, C → `max_instant` = start of 2026-07-22 (playback-device local)
+- Items with resolved instant ≤ now: A, B, C → `max_instant` = 2026-07-22T00:00:00 (playback-device local)
 - Timed cohort (same `max_instant`): B, C
 - Evergreen: Intro, Outro
 - Active set (original order): **Intro, Work B, Work C, Outro**
@@ -781,7 +780,7 @@ type ContractInfo {
 - User consent workflow for wallet address sharing
 - Signature verification including `dynamicQuery` block
 - `schedule.byDisplayAt`: active set = latest past cohort + evergreen (order preserved)
-- `displayAt` timezone forms: date-only / bare local vs `Z` / offset absolute equality
+- `displayAt` timezone forms: bare local vs `Z` / offset absolute equality; date-only rejected
 - Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
 - Timer threshold: immediate active-set push; cursor starts at first new timed-cohort item
 - Empty active set: stop previous playback (no hold-last-frame of removed item)
@@ -846,18 +845,18 @@ Current version: **0.2.0**
 ### v0.2.0 (2026-07-21) — displayAt scheduling
 
 - Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `schedule` / `displayAt` per §8.1).
-- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: date, local datetime with seconds, or RFC 3339 `date-time`).
+- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: local datetime with seconds, or RFC 3339 `date-time`; date-only not accepted).
 - Normative split: device control layer filters and timers; player plays the pre-filtered active set only (no Daily-specific player logic).
-- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare/date-only = **playback-device** local), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
+- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **playback-device** local), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
 - Playback cursor on cohort change: start at the first timed-cohort item (Daily midnight surfaces the new day work, not a leading evergreen restart).
 - Empty active set: push empty/idle; do not hold last frame of a removed item.
 - Recompute also on material playback-device clock or timezone changes.
 - Signatures verify the full catalog before filtering; the pushed active set is not separately signed.
 - Composition with `dynamicQuery`: control layer owns playback lists; §4.6.1 non-disruption does not override active-set replace (§3.5.6).
-- `DisplayAt` schema `oneOf` uses mutually exclusive `pattern`s (portable without Format-Assertion).
+- `DisplayAt` schema `oneOf` uses mutually exclusive `pattern`s for local datetime vs absolute `date-time` (portable without Format-Assertion; date-only rejected).
 - Compliance badge and §7.3 scenarios updated for v0.2 scheduling.
 - Field location: `displayAt` is top-level on the item (same level as `source`), not inside `display`.
-- JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; `DisplayAt` as `oneOf` date / local datetime / `date-time`; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
+- JSON: `extensions/playlists/schema.json` (`schedule` and per-item `displayAt` via `items` overlay; `DisplayAt` as `oneOf` local datetime / `date-time`; composed with the bundle using `allOf`). Example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical `core/v1.1.0/schemas/playlist.json` is unchanged.
 - Published resource URLs now use `/extensions/playlists/v0.2.0/`.
 
 ### Amendment (2026-04-13) — Note (experimental)
@@ -1014,13 +1013,8 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
       }
     },
     "DisplayAt": {
-      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date only or local datetime without timezone: playback-device local (date only → T00:00:00). RFC 3339 date-time with Z or offset: absolute/global. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary.",
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Local datetime without timezone: playback-device local. RFC 3339 date-time with Z or offset: absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary.",
       "oneOf": [
-        {
-          "title": "Date only (playback-device local midnight)",
-          "type": "string",
-          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
-        },
         {
           "title": "Local datetime without timezone (playback-device local)",
           "type": "string",
@@ -1033,7 +1027,6 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
         }
       ],
       "examples": [
-        "2026-07-21",
         "2026-07-21T00:00:00",
         "2026-07-21T00:00:00Z",
         "2026-07-21T09:00:00+07:00"
