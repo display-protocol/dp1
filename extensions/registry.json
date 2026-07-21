@@ -3,7 +3,7 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "lastUpdated": "2026-07-21T00:00:00Z",
   "extensions": [
     {
@@ -11,7 +11,7 @@
       "name": "Channel Extension",
       "version": "1.0.0",
       "status": "released",
-      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, and verifiable identities.",
+      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema).",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist-group"
@@ -26,7 +26,8 @@
         "Multi-curator exhibitions with verifiable identities",
         "Publisher attribution for institutions and collectives",
         "DID-based entity format (curators and publisher)",
-        "Multi-signature support (aligned with DP-1 v1.1.0)",
+        "Multi-signature support (aligned with DP-1 v1.1.0), including `publisher` as a signature role alongside curator, feed, agent, institution, and licensor",
+        "Player verification: conforming implementations MUST verify at least one `feed` and one `publisher` signature before accepting a channel (specified in channel.md; JSON Schema validates structure and role enum only)",
         "Enhanced metadata (summary, coverImage)"
       ],
       "maintainer": {
@@ -70,7 +71,7 @@
   ],
   "changelog": [
     {
-      "version": "1.0.3",
+      "version": "1.0.4",
       "date": "2026-07-21T00:00:00Z",
       "changes": [
         "Playlist extension: bump to v0.2.0 (minor additive release).",
@@ -79,6 +80,14 @@
         "Playlist extension: document timezone rules, active set logic, timer-based transitions, playback cursor on cohort change, signatures-before-filter, dynamicQuery trust/merge order, and composition with dynamicQuery.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
         "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."
+      ]
+    },
+    {
+      "version": "1.0.3",
+      "date": "2026-05-20T00:00:00Z",
+      "changes": [
+        "Channel extension: `publisher` is a valid `signatures[].role` value in schema.json; registry description and features updated.",
+        "Channel extension: documented player norm—verify at least one `feed` and one `publisher` signature before treating a channel as valid; rule remains prose-only (not enforced by JSON Schema)."
       ]
     },
     {

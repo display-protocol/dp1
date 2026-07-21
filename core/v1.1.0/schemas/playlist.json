@@ -177,7 +177,7 @@
         },
         "loop": {
           "type": "boolean",
-          "description": "Repeat automatically",
+          "description": "When true, time-based sources (video, audio) repeat continuously. When false, players advance to the next playlist item at end-of-stream. Has no effect on non-time-based sources.",
           "default": true
         },
         "interaction": {

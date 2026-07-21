@@ -24,6 +24,7 @@ Channels extend the Playlist-Group concept (DP-1 §15) with additive fields only
 - **Builds on:** Playlist-Group schema (§15) and Feed API
 - **Transport:** Delivered as signed JSON per DP-1 §7.1 (via HTTP/IPFS/offline, §8)
 - **Authority:** Channel signature covers the channel object; individual playlists maintain their own signatures
+- **Signing (channels):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` before treating a channel as valid (§5.2). The JSON Schema does not enforce which roles appear in `signatures`; it only validates structure and allowed `role` values.
 - **Versioning:** Additive extension, compatible with DP-1 v1.0.0+ (does not require core protocol changes)
 
 ---
@@ -86,6 +87,14 @@ Channels extend the Playlist-Group object from DP-1 §15 with **optional** addit
   "signatures": [
     {
       "alg": "ed25519",
+      "kid": "did:key:z6Mkj3sR9KqWxYBBWHut3Hfadd9jSwuBV8xRoAnwWsdvkpQA",
+      "ts": "2025-10-17T11:45:00Z",
+      "payload_hash": "sha256:0f4c0d87a1b2c3d4e5f6071829a1b2c3d4e5f6071829a1b2",
+      "role": "feed",
+      "sig": "W1a6bW8sNd6kIqM1R1c0wfHAs2l4iWuJwPw2j7Bp8eT"
+    },
+    {
+      "alg": "ed25519",
       "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
       "ts": "2025-10-17T12:00:00Z",
       "payload_hash": "sha256:0f4c0d87a1b2c3d4e5f6071829a1b2c3d4e5f6071829a1b2",
@@ -97,7 +106,7 @@ Channels extend the Playlist-Group object from DP-1 §15 with **optional** addit
       "kid": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
       "ts": "2025-10-17T12:15:00Z",
       "payload_hash": "sha256:0f4c0d87a1b2c3d4e5f6071829a1b2c3d4e5f6071829a1b2",
-      "role": "institution",
+      "role": "publisher",
       "sig": "Y7d3aY9tPf2mKsO3S5e2yhJCu3n6kYwLyRy4l9Dr0gV"
     }
   ]
@@ -250,14 +259,16 @@ Channels **MUST** be signed per DP-1 §7.1 (multi-signature chain model for DP-1
 
 ### 5.2 Multi-Party Signing
 
-Channels support multiple signatures with distinct roles:
+Channels support multiple signatures with distinct roles. The `role` value **MUST** be one of: `curator`, `feed`, `agent`, `institution`, `licensor`, or `publisher`. The machine-readable schema validates each signature object and this `role` enum only; it does **not** require that any particular roles be present in the `signatures` array.
+
+**Player verification** (below) is normative for acceptance: a conforming player **MUST** successfully verify at least one signature whose role is `feed` (the feed operator hosting the channel) and at least one whose role is `publisher` (the channel publisher). Producers **SHOULD** include those signatures (and **SHOULD** align `signatures[].kid` with the corresponding keys, e.g. `publisher.key` for the publisher signature) so that conforming players accept the channel.
 
 ```json
 "signatures": [
   {
     "alg": "ed25519",
     "kid": "did:key:z6Mk...",
-    "role": "curator",
+    "role": "feed",
     "ts": "2025-10-17T12:00:00Z",
     "payload_hash": "sha256:...",
     "sig": "..."
@@ -265,18 +276,19 @@ Channels support multiple signatures with distinct roles:
   {
     "alg": "ed25519",
     "kid": "did:key:z6Mk...",
-    "role": "institution",
-    "ts": "2025-10-17T12:15:00Z",
+    "role": "publisher",
+    "ts": "2025-10-17T12:05:00Z",
     "payload_hash": "sha256:...",
     "sig": "..."
   }
 ]
 ```
 
-**Verification requirements:**
-- Players **MUST** verify at least one signature with role `"curator"` or `"institution"`
-- Players **SHOULD** verify all signatures present
-- Players **MAY** establish role-specific trust policies
+**Verification requirements (player behavior; not expressed in JSON Schema):**
+- Players **MUST** verify at least one signature with role `"feed"`.
+- Players **MUST** verify at least one signature with role `"publisher"`.
+- Players **SHOULD** verify all signatures present.
+- Players **MAY** establish role-specific trust policies.
 
 See DP-1 §7.1 for complete signature specification.
 
@@ -445,7 +457,7 @@ GET /api/v1/channels/generative-geometry-2025
 **Minimum requirements:**
 - Parse and display channel metadata (`title`, `publisher`, `curators`)
 - Load and render linked playlists in order
-- Verify channel signatures per DP-1 §7.1
+- Verify channel signatures per DP-1 §7.1 and **MUST** accept a channel only if verification succeeds for at least one signature with role `"feed"` and at least one with role `"publisher"` (§5.2)
 - Handle missing optional fields gracefully
 
 **Recommended features:**
@@ -462,7 +474,7 @@ GET /api/v1/channels/generative-geometry-2025
 
 **Publishing channels:**
 1. Create channel JSON per §3.1
-2. Sign channel per DP-1 §7.1 (multi-signature recommended)
+2. Sign channel per DP-1 §7.1; **SHOULD** include at least one signature with role `feed` (feed operator) and one with role `publisher` (channel publisher) so conforming players (§5.2) accept the channel
 3. Host at predictable URL (e.g., `/api/v1/channels/{slug}`)
 4. Implement discovery endpoints (§6.1)
 5. Provide JWKS endpoint for key verification
@@ -480,7 +492,7 @@ GET /api/v1/channels/generative-geometry-2025
 
 **Requirements:**
 - Parse and display all required channel fields
-- Verify channel signatures per DP-1 §7.1
+- Verify channel signatures per DP-1 §7.1, including at least one valid `feed` and one valid `publisher` signature (§5.2)
 - Render linked playlists correctly
 - Handle missing optional fields gracefully
 - Pass reference test suite (10+ sample channels)
@@ -491,7 +503,7 @@ GET /api/v1/channels/generative-geometry-2025
 - Single curator with verifiable identity
 - Multi-curator channels
 - Publisher-attributed channels
-- Channel signature verification
+- Channel signature verification (including required `feed` and `publisher` roles)
 - Feed API queries with filtering
 
 ---
@@ -555,6 +567,8 @@ Current version: **1.0.0**
 ### v1.0.0 (2026-03-11)
 
 **Initial stable release of Channel Extension.**
+
+**Normative clarification (2026-05-20):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` (§5.2). This requirement is specified in prose and is **not** enforced by `schema.json`.
 
 **Core Features:**
 - Channel schema extending DP-1 Playlist-Group (§15)
