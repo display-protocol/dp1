@@ -61,7 +61,7 @@
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
         "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
-        "displayAt scheduling: when schedule.byDisplayAt is true, the device control layer filters to an active set by item displayAt (ISO 8601; date-only = local midnight, bare local = playback-device local, Z/offset absolute), timers push the new list immediately to the player (player has no Daily-specific logic)"
+        "displayAt scheduling: when schedule.byDisplayAt is true, the device control layer filters to an active set by item displayAt (ISO 8601; bare local = playback-device local, Z/offset absolute; date-only not accepted), timers push the new list immediately to the player (player has no Daily-specific logic)"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -75,8 +75,8 @@
       "date": "2026-07-21T00:00:00Z",
       "changes": [
         "Playlist extension: bump to v0.2.0 (minor additive release).",
-        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 subset; date-only = local midnight) for time-based active-set filtering by the device control layer (immediate push on threshold; playback-device local for bare local / date-only).",
-        "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (date-only / local datetime / date-time with bounded offset; portable without Format-Assertion).",
+        "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 subset; local datetime or RFC 3339 date-time; date-only not accepted) for time-based active-set filtering by the device control layer (immediate push on threshold; playback-device local for bare local).",
+        "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (local datetime / date-time with bounded offset; portable without Format-Assertion).",
         "Playlist extension: document timezone and DST gap/fold rules, active set logic, timer-based transitions, playhead handoff (start.id|source|index), Favorites strip guidance, signatures-before-filter, and dynamicQuery single-executor composition.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
         "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."

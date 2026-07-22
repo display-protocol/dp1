@@ -41,7 +41,7 @@ These extensions enable playlists to transition from static collections to live,
 | **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
 | **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
-| **displayAt** | Optional ISO 8601 date or datetime on a playlist item indicating when that item becomes eligible for the active set (date-only = local midnight). |
+| **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for the active set. |
 | **Active Set** | When `schedule.byDisplayAt` is `true`, the subset of playlist items the device control layer sends to the player at the current time. |
 | **Schedule** | Playlist-level object that opts into scheduling behavior (currently `byDisplayAt`). |
 | **Playback device** | The display device whose control layer runs `byDisplayAt` filtering and whose local clock defines timezone-less `displayAt` values. |
@@ -101,7 +101,7 @@ These extensions enable playlists to transition from static collections to live,
 | `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, the device control layer filters items by `displayAt` before playback. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
-Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` date or datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
+Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
 ### 3.3 Entity Format (Curators)
 
@@ -212,7 +212,7 @@ Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `displayAt` | string (ISO 8601 subset) | OPTIONAL | When this item becomes eligible for the active set. Accepted wire forms: date-only (`YYYY-MM-DD`), local datetime with seconds and no timezone (`YYYY-MM-DDThh:mm:ss[.frac]`), or absolute RFC 3339 `date-time` (with `Z` or numeric offset with colon, e.g. `+07:00`). Compact offset without colon (`+0700`) is **not** accepted. |
+| `displayAt` | string (ISO 8601 subset) | OPTIONAL | When this item becomes eligible for the active set. Accepted wire forms: local datetime with seconds and no timezone (`YYYY-MM-DDThh:mm:ss[.frac]`), or absolute RFC 3339 `date-time` (with `Z` or numeric offset with colon, e.g. `+07:00`). Date-only (`YYYY-MM-DD`) and compact offset without colon (`+0700`) are **not** accepted. |
 
 **Field location:** `displayAt` is a **top-level** field on the item (same level as `source`). It is **not** inside `display`. The `display` object is for render preferences (scaling, loop, margin); `displayAt` is scheduling metadata.
 
@@ -223,11 +223,10 @@ Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list
 | With timezone (`Z`) | `2026-07-21T00:00:00Z` | Absolute — global sync |
 | With offset | `2026-07-21T09:00:00+07:00` | Absolute — global sync |
 | Without timezone | `2026-07-21T00:00:00` | Playback-device local time |
-| Date only | `2026-07-21` | Treat as `T00:00:00` playback-device local |
 
 **Clock authority:** “Device local” **MUST** mean the local timezone of the **playback device** that runs the schedule filter (the device control layer on the wall display), **not** the casting client or phone. Absolute (`Z` / offset) values **MUST** compare as the same UTC instant on every device.
 
-**DST gap and fold (bare local and date-only):** When resolving a timezone-less wall time in the playback-device zone:
+**DST gap and fold (bare local):** When resolving a timezone-less wall time in the playback-device zone:
 
 - **Gap** (spring-forward; local time does not exist): resolve to the **first valid local instant after** the gap.
 - **Fold** (fall-back; local time occurs twice): resolve to the **earlier** of the two ambiguous instants.
@@ -239,7 +238,7 @@ Absolute `Z` / offset values are unaffected (they already name a unique instant)
 **Publisher controls behavior:**
 
 - Global release (same instant worldwide): include timezone (`Z` or offset)
-- Local release (each playback device’s local time): omit timezone (datetime or date-only)
+- Local release (each playback device’s local time): omit timezone (local datetime with seconds)
 
 **Example item:**
 
@@ -303,11 +302,12 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 
 **Unchanged-set skip (normative):** Two active-set snapshots are the **same** only when they have the same length, the same ordered sequence of item identities (`id` when present; otherwise `source`; otherwise index in the full effective list), **and** the same `source` string for each corresponding item. Deep equality of other fields (`note`, `duration`, `display`, …) is **not** required for sameness. When a step-3 recompute yields the same active set under this definition, the control layer **MAY** skip a redundant player push and **SHOULD** preserve in-progress playback and cursor position. A live refresh that changes `source` on the same `id` is **not** the same set and **MUST** push.
 
-**Playback cursor after an active-set push (normative):** If the new active set is **empty**, cursor rules 1–3 do **not** apply — push empty/idle per §3.5.5 with **no** start item. Otherwise let `previous_item` be the item currently playing (if any). Item identity for “same item” **MUST** use `id` when present; otherwise `source`; otherwise the item’s index in the full effective list. Let the timed cohort be as defined in §3.5.3.
+**Playback cursor after an active-set push (normative):** If the new active set is **empty**, cursor rules 1–4 do **not** apply — push empty/idle per §3.5.5 with **no** start item. Otherwise let `previous_item` be the item currently playing (if any). Item identity for “same item” **MUST** use `id` when present; otherwise `source`; otherwise the item’s index in the full effective list. Let the timed cohort be as defined in §3.5.3.
 
 1. If the timed cohort’s `max_instant` **changed** to a **non-empty** new value (including from empty to non-empty, or to a different instant), the control layer **MUST** begin playback at the **first timed-cohort item** in the new active set (the first selected item whose resolved `displayAt` equals the new `max_instant`). Evergreen items remain in the list for later advances within the set — they **MUST NOT** block surfacing the new release (for example, Daily midnight **MUST** start the new day’s work, not restart a leading evergreen intro). If that item has a `note` (§3.4), the player **SHOULD** show the intermission **before** loading its `source` (timer threshold does not skip `note`).
 2. Else if `previous_item` is still present in the new active set, playback **MUST** continue that item when this push is not skipped (or resume its in-progress media if the player supports it). This covers `max_instant` unchanged, timed cohort becoming empty (clock rollback), or any other recompute where the previous item remains eligible. When the unchanged-set skip applies, the control layer **SHOULD** preserve in-progress playback without a new push.
-3. Else begin at the **first** item of the new active set.
+3. Else if the timed cohort is **non-empty**, begin at the **first timed-cohort item** in the new active set (same selection as rule 1). This covers `max_instant` unchanged while `previous_item` left the set (live refresh removed or replaced the playing day item; cast of another Daily playlist with the same release instant) — evergreen items **MUST NOT** restart ahead of the still-active release.
+4. Else begin at the **first** item of the new active set (evergreen-only, or no timed cohort).
 
 **Playhead handoff (normative):** Because the player **MUST NOT** be required to interpret `displayAt` / `byDisplayAt`, every control-layer active-set push that is **not** skipped under the unchanged-set rule above and that pushes a **non-empty** active set **MUST** include an explicit start descriptor for the player. The transport channel is implementation-defined; the descriptor **MUST** identify exactly one item in the **pushed active set** using **one** of:
 
@@ -317,7 +317,7 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 | `start.source` | string | Item `source` URI |
 | `start.index` | integer ≥ 0 | Zero-based index within the **pushed active set** (not the full catalog) |
 
-Exactly one of `start.id`, `start.source`, or `start.index` **MUST** be present. Selection follows the cursor rules: rule 1 → first timed-cohort item; rule 2 → continue `previous_item`; rule 3 → first item of the new active set. Empty-list / idle pushes (§3.5.5) **MUST NOT** require a start descriptor. A list-only push where the player always starts at index 0 is **not** sufficient for non-empty sets — including when membership changes but `max_instant` does not (for example `dynamicQuery` appends evergreen while Day N is playing), and when evergreen items precede the timed cohort (Daily midnight).
+Exactly one of `start.id`, `start.source`, or `start.index` **MUST** be present. Selection follows the cursor rules: rule 1 or 3 → first timed-cohort item; rule 2 → continue `previous_item`; rule 4 → first item of the new active set. Empty-list / idle pushes (§3.5.5) **MUST NOT** require a start descriptor. A list-only push where the player always starts at index 0 is **not** sufficient for non-empty sets — including when membership changes but `max_instant` does not (for example `dynamicQuery` appends evergreen while Day N is playing), and when evergreen items precede the timed cohort (Daily midnight).
 
 #### 3.5.5 Duration, loop, and edge cases
 
@@ -607,7 +607,7 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `display` (object)
 - `provenance` (object)
 - `note` (object; experimental intermission per §3.4)
-- `displayAt` (string; ISO 8601 scheduling date or datetime per §3.5) — **ignored for scheduling when the item came from `dynamicQuery`** (§3.5.6)
+- `displayAt` (string; ISO 8601 scheduling datetime per §3.5) — **ignored for scheduling when the item came from `dynamicQuery`** (§3.5.6)
 - All other PlaylistItem fields per DP-1 §3.2
 
 **Validation path:** Core `itemSchema` versions validate base PlaylistItem fields. Extension overlay fields (`note`, `displayAt`) on **static** signed items are validated by `extensions/playlists/schema.json` via `allOf`. Dynamic items **SHOULD** be validated against core PlaylistItem fields (and `note` when present) before acceptance. If a dynamic item includes `displayAt` that fails the `DisplayAt` pattern, implementations **MUST** strip or ignore that field and **MUST NOT** reject the whole item for that reason alone — the item remains evergreen for §3.5.6 membership. Only static `displayAt` values affect active-set filtering.
@@ -816,12 +816,14 @@ type ContractInfo {
 - Signature verification of full catalog (`schedule`, static `displayAt`, archive/future items) **before** active-set filter when `byDisplayAt` is `true`
 - `schedule.byDisplayAt`: active set = latest past cohort + evergreen (order preserved)
 - `schedule.byDisplayAt` absent or `false`: play full list; ignore `displayAt` for filtering
-- `displayAt` timezone forms: date-only (= local midnight), bare local vs `Z` / offset absolute equality; compact offset rejected; DST gap/fold rules for bare local
+- `displayAt` timezone forms: bare local vs `Z` / offset absolute equality; date-only and compact offset rejected; DST gap/fold rules for bare local
 - Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
 - Timer threshold: immediate active-set push; does not wait for `duration`/`loop`
 - Unchanged-set skip: same identity sequence **and** same `source` per item; `source` change on same `id` forces push
 - Cursor rule 1: when `max_instant` changes to non-empty, start at first timed-cohort item (playhead handoff; not leading evergreen)
-- Cursor rule 2: when a non-empty list is pushed and `max_instant` is unchanged, handoff **MUST** name the continued item via `start.id` / `start.source` / `start.index`; empty/idle pushes need no start descriptor
+- Cursor rule 2: when a non-empty list is pushed and `max_instant` is unchanged and `previous_item` remains, handoff **MUST** name the continued item via `start.id` / `start.source` / `start.index`; empty/idle pushes need no start descriptor
+- Cursor rule 3: when `previous_item` left the set but timed cohort is still non-empty, start at first timed-cohort item (not leading evergreen)
+- Cursor rule 4: evergreen-only (or no timed cohort) → first item of the new active set
 - Clock/timezone change on playback device triggers recompute (§3.5.4 step 3)
 - Multiple items same `displayAt` instant in timed cohort (§3.5.3 example B+C)
 - Empty active set: push empty/idle (no start descriptor); player **MAY** idle/blank or hold last frame
@@ -892,10 +894,10 @@ Current version: **0.2.0**
 ### v0.2.0 (2026-07-21) — displayAt scheduling
 
 - Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `schedule` / `displayAt` per §8.1).
-- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: date-only as local midnight, local datetime with seconds, or RFC 3339 `date-time` with bounded offset).
+- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: local datetime with seconds, or RFC 3339 `date-time` with bounded offset; date-only not accepted).
 - Normative split: device control layer filters and timers; player plays the pre-filtered active set only (no Daily-specific player logic). Aligns with [feral-file#3440 design](https://github.com/feral-file/feral-file/issues/3440#issuecomment-5031173091).
-- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local / date-only = **playback-device** local, with DST gap/fold rules), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
-- Playback cursor on cohort change: start at the first timed-cohort item (Daily midnight surfaces the new day work, not a leading evergreen restart). Empty active set short-circuits cursor rules.
+- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **playback-device** local, with DST gap/fold rules), filter to the active set (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate push** on threshold (does not wait for `duration`/`loop`).
+- Playback cursor: cohort change or non-empty timed cohort when `previous_item` left the set → first timed-cohort item (Daily must not restart a leading evergreen); evergreen-only fallback → first active-set item. Empty active set short-circuits cursor rules.
 - Empty active set: push empty/idle; player **MAY** idle/blank or hold last frame.
 - Favorites / non-scheduled copies: **SHOULD** strip `displayAt`; destination **MUST NOT** enable `byDisplayAt` unless filtering is intentional.
 - Unchanged-set skip requires same identity sequence **and** same `source` per item; playhead handoff uses `start.id` / `start.source` / `start.index`.
@@ -904,7 +906,7 @@ Current version: **0.2.0**
 - Composition with `dynamicQuery`: control layer owns playback lists; single executor; wait for first filtered push (no catalog flash); static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership).
 - Offset wire form: colon required; hours `00–23`, minutes `00–59`; compact `+0700` rejected.
 - §7.1 badge: wall playback with `byDisplayAt: true` **MUST** implement §3.5; catalog-only clients may omit without claiming scheduled playback.
-- `DisplayAt` schema `oneOf`: date-only / local datetime / absolute `date-time` (mutually exclusive patterns).
+- `DisplayAt` schema `oneOf`: local datetime / absolute `date-time` (mutually exclusive patterns; date-only rejected).
 - JSON: `extensions/playlists/schema.json`; example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical core playlist schema unchanged.
 - Published resource URLs now use `/extensions/playlists/v0.2.0/`.
 
@@ -1063,13 +1065,8 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
       }
     },
     "DisplayAt": {
-      "description": "ISO 8601 subset when this item becomes eligible for the active set. Date-only (YYYY-MM-DD): playback-device local midnight. Local datetime without timezone: playback-device local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
+      "description": "ISO 8601 subset when this item becomes eligible for the active set. Local datetime without timezone: playback-device local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
       "oneOf": [
-        {
-          "title": "Date-only (playback-device local midnight)",
-          "type": "string",
-          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
-        },
         {
           "title": "Local datetime without timezone (playback-device local)",
           "type": "string",
@@ -1082,7 +1079,6 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
         }
       ],
       "examples": [
-        "2026-07-21",
         "2026-07-21T00:00:00",
         "2026-07-21T00:00:00Z",
         "2026-07-21T09:00:00+07:00"
