@@ -184,8 +184,8 @@ Time-based scheduling lets a playlist carry its full catalog (including archive 
 | Component | Responsibility |
 |:----------|:---------------|
 | **Publisher / app** | Ship the **full** playlist (`items` include archive and future; `schedule.byDisplayAt: true` when filtering is desired). Cast/send that full document to the device. |
-| **Device control layer** (e.g. controld) | Parse `displayAt`, compute the active set, manage the timer, and **push only the active set** to the player. |
-| **Player** | Play the received list with normal `duration` / `loop` rules. The player **MUST NOT** be required to interpret `displayAt` or `byDisplayAt`. |
+| **Device control layer** (e.g. controld) | Parse `displayAt`, compute the active set, manage the timer, and **push only the active set** to the player. When `dynamicQuery` is also present, **MUST** be the sole query executor (§3.5.6.4). |
+| **Player** | Play the received list with normal `duration` / `loop` rules. The player **MUST NOT** be required to interpret `displayAt` or `byDisplayAt`, and **MUST NOT** execute `dynamicQuery` when `byDisplayAt` is `true`. |
 
 Catalog UIs (hero, archive scroll) **MAY** keep the full playlist; only the list sent for playback **MUST** be the active set when `byDisplayAt` is `true`.
 
@@ -335,9 +335,9 @@ When both `schedule.byDisplayAt` is `true` and `dynamicQuery` is present, the **
 1. Fast-start static items (§4.6.1) **MUST** be filtered to an active set **before** they are sent for playback — do not flash archive or future static items, then filter later. When `byDisplayAt` is `true`, the player **MUST NOT** paint a playback surface from the unfiltered catalog while waiting; it **MUST** wait for the first control-layer active-set push (empty/idle counts). The `<2s` fast-start target in §4.6.1 applies to that **first filtered push**, not to flashing the full static list.
 2. **Effective list order (normative):** Static `items` from the signed playlist document **MUST** appear first, in document order; accepted dynamic items **MUST** be appended after the static block, in the order returned by the indexer (after mapping). §3.5.3 step 5 preserves order within this combined list.
 3. **`displayAt` on dynamic items (trust):** Only `displayAt` values on **static** items in the signed playlist document **MUST** affect active-set filtering and timers. If an indexer response includes `displayAt`, implementations **MUST** ignore it for scheduling (the field **MAY** still be stored on the item for catalog UIs). For §3.5.3 membership, such dynamic items **MUST** be treated as having **no** scheduling `displayAt` (evergreen / always eligible), not as invalid or excluded. Dynamic items **MUST NOT** shift `max_instant` or arm timers.
-4. **Who executes `dynamicQuery` when `byDisplayAt` is `true`:** Exactly one executor **MUST** run the query — either the device control layer **or** the player — not both for the same enrichment cycle. The control layer **MAY** execute it. If the control layer does not, the player **MUST** execute it asynchronously (per §4) and **MUST** hand accepted items to the control layer (implementation-defined channel) **before** any player-side display update from enrichment. If the control layer executes the query, the player **MUST NOT** be required to execute it again for that cycle. Accepted dynamic items **MUST** be available to the control layer before any player-side display update from enrichment.
+4. **Who executes `dynamicQuery` when `byDisplayAt` is `true`:** The device control layer **MUST** be the **sole** executor. The player receives only active-set pushes (§3.5 architecture) and therefore **MUST NOT** be required to hold the signed catalog or `dynamicQuery` block, **MUST NOT** execute the query, and **MUST NOT** merge enrichment into a player-owned playlist. The control layer verifies the full signed document (§5 / §4.7.1), runs the query per §4, and builds the effective list.
 5. After enrichment, the device control layer **MUST** recompute the active set over that effective list, **MUST** retarget the transition timer, and **MUST** push per §3.5.4 (including cursor rules).
-6. **Exception to §4.6.1:** when `byDisplayAt` is `true`, players **MUST NOT** render the unfiltered static catalog or an unfiltered static+dynamic merge. They **MUST** play only active-set lists received from the control layer. The §4.6.1 phrase “update display without disrupting current playback” **MUST NOT** delay or refuse an active-set replace required by §3.5.4 / this section. When `dynamicQuery` fails, fallback **MUST** be the last active set pushed by the control layer (or idle if empty), not the unfiltered static catalog (§4.4, §4.6.2).
+6. **Exception to §4.6.1:** when `byDisplayAt` is `true`, players **MUST NOT** render the unfiltered static catalog or an unfiltered static+dynamic merge. They **MUST** play only active-set lists received from the control layer. The only player-visible list mutation under `byDisplayAt` is a control-layer active-set push. The §4.6.1 phrase “update display without disrupting current playback” **MUST NOT** delay or refuse an active-set replace required by §3.5.4 / this section. When `dynamicQuery` fails, fallback **MUST** be the last active set pushed by the control layer (or idle if empty), not the unfiltered static catalog (§4.4, §4.6.2).
 
 #### 3.5.7 Example: Daily playlist
 
@@ -397,7 +397,7 @@ The `dynamicQuery` extension enables playlists to fetch items dynamically from e
 Defines a rigid contract for request construction and response parsing, moving beyond opaque metadata.
 
 **Fast Start, Rich Upgrade**  
-Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view — **except** when `schedule.byDisplayAt` is `true`: the fast-start playback list is the **filtered active set** from the first control-layer push (§3.5.6), and `dynamicQuery` execution follows the single-executor rule in §3.5.6.4 (control layer **or** player, not both).
+Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view — **except** when `schedule.byDisplayAt` is `true`: the fast-start playback list is the **filtered active set** from the first control-layer push (§3.5.6), and the device control layer is the **sole** `dynamicQuery` executor (§3.5.6.4).
 
 **Deterministic Resolution**  
 Standardized template variables and protocol profiles ensure different players produce identical requests for the same user context.
@@ -526,7 +526,7 @@ Profile for executing GraphQL queries with versioned schema.
 
 ### 4.4 Template Variable Hydration
 
-The component that executes `dynamicQuery` (the player, or the device control layer when it is the sole executor per §3.5.6.4) **MUST** hydrate template placeholders directly in the `query` string before execution.
+The component that executes `dynamicQuery` **MUST** hydrate template placeholders directly in the `query` string before execution. When `schedule.byDisplayAt` is `true`, that executor is the device control layer (§3.5.6.4); otherwise it is typically the player (§4.6.1).
 
 **Standard Template Variables:**
 
@@ -638,16 +638,16 @@ When `schedule.byDisplayAt` is `true`, players **MUST NOT** send the unfiltered 
 
 **Fast start:**
 1. Players **MUST** render static playlist items immediately (target <2s). When `byDisplayAt` is `true`, that target applies to the **first filtered active-set push** from the control layer (empty/idle counts); players **MUST NOT** flash the unfiltered static catalog while waiting (§3.5.6.1).
-2. Players **MUST** execute `dynamicQuery` asynchronously (non-blocking), **unless** `byDisplayAt` is `true` and the control layer is the executor for that cycle (§3.5.6.4).
+2. When `byDisplayAt` is absent or `false`, players **MUST** execute `dynamicQuery` asynchronously (non-blocking). When `byDisplayAt` is `true`, players **MUST NOT** execute `dynamicQuery` — the device control layer is the sole executor (§3.5.6.4).
 3. Players **MUST** continue showing the current playback surface until dynamic items are ready — when `byDisplayAt` is `true`, that surface is the **last pushed active set** (or idle), not the full static catalog
 
-**Dynamic enrichment:**
+**Dynamic enrichment** (when `byDisplayAt` is absent or `false` — player is the executor):
 1. Validate response structure and item schema against specified DP-1 version
 2. Transform items using `itemMap` (if present)
-3. Merge or append dynamic items to playlist (implementation-defined), **except** when `byDisplayAt` is `true`: static items first in document order, then append accepted dynamic items (§3.5.6)
+3. Merge or append dynamic items to playlist (implementation-defined)
 4. Update display without disrupting current playback
 
-**When `schedule.byDisplayAt` is `true`:** Accepted dynamic items **MUST** reach the control layer before player display update (via control-layer fetch or player handoff per §3.5.6.4). Active-set replace from the control layer **MUST NOT** be delayed by bullet 4. Fallback on query failure **MUST** be the last pushed active set (or idle), not the unfiltered catalog (§4.4, §4.6.2).
+**When `schedule.byDisplayAt` is `true`:** The device control layer **MUST** perform enrichment (validate, `itemMap`, append into the effective list per §3.5.6.2–3), then recompute and push per §3.5.6.5. The player **MUST NOT** merge dynamic items locally; the only player-visible list mutation is a control-layer active-set push. Fallback on query failure **MUST** be the last pushed active set (or idle), not the unfiltered catalog (§4.4, §4.6.2).
 
 #### 4.6.2 Error Handling
 
@@ -659,7 +659,7 @@ Players **MUST** handle failures gracefully:
 | Invalid response | Log error, continue with static content, do not crash. When `byDisplayAt` is `true`, continue the **last pushed active set** (or idle if empty). |
 | Missing template placeholder | Skip query execution, show static content. When `byDisplayAt` is `true`, show the **last pushed active set** (or idle if empty). |
 | Signature verification failed | Reject entire playlist per DP-1 §7.1. |
-| Schema validation failed | Log error, discard invalid items, show valid items only. When `byDisplayAt` is `true`, continue the **last pushed active set** (or idle if empty) and hand only accepted items to the control layer — do not paint an unfiltered partial catalog. Invalid dynamic `displayAt` alone **MUST NOT** discard an otherwise-valid item (§4.5). |
+| Schema validation failed | Log error, discard invalid items, show valid items only. When `byDisplayAt` is `true`, the control layer discards invalid dynamic items and pushes a recomputed active set (or continues the last push / idle); the player **MUST NOT** paint an unfiltered partial catalog. Invalid dynamic `displayAt` alone **MUST NOT** discard an otherwise-valid item (§4.5). |
 
 **Players MUST ensure the screen never goes dark due to dynamic query failures.**
 
@@ -821,7 +821,7 @@ type ContractInfo {
 - Timer threshold: immediate active-set push; does not wait for `duration`/`loop`
 - Unchanged-set skip: same identity sequence **and** same `source` per item; `source` change on same `id` forces push
 - Cursor rule 1: when `max_instant` changes to non-empty, start at first timed-cohort item (playhead handoff; not leading evergreen)
-- Cursor rule 2: when a non-empty list is pushed and `max_instant` is unchanged and `previous_item` remains, handoff **MUST** name the continued item via `start.id` / `start.source` / `start.index`; empty/idle pushes need no start descriptor
+- Cursor rule 2: when a non-empty list is pushed, rule 1 did not apply, and `previous_item` remains eligible (including clock rollback that empties the timed cohort), handoff **MUST** name the continued item via `start.id` / `start.source` / `start.index`; empty/idle pushes need no start descriptor
 - Cursor rule 3: when `previous_item` left the set but timed cohort is still non-empty, start at first timed-cohort item (not leading evergreen)
 - Cursor rule 4: evergreen-only (or no timed cohort) → first item of the new active set
 - Clock/timezone change on playback device triggers recompute (§3.5.4 step 3)
@@ -829,7 +829,7 @@ type ContractInfo {
 - Empty active set: push empty/idle (no start descriptor); player **MAY** idle/blank or hold last frame
 - Future-only `displayAt`: active set is evergreen items only
 - Fast-start: wait for first filtered push; no flash of archive/future static items (§3.5.6.1)
-- Composition: `byDisplayAt` + `dynamicQuery`; single executor; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership); membership change with unchanged `max_instant` → push with continue handoff
+- Composition: `byDisplayAt` + `dynamicQuery`; control layer is sole `dynamicQuery` executor; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership); membership change with unchanged `max_instant` → push with continue handoff
 - Schema validation under `byDisplayAt`: last pushed active set (or idle); invalid dynamic `displayAt` alone does not discard the item
 - Favorites / non-scheduled copy: strip `displayAt` (or keep `byDisplayAt` false) so past items remain playable
 
@@ -903,7 +903,7 @@ Current version: **0.2.0**
 - Unchanged-set skip requires same identity sequence **and** same `source` per item; playhead handoff uses `start.id` / `start.source` / `start.index`.
 - Recompute also on material playback-device clock or timezone changes.
 - Signatures verify the full catalog before filtering; the pushed active set is not separately signed.
-- Composition with `dynamicQuery`: control layer owns playback lists; single executor; wait for first filtered push (no catalog flash); static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership).
+- Composition with `dynamicQuery`: control layer owns playback lists and is the sole `dynamicQuery` executor when `byDisplayAt` is `true`; wait for first filtered push (no catalog flash); static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership).
 - Offset wire form: colon required; hours `00–23`, minutes `00–59`; compact `+0700` rejected.
 - §7.1 badge: wall playback with `byDisplayAt: true` **MUST** implement §3.5; catalog-only clients may omit without claiming scheduled playback.
 - `DisplayAt` schema `oneOf`: local datetime / absolute `date-time` (mutually exclusive patterns; date-only rejected).
