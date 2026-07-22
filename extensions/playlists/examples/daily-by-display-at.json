@@ -7,7 +7,7 @@
   "schedule": {
     "byDisplayAt": true
   },
-  "summary": "One artwork per day. Archive items remain in the playlist; the device control layer filters to the active set using displayAt.",
+  "summary": "One artwork per day. Archive items remain in the playlist; playback uses displayAt to determine which items are eligible.",
   "items": [
     {
       "id": "44444444-4444-4444-8444-444444444444",

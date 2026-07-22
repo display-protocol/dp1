@@ -52,19 +52,19 @@
   "$defs": {
     "Schedule": {
       "type": "object",
-      "description": "Playlist-level scheduling controls. When byDisplayAt is true, the device control layer filters items to an active set based on each item's displayAt and pushes only that set to the player.",
+      "description": "Playlist-level scheduling controls. When byDisplayAt is true, playback includes only eligible items based on each item's displayAt.",
       "properties": {
         "byDisplayAt": {
           "type": "boolean",
-          "description": "When true, the device control layer MUST filter playlist items to the active set for the current time using displayAt and push only that set to the player. When false or absent, play all items (core behavior) and ignore displayAt for filtering."
+          "description": "When true, playback MUST include only eligible items for the current time based on displayAt. When false or absent, play all items (core behavior)."
         }
       }
     },
     "DisplayAt": {
-      "description": "ISO 8601 subset when this item becomes eligible for the active set. Local datetime without timezone: playback-device local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Branches use mutually exclusive patterns so oneOf works without Format-Assertion vocabulary. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
+      "description": "ISO 8601 subset when this item becomes eligible for playback. Local datetime without timezone: display-locale local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
       "oneOf": [
         {
-          "title": "Local datetime without timezone (playback-device local)",
+          "title": "Local datetime without timezone (display-locale local)",
           "type": "string",
           "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$"
         },
