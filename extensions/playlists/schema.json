@@ -52,11 +52,11 @@
   "$defs": {
     "Schedule": {
       "type": "object",
-      "description": "Playlist-level scheduling controls. When byDisplayAt is true, playback includes only eligible items based on each item's displayAt.",
+      "description": "Playlist-level scheduling controls. When byDisplayAt is true, playback includes only the current release (latest past displayAt instant) plus items without displayAt.",
       "properties": {
         "byDisplayAt": {
           "type": "boolean",
-          "description": "When true, playback MUST include only eligible items for the current time based on displayAt. When false or absent, play all items (core behavior)."
+          "description": "When true, playback MUST include only the current release (latest past displayAt instant) plus items without displayAt. When false or absent, play all items (core behavior)."
         }
       }
     },
