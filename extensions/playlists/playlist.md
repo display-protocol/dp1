@@ -17,7 +17,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 1. **Dynamic Query**: Machine-executable interface for fetching playlist items dynamically from external indexers
 2. **Enhanced Metadata**: Additional fields for curators, summary, and cover images
 3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
-4. **displayAt Scheduling**: Optional time-based filtering so conforming implementations play only items that are active at a given time (for example, Daily-style one artwork per day)
+4. **displayAt Scheduling**: Optional time-based filtering so conforming implementations play only items that are eligible at a given time (for example, Daily-style one artwork per day)
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -288,7 +288,9 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 
 **Immediate transition (normative):** When eligible items change (membership, order, or any item's `source`), playback **MUST** switch immediately. It **MUST NOT** wait for the current item's `duration` or `loop` cycle to finish. Crossing a `displayAt` threshold **MUST** surface the new item.
 
-**Unchanged eligibility skip (normative):** If eligibility has not changed (same items in same order, same `source` for each), the implementation **MAY** skip transition and **SHOULD** preserve in-progress playback. A live refresh that changes `source` on an item **MUST** reload that item.
+**Item identity (normative):** For “same item” / continue decisions, identity **MUST** use the item’s `id` when present; otherwise `source`; otherwise the item’s index in the full effective list (static document order, then appended dynamic items per §3.5.6).
+
+**Unchanged eligibility skip (normative):** If eligibility has not changed (same ordered identities and the same `source` for each), the implementation **MAY** skip transition and **SHOULD** preserve in-progress playback. A live refresh that changes `source` on the same identity **MUST** reload that item.
 
 **Which item to play after eligibility changes (normative):** If no items are eligible, show idle per §3.5.5. Otherwise:
 
@@ -314,8 +316,8 @@ When both `schedule.byDisplayAt` is `true` and `dynamicQuery` is present, accept
 
 1. **Fast-start (§4.6.1)** **MUST** present eligible items first (empty/idle counts) — do not flash archive or future static items, then filter later.
 2. **Effective list order:** Static `items` from the signed playlist document **MUST** appear first, in document order; accepted dynamic items **MUST** be appended after, in indexer order.
-3. **`displayAt` on dynamic items:** Only `displayAt` values on **static** items affect eligibility and timers. Dynamic items **MUST** be treated as always eligible. Dynamic items **MUST NOT** shift `max_instant` or arm timers.
-4. After enrichment, the implementation **MUST** re-evaluate eligibility, retarget the transition timer, and apply per §3.5.4.
+3. **`displayAt` on dynamic items:** Only `displayAt` values on **static** items affect eligibility and timers. Before computing *past* / `max_instant` (§3.5.3), implementations **MUST** ignore (or strip) any `displayAt` on dynamic items and treat those items as always eligible. Dynamic items **MUST NOT** shift `max_instant` or arm timers.
+4. After enrichment, the implementation **MUST** re-evaluate eligibility per §3.5.3–§3.5.4 and retarget any transition timer.
 5. When `dynamicQuery` fails, fallback **MUST** be the last eligible set (or idle if empty), not the unfiltered static catalog.
 
 #### 3.5.7 Example: Daily playlist
@@ -505,7 +507,7 @@ Profile for executing GraphQL queries with versioned schema.
 
 ### 4.4 Template Variable Hydration
 
-The component that executes `dynamicQuery` **MUST** hydrate template placeholders directly in the `query` string before execution. When `schedule.byDisplayAt` is `true`, that work is part of building the effective list (§3.5.6.4); otherwise it is typically the player (§4.6.1).
+The component that executes `dynamicQuery` **MUST** hydrate template placeholders directly in the `query` string before execution. When `schedule.byDisplayAt` is `true`, that work is part of building the effective list (§3.5.6); otherwise it is typically the player (§4.6.1).
 
 **Standard Template Variables:**
 
@@ -519,7 +521,7 @@ The component that executes `dynamicQuery` **MUST** hydrate template placeholder
 **Hydration rules:**
 - Template variables use double curly braces: `{{variable_name}}`
 - The `dynamicQuery` executor **MUST** replace all `{{...}}` templates in the `query` field before sending the request
-- If a template cannot be resolved, the executor **MUST** fail gracefully (skip query; show static content / last applied eligible items). When `schedule.byDisplayAt` is `true`, “static content” means the **last applied eligible items** (or idle if empty), not the unfiltered static catalog (§3.5.6).
+- If a template cannot be resolved, the executor **MUST** fail gracefully (skip query; show static content). When `schedule.byDisplayAt` is `true`, “static content” means the **last eligible set** (or idle if empty), not the unfiltered static catalog (§3.5.6.5).
 - If no `{{...}}` templates are present in query, it is used as-is (static query)
 - Custom variables beyond the standard set are **NOT** supported in v0.2.0
 
@@ -613,12 +615,12 @@ The `dynamicQuery` executor **MUST** transform response items using the mapping 
 
 #### 4.6.1 Rendering Strategy
 
-When `schedule.byDisplayAt` is `true`, the playback list **MUST** be only eligible items per §3.5 — not the unfiltered static catalog or an unfiltered static+dynamic merge. Enrichment feeds the effective list (§3.5.6); the fast-start and enrichment bullets below include that carve-out.
+When `schedule.byDisplayAt` is `true`, playback **MUST** use only eligible items per §3.5 — not the unfiltered static catalog or an unfiltered static+dynamic merge. Enrichment feeds the effective list (§3.5.6); the fast-start and enrichment bullets below include that carve-out.
 
 **Fast start:**
-1. Players **MUST** render static playlist items immediately (target <2s). When `byDisplayAt` is `true`, that target applies to the **first computed eligible items** (empty/idle counts); implementations **MUST NOT** flash the unfiltered static catalog while waiting (§3.5.6.1).
-2. When `byDisplayAt` is absent or `false`, players **MUST** execute `dynamicQuery` asynchronously (non-blocking). When `byDisplayAt` is `true`, enrichment **MUST** follow §3.5.6 (effective list → eligible items), not a separate unfiltered merge into the playback list.
-3. Players **MUST** continue showing the current playback surface until dynamic items are ready — when `byDisplayAt` is `true`, that surface is the **last applied eligible items** (or idle), not the full static catalog
+1. Players **MUST** render static playlist items immediately (target <2s). When `byDisplayAt` is `true`, that target applies to the **first eligible set** (empty/idle counts); implementations **MUST NOT** flash the unfiltered static catalog while waiting (§3.5.6.1).
+2. When `byDisplayAt` is absent or `false`, players **MUST** execute `dynamicQuery` asynchronously (non-blocking). When `byDisplayAt` is `true`, enrichment **MUST** follow §3.5.6 (effective list → eligibility), not a separate unfiltered merge into playback.
+3. Players **MUST** continue showing the current playback surface until dynamic items are ready — when `byDisplayAt` is `true`, that surface is the **last eligible set** (or idle), not the full static catalog
 
 **Dynamic enrichment** (when `byDisplayAt` is absent or `false`):
 1. Validate response structure and item schema against specified DP-1 version
@@ -626,7 +628,7 @@ When `schedule.byDisplayAt` is `true`, the playback list **MUST** be only eligib
 3. Merge or append dynamic items to playlist (implementation-defined)
 4. Update display without disrupting current playback
 
-**When `schedule.byDisplayAt` is `true`:** Implementations **MUST** perform enrichment into the effective list (validate, `itemMap`, append per §3.5.6.2–3), then recompute and apply per §3.5.6.5. The playback list **MUST** remain only eligible items. Fallback on query failure **MUST** be the last applied eligible items (or idle), not the unfiltered catalog (§4.4, §4.6.2).
+**When `schedule.byDisplayAt` is `true`:** Implementations **MUST** perform enrichment into the effective list (validate, `itemMap`, append per §3.5.6.2–3), then re-evaluate eligibility per §3.5.6.4. Playback **MUST** remain only eligible items. Fallback on query failure **MUST** be the last eligible set (or idle), not the unfiltered catalog (§4.4, §4.6.2).
 
 #### 4.6.2 Error Handling
 
@@ -634,11 +636,11 @@ Players **MUST** handle failures gracefully:
 
 | Error Condition | Required Behavior |
 |:----------------|:------------------|
-| Network failure | Continue playing static content, retry with exponential backoff (optional). When `byDisplayAt` is `true`, continue the **last applied eligible items** (or idle if empty), not the unfiltered catalog. |
-| Invalid response | Log error, continue with static content, do not crash. When `byDisplayAt` is `true`, continue the **last applied eligible items** (or idle if empty). |
-| Missing template placeholder | Skip query execution, show static content. When `byDisplayAt` is `true`, show the **last applied eligible items** (or idle if empty). |
+| Network failure | Continue playing static content, retry with exponential backoff (optional). When `byDisplayAt` is `true`, continue the **last eligible set** (or idle if empty), not the unfiltered catalog. |
+| Invalid response | Log error, continue with static content, do not crash. When `byDisplayAt` is `true`, continue the **last eligible set** (or idle if empty). |
+| Missing template placeholder | Skip query execution, show static content. When `byDisplayAt` is `true`, show the **last eligible set** (or idle if empty). |
 | Signature verification failed | Reject entire playlist per DP-1 §7.1. |
-| Schema validation failed | Log error, discard invalid items, show valid items only. When `byDisplayAt` is `true`, discard invalid dynamic items and apply a recomputed eligible items (or continue the last apply / idle); **MUST NOT** paint an unfiltered partial catalog. Invalid dynamic `displayAt` alone **MUST NOT** discard an otherwise-valid item (§4.5). |
+| Schema validation failed | Log error, discard invalid items, show valid items only. When `byDisplayAt` is `true`, discard invalid dynamic items and re-evaluate eligibility (or continue the last eligible set / idle); **MUST NOT** paint an unfiltered partial catalog. Invalid dynamic `displayAt` alone **MUST NOT** discard an otherwise-valid item (§4.5). |
 
 **Players MUST ensure the screen never goes dark due to dynamic query failures.**
 
@@ -764,10 +766,10 @@ type ContractInfo {
 ### 7.1 Extension Badge: "DP-1 Playlist v0.2"
 
 **Requirements:**
-- Parse all extended playlist fields (catalog UIs **MAY** display them; wall players that only receive pre-filtered eligible itemss are not required to surface `displayAt` / `schedule` in the UI)
+- Parse all extended playlist fields (catalog UIs **MAY** display them)
 - Verify playlist signatures per DP-1 §7.1 on the full catalog document before eligibility filtering when `byDisplayAt` is `true`
 - Handle missing optional fields gracefully
-- Any implementation that accepts playlists with `schedule.byDisplayAt: true` for scheduled playback **MUST** implement eligibility filtering, timer apply, and start-item selection per §3.5. Catalog-only clients that never perform playback **MAY** omit filtering and **MUST NOT** claim scheduled-playback compliance.
+- Any implementation that accepts playlists with `schedule.byDisplayAt: true` for scheduled playback **MUST** implement eligibility, transitions, and start-item selection per §3.5. Catalog-only clients that never perform playback **MAY** omit filtering and **MUST NOT** claim scheduled-playback compliance.
 - Pass reference test suite (10+ sample playlists)
 
 ### 7.2 Optional Badge: "DP-1 Playlist Dynamic"
@@ -793,23 +795,23 @@ type ContractInfo {
 - User consent workflow for wallet address sharing
 - Signature verification including `dynamicQuery` block
 - Signature verification of full catalog (`schedule`, static `displayAt`, archive/future items) **before** eligibility filter when `byDisplayAt` is `true`
-- `schedule.byDisplayAt`: eligible items = latest past cohort + evergreen (order preserved)
+- `schedule.byDisplayAt`: eligible = current release (latest past `max_instant`) + items with no `displayAt` (order preserved)
 - `schedule.byDisplayAt` absent or `false`: play full list; ignore `displayAt` for filtering
 - `displayAt` timezone forms: bare local vs `Z` / offset absolute equality; date-only and compact offset rejected; DST gap/fold rules for bare local
-- Invalid `displayAt` excluded from timed cohort and timers (not evergreen)
-- Timer threshold: immediate eligibility apply; does not wait for `duration`/`loop`
-- Unchanged-set skip: same identity sequence **and** same `source` per item; `source` change on same `id` forces apply
-- Cursor rule 1: when `max_instant` changes to non-empty, start at first timed-cohort item (not leading evergreen)
-- Cursor rule 2: when a non-empty list is applied, rule 1 did not apply, and `previous_item` remains eligible (including clock rollback that empties the timed cohort), start selection **MUST** name the continued item; resume in-progress media only if `source` is unchanged — if `source` changed, load the new URI immediately; empty/idle applies need no start item
-- Cursor rule 3: when `previous_item` left the set but timed cohort is still non-empty, start at first timed-cohort item (not leading evergreen)
-- Cursor rule 4: evergreen-only (or no timed cohort) → first item of the new eligible items
-- Display-locale clock/timezone change triggers recompute (§3.5.4 step 3)
-- Multiple items same `displayAt` instant in timed cohort (§3.5.3 example B+C)
-- Empty eligible items: apply empty/idle (no start item); implementation **MAY** idle/blank or hold last frame
-- Future-only `displayAt`: eligible items is evergreen items only
-- Fast-start: first computed eligible items; no flash of archive/future static items (§3.5.6.1)
-- Composition: `byDisplayAt` + `dynamicQuery`; enrichment builds effective list then eligible items; ignore unsigned `displayAt` on dynamic items (treat as evergreen for membership); membership change with unchanged `max_instant` → apply with continue start selection
-- Schema validation under `byDisplayAt`: last applied eligible items (or idle); invalid dynamic `displayAt` alone does not discard the item
+- Invalid `displayAt` not eligible and not a timer candidate (not treated as always eligible)
+- Threshold: immediate transition; does not wait for `duration`/`loop`
+- Unchanged eligibility skip: same identity sequence **and** same `source` per item; `source` change on same identity forces reload
+- Cursor rule 1: new `max_instant` → start at first current-release item (not leading always-eligible)
+- Cursor rule 2: current item still eligible → continue; reload if `source` changed
+- Cursor rule 3: current item left eligibility but a current release exists → start at first current-release item
+- Cursor rule 4: otherwise → first eligible item
+- Display-locale clock/timezone change triggers re-evaluation (§3.5.4 step 3)
+- Multiple items same `displayAt` instant in the current release (§3.5.3 example B+C)
+- No eligible items: idle/blank or hold last frame (§3.5.5)
+- Future-only `displayAt`: only items without `displayAt` are eligible
+- Fast-start: first eligible set; no flash of archive/future static items (§3.5.6.1)
+- Composition: `byDisplayAt` + `dynamicQuery`; ignore/strip unsigned `displayAt` on dynamic items before §3.5.3; enrichment then re-evaluate (§3.5.6.4); failure → last eligible set (§3.5.6.5)
+- Schema validation under `byDisplayAt`: last eligible set (or idle); invalid dynamic `displayAt` alone does not discard the item
 - Favorites / non-scheduled copy: strip `displayAt` (or keep `byDisplayAt` false) so past items remain playable
 
 ---
@@ -874,15 +876,14 @@ Current version: **0.2.0**
 
 - Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `schedule` / `displayAt` per §8.1).
 - Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: local datetime with seconds, or RFC 3339 `date-time` with bounded offset; date-only not accepted).
-- Normative behavior: when `byDisplayAt` is `true`, the **playback list** is only eligible items; component split for filtering vs rendering is implementation-defined.
-- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **display locale**, with DST gap/fold rules), filter to only eligible items (most recent release ≤ now + evergreen; empty *past* → evergreen only), preserve order, and advance via timer with **immediate apply** on threshold (does not wait for `duration`/`loop`).
-- Playback cursor: cohort change or non-empty timed cohort when `previous_item` left the set → first timed-cohort item (Daily must not restart a leading evergreen); evergreen-only fallback → first eligibility item. Empty eligible items short-circuits cursor rules.
-- Empty eligible items: apply empty/idle; implementation **MAY** idle/blank or hold last frame.
+- Normative behavior: when `byDisplayAt` is `true`, playback includes only eligible items (most recent release ≤ now + items with no `displayAt`).
+- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **display locale**, with DST gap/fold rules), preserve order, and transition immediately on threshold (does not wait for `duration`/`loop`).
+- Which item to play: new release → first release item; else continue current if still eligible (reload if `source` changed); else first current-release item; else first eligible. No eligible items → idle/blank or hold last frame.
 - Favorites / non-scheduled copies: **SHOULD** strip `displayAt`; destination **MUST NOT** enable `byDisplayAt` unless filtering is intentional.
-- Unchanged-set skip requires same identity sequence **and** same `source` per item; start-item selection may use `start.id` / `start.source` / `start.index`; continuing an item whose `source` changed **MUST** reload the new URI (no resume of old bytes).
-- Recompute also on material display-locale clock or timezone changes.
-- Signatures verify the full catalog before filtering; only eligible set used for playback is not separately signed.
-- Composition with `dynamicQuery`: enrichment builds the effective list then only eligible items when `byDisplayAt` is `true`; first filtered playback list (no catalog flash); static-first effective list order; ignore unsigned `displayAt` on dynamic items (evergreen for membership).
+- Unchanged eligibility skip: same identity sequence (`id` / else `source` / else index) **and** same `source` per item.
+- Re-evaluate also on material display-locale clock or timezone changes.
+- Signatures verify the full catalog before filtering; the eligible playback subset is not separately signed.
+- Composition with `dynamicQuery`: ignore/strip unsigned `displayAt` on dynamic items before eligibility; enrichment then re-evaluate (§3.5.6); failure → last eligible set.
 - Offset wire form: colon required; hours `00–23`, minutes `00–59`; compact `+0700` rejected.
 - §7.1 badge: scheduled playback with `byDisplayAt: true` **MUST** implement §3.5; catalog-only clients may omit without claiming scheduled-playback compliance.
 - `DisplayAt` schema `oneOf`: local datetime / absolute `date-time` (mutually exclusive patterns; date-only rejected).

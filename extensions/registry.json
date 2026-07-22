@@ -77,7 +77,7 @@
         "Playlist extension: bump to v0.2.0 (minor additive release).",
         "Playlist extension: schedule.byDisplayAt (playlist-level) and displayAt (item-level ISO 8601 subset; local datetime or RFC 3339 date-time; date-only not accepted) for time-based playback filtering (immediate apply on threshold; display locale for bare local).",
         "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (local datetime / date-time with bounded offset; portable without Format-Assertion).",
-        "Playlist extension: document timezone and DST gap/fold rules, playback eligibility rules, timer-based transitions, playhead handoff, Favorites strip guidance, signatures-before-filter, and dynamicQuery composition.",
+        "Playlist extension: document timezone and DST gap/fold rules, playback eligibility and transition rules, Favorites strip guidance, signatures-before-filter, and dynamicQuery composition.",
         "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
         "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."
       ]
