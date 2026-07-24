@@ -41,8 +41,7 @@ These extensions enable playlists to transition from static collections to live,
 | **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
 | **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
-| **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. |
-| **Schedule** | Playlist-level object that opts into scheduling behavior (currently `byDisplayAt`). |
+| **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
 | **Display locale** | The local timezone and clock of the display that presents the playlist; authority for timezone-less `displayAt` values (not the casting client). |
 
 ---
@@ -97,7 +96,6 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
-| `schedule` | object | OPTIONAL | Scheduling controls. See §3.5. When `byDisplayAt` is `true`, playback uses only eligible items derived from `displayAt`. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
@@ -178,21 +176,17 @@ The **`note`** object is an **optional** intermission card: short, **artist-auth
 
 Time-based scheduling lets a playlist carry its full catalog (including archive and future items) while only playing items that are eligible at the current time. This supports Daily-style playlists (one artwork per day).
 
-**Favorites / non-scheduled copies:** When copying an item from a `byDisplayAt` playlist into a playlist that should play without time filtering (for example Favorites), the implementation **SHOULD** strip `displayAt` from the copied item and **MUST NOT** set `schedule.byDisplayAt` to `true` on that destination playlist unless filtering is intentional.
+**Favorites / non-scheduled copies:** When copying an item from a displayAt-scheduled playlist into a playlist that should play without time filtering (for example Favorites), the implementation **SHOULD** strip `displayAt` from the copied item.
 
 **Signatures:** Signature verification **MUST** use the **full, unmodified** playlist document (including archive and future items) per §5 / DP-1 §7.1.
 
-#### 3.5.1 Playlist-level `schedule.byDisplayAt`
+#### 3.5.1 Automatic activation
 
-| Field | Type | Required | Description |
-|:------|:-----|:---------|:------------|
-| `schedule` | object | OPTIONAL | Playlist-level scheduling controls. |
-| `schedule.byDisplayAt` | boolean | OPTIONAL | When `true`, playback **MUST** include only eligible items per §3.5.3. When `false` or absent, play all items normally. |
+displayAt scheduling activates automatically whenever the current playlist item list contains at least one item with a `displayAt` field. When no item has `displayAt`, play all items normally (core behavior).
 
 ```json
 {
   "title": "Daily",
-  "schedule": { "byDisplayAt": true },
   "items": [ ... ]
 }
 ```
@@ -246,7 +240,7 @@ Absolute `Z` / offset values are unaffected (they already name a unique instant)
 
 #### 3.5.3 Playback eligibility
 
-When `schedule.byDisplayAt` is `true`, playback **MUST** include only eligible items from the current playlist item list. Eligibility is determined as follows:
+When displayAt scheduling is active (§3.5.1), playback **MUST** include only eligible items from the current playlist item list. Eligibility is determined as follows:
 
 1. **MUST** resolve each item’s `displayAt` to an **instant** using §3.5.2. Comparisons against `now` **MUST** use those instants — **not** lexical string comparison of the wire values.
 2. Let *past* be items that have a resolvable `displayAt` whose instant ≤ now. If *past* is empty, the **current release** is empty; skip to step 4.
@@ -277,7 +271,7 @@ Playlist items (in order):
 
 #### 3.5.4 Playback transitions
 
-When `byDisplayAt` is `true`, playback **MUST** update when eligibility changes:
+When displayAt scheduling is active (§3.5.1), playback **MUST** update when eligibility changes:
 
 1. Find `next_instant` = the minimum resolved `displayAt` instant where that instant > now (if any). Every item with a resolvable `displayAt` **MUST** be considered a timer candidate.
 2. If `next_instant` exists, playback **MUST** transition at that time.
@@ -308,15 +302,15 @@ There is no polling and no midnight-specific logic. Scheduling is driven by the 
 - If no items are eligible, the implementation **MAY** show an idle or blank state, or **MAY** hold the last frame of the previous item.
 - Multiple items with the same resolved `displayAt` instant **MUST** all be eligible together.
 - An item whose `displayAt` is not an accepted §3.5.2 wire form, or cannot be resolved to an instant (invalid calendar/clock value), **MUST** be treated as **not eligible** and **MUST NOT** contribute a timer candidate.
-- Implementations that do not understand `byDisplayAt` **SHOULD** ignore it and play the full list (degraded but functional).
+- Implementations that do not understand `displayAt` scheduling **SHOULD** ignore `displayAt` and play the full list (degraded but functional).
 
 #### 3.5.6 Independence from item sourcing
 
 `displayAt` scheduling applies to the **current playlist item list**, regardless of how that list was obtained (static `items` in the playlist document, items produced by `dynamicQuery` (§4), or any combination).
 
 - §4 defines how `dynamicQuery` builds or updates the item list.
-- §3.5 defines how `displayAt` / `byDisplayAt` select which of those items play, and when playback transitions.
-- The two mechanisms are independent: an item list **MAY** contain items with or without `displayAt`. When `byDisplayAt` is `true`, §3.5.3–§3.5.5 apply uniformly to every item in the list.
+- §3.5 defines how `displayAt` selects which of those items play, and when playback transitions.
+- The two mechanisms are independent: an item list **MAY** contain items with or without `displayAt`. When displayAt scheduling is active (§3.5.1), §3.5.3–§3.5.5 apply uniformly to every item in the list.
 - Whenever the item list changes, re-evaluate eligibility and timers per §3.5.3–§3.5.4.
 
 #### 3.5.7 Example: Daily playlist
@@ -326,7 +320,6 @@ See also `extensions/playlists/examples/daily-by-display-at.json` (same item ord
 ```json
 {
   "title": "Daily",
-  "schedule": { "byDisplayAt": true },
   "items": [
     {
       "title": "Evergreen Intro",
@@ -377,7 +370,7 @@ The `dynamicQuery` extension enables playlists to fetch items dynamically from e
 Defines a rigid contract for request construction and response parsing, moving beyond opaque metadata.
 
 **Fast Start, Rich Upgrade**  
-Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view. When `schedule.byDisplayAt` is `true`, playback of that item list still follows §3.5 (only eligible items play).
+Players **MUST** render static playlist items immediately and execute the `dynamicQuery` asynchronously to enrich the view. When displayAt scheduling is active (§3.5.1), playback of that item list still follows §3.5 (only eligible items play).
 
 **Deterministic Resolution**  
 Standardized template variables and protocol profiles ensure different players produce identical requests for the same user context.
@@ -590,7 +583,7 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `displayAt` (string; ISO 8601 scheduling datetime per §3.5) — optional on mapped items
 - All other PlaylistItem fields per DP-1 §3.2
 
-**Validation path:** Core `itemSchema` versions validate base PlaylistItem fields. Extension overlay fields (`note`, `displayAt`) on **static** signed items are validated by `extensions/playlists/schema.json` via `allOf`. Dynamic items **SHOULD** be validated against core PlaylistItem fields (and `note` when present) before acceptance. How optional `displayAt` on accepted items affects playback is defined only in §3.5 (independent of whether the item came from static `items` or `dynamicQuery`).
+**Validation path:** Core `itemSchema` versions define base PlaylistItem fields. When the playlists extension is in use, items **MUST** be validated against core PlaylistItem composed with the extension item overlay (`note`, `displayAt`) — the same overlay used for static items in `playlist_with_extension.json` / `playlist_item_with_extension.json`. This applies to items in the signed playlist document and to items accepted from `dynamicQuery` before they enter the playlist item list. How `displayAt` affects playback after acceptance is defined only in §3.5 (independent of item sourcing).
 
 **Field mapping (optional):**
 
@@ -619,7 +612,7 @@ The `dynamicQuery` executor **MUST** transform response items using the mapping 
 2. Players **MUST** execute `dynamicQuery` asynchronously (non-blocking)
 3. Players **MUST** continue showing static content until dynamic items are ready
 
-When `schedule.byDisplayAt` is `true`, the items that play from that list **MUST** still follow §3.5 (eligibility and transitions). Assembling the item list via `dynamicQuery` remains as above.
+When displayAt scheduling is active (§3.5.1), the items that play from that list **MUST** still follow §3.5 (eligibility and transitions). Assembling the item list via `dynamicQuery` remains as above.
 
 **Dynamic enrichment:**
 1. Validate response structure and item schema against specified DP-1 version
@@ -684,7 +677,7 @@ Playlists with extensions **MUST** be signed per DP-1 §7.1.
 **Signature coverage:**
 - Playlist signature covers the **entire playlist object** including all extension fields
 - The `dynamicQuery` block is part of the signed payload
-- The `schedule` object and item-level `displayAt` values present in the signed playlist document are part of the signed payload
+- Item-level `displayAt` values present in the signed playlist document are part of the signed payload
 - Signature verification **MUST** occur before executing dynamic queries
 - Items returned by `dynamicQuery` are not part of that signed document; their acceptance is governed by §4. Playback scheduling for any accepted item that carries `displayAt` is governed by §3.5.
 
@@ -763,9 +756,9 @@ type ContractInfo {
 
 **Requirements:**
 - Parse all extended playlist fields (catalog UIs **MAY** display them)
-- Verify playlist signatures per DP-1 §7.1 on the full catalog document before eligibility filtering when `byDisplayAt` is `true`
+- Verify playlist signatures per DP-1 §7.1 on the full catalog document before eligibility filtering when displayAt scheduling is active (§3.5.1)
 - Handle missing optional fields gracefully
-- Any implementation that accepts playlists with `schedule.byDisplayAt: true` for scheduled playback **MUST** implement eligibility, transitions, and start-item selection per §3.5. Catalog-only clients that never perform playback **MAY** omit filtering and **MUST NOT** claim scheduled-playback compliance.
+- Any implementation that accepts playlists with item-level `displayAt` for scheduled playback **MUST** implement eligibility, transitions, and start-item selection per §3.5. Catalog-only clients that never perform playback **MAY** omit filtering and **MUST NOT** claim scheduled-playback compliance.
 - Pass reference test suite (10+ sample playlists)
 
 ### 7.2 Optional Badge: "DP-1 Playlist Dynamic"
@@ -790,9 +783,9 @@ type ContractInfo {
 - Indexer failure handling (network error, invalid response)
 - User consent workflow for wallet address sharing
 - Signature verification including `dynamicQuery` block
-- Signature verification of full catalog (`schedule`, `displayAt` on document items, archive/future items) **before** eligibility filter when `byDisplayAt` is `true`
-- `schedule.byDisplayAt`: eligible = current release (latest past `max_instant`) + items with no `displayAt` (order preserved)
-- `schedule.byDisplayAt` absent or `false`: play full list; ignore `displayAt` for filtering
+- Signature verification of full catalog (`displayAt` on document items, archive/future items) **before** eligibility filter when displayAt scheduling is active (§3.5.1)
+- displayAt scheduling active: eligible = current release (latest past `max_instant`) + items with no `displayAt` (order preserved)
+- No items with `displayAt`: play full list; ignore `displayAt` for filtering
 - `displayAt` timezone forms: bare local vs `Z` / offset absolute equality; date-only and compact offset rejected; DST gap/fold rules for bare local
 - Invalid `displayAt` not eligible and not a timer candidate
 - Threshold: immediate transition; does not wait for `duration`/`loop`
@@ -807,7 +800,7 @@ type ContractInfo {
 - Future-only `displayAt`: only items without `displayAt` are eligible
 - Item list change (refresh / enrichment) triggers re-evaluation per §3.5.6
 - Independence: `displayAt` rules apply the same whether items came from static `items` or `dynamicQuery` (§3.5.6)
-- Favorites / non-scheduled copy: strip `displayAt` (or keep `byDisplayAt` false) so past items remain playable
+- Favorites / non-scheduled copy: strip `displayAt` so past items remain playable
 
 ---
 
@@ -869,18 +862,18 @@ Current version: **0.2.0**
 
 ### v0.2.0 (2026-07-21) — displayAt scheduling
 
-- Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `schedule` / `displayAt` per §8.1).
-- Documented playlist-level **`schedule.byDisplayAt`** and item-level **`displayAt`** (ISO 8601 subset: local datetime with seconds, or RFC 3339 `date-time` with bounded offset; date-only not accepted).
-- Normative behavior: when `byDisplayAt` is `true`, playback includes only eligible items (most recent release ≤ now + items with no `displayAt`).
-- When `byDisplayAt` is `true`, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **display locale**, with DST gap/fold rules), preserve order, and transition immediately on threshold (does not wait for `duration`/`loop`).
+- Bumped Playlist Extension from **0.1.0** to **0.2.0** (minor: additive `displayAt` per §8.1).
+- Documented item-level **`displayAt`** (ISO 8601 subset: local datetime with seconds, or RFC 3339 `date-time` with bounded offset; date-only not accepted). displayAt scheduling activates automatically whenever the current item list contains at least one item with `displayAt`.
+- Normative behavior: when displayAt scheduling is active, playback includes only eligible items (most recent release ≤ now + items with no `displayAt`).
+- When displayAt scheduling is active, implementations **MUST** resolve each `displayAt` to an instant (§3.5.2; bare local = **display locale**, with DST gap/fold rules), preserve order, and transition immediately on threshold (does not wait for `duration`/`loop`).
 - Which item to play: new release → first release item; else continue current if still eligible (reload if `source` changed); else first current-release item; else first eligible. No eligible items → idle/blank or hold last frame.
-- Favorites / non-scheduled copies: **SHOULD** strip `displayAt`; destination **MUST NOT** enable `byDisplayAt` unless filtering is intentional.
+- Favorites / non-scheduled copies: **SHOULD** strip `displayAt`.
 - Unchanged eligibility skip: same identity sequence (`id` / else `source` / else index) **and** same `source` per item.
 - Re-evaluate also on material display-locale clock or timezone changes.
 - Signatures verify the full catalog before filtering; the eligible playback subset is not separately signed.
 - Composition with `dynamicQuery`: independent — §4 builds the item list; §3.5 applies `displayAt` uniformly to that list (§3.5.6).
 - Offset wire form: colon required; hours `00–23`, minutes `00–59`; compact `+0700` rejected.
-- §7.1 badge: scheduled playback with `byDisplayAt: true` **MUST** implement §3.5; catalog-only clients may omit without claiming scheduled-playback compliance.
+- §7.1 badge: scheduled playback with item-level `displayAt` **MUST** implement §3.5; catalog-only clients may omit without claiming scheduled-playback compliance.
 - `DisplayAt` schema `oneOf`: local datetime / absolute `date-time` (mutually exclusive patterns; date-only rejected).
 - JSON: `extensions/playlists/schema.json`; example: `extensions/playlists/examples/daily-by-display-at.json`. Canonical core playlist schema unchanged.
 - Published resource URLs now use `/extensions/playlists/v0.2.0/`.
@@ -934,7 +927,7 @@ Current version: **0.2.0**
 
 ## Appendix A · JSON Schema
 
-Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragment below mirrors the shipped `$id` and the `schedule` / `displayAt` defs; prefer the file on disk when validating.
+Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragment below mirrors the shipped `$id` and the `displayAt` defs; prefer the file on disk when validating.
 
 ```json
 {
@@ -946,9 +939,6 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
   "properties": {
     "note": {
       "$ref": "#/$defs/Note"
-    },
-    "schedule": {
-      "$ref": "#/$defs/Schedule"
     },
     "items": {
       "type": "array",
@@ -1029,16 +1019,6 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
     }
   },
   "$defs": {
-    "Schedule": {
-      "type": "object",
-      "description": "Playlist-level scheduling controls. When byDisplayAt is true, playback includes only the current release (latest past displayAt instant) plus items without displayAt.",
-      "properties": {
-        "byDisplayAt": {
-          "type": "boolean",
-          "description": "When true, playback MUST include only the current release (latest past displayAt instant) plus items without displayAt. When false or absent, play all items (core behavior)."
-        }
-      }
-    },
     "DisplayAt": {
       "description": "ISO 8601 subset when this item becomes eligible for playback. Local datetime without timezone: display-locale local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
       "oneOf": [

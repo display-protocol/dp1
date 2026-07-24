@@ -8,9 +8,6 @@
     "note": {
       "$ref": "#/$defs/Note"
     },
-    "schedule": {
-      "$ref": "#/$defs/Schedule"
-    },
     "items": {
       "type": "array",
       "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note and displayAt.",
@@ -50,16 +47,6 @@
     }
   },
   "$defs": {
-    "Schedule": {
-      "type": "object",
-      "description": "Playlist-level scheduling controls. When byDisplayAt is true, playback includes only the current release (latest past displayAt instant) plus items without displayAt.",
-      "properties": {
-        "byDisplayAt": {
-          "type": "boolean",
-          "description": "When true, playback MUST include only the current release (latest past displayAt instant) plus items without displayAt. When false or absent, play all items (core behavior)."
-        }
-      }
-    },
     "DisplayAt": {
       "description": "ISO 8601 subset when this item becomes eligible for playback. Local datetime without timezone: display-locale local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
       "oneOf": [

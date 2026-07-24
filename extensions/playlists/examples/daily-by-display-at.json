@@ -4,9 +4,6 @@
   "slug": "daily",
   "title": "Daily",
   "created": "2026-07-01T00:00:00Z",
-  "schedule": {
-    "byDisplayAt": true
-  },
   "summary": "One artwork per day. Archive items remain in the playlist; playback uses displayAt to determine which items are eligible.",
   "items": [
     {
