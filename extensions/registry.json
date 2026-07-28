@@ -3,8 +3,8 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.3",
-  "lastUpdated": "2026-05-20T00:00:00Z",
+  "version": "1.0.4",
+  "lastUpdated": "2026-07-28T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -40,7 +40,7 @@
       "name": "Playlist Extension",
       "version": "0.1.0",
       "status": "draft",
-      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional experimental Note (intermission) fields on the playlist and on each item. Enables playlists to transition from static collections to live, personalized feeds.",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional experimental Note (intermission) fields on the playlist and on each item. Enables playlists to transition from static collections to live, personalized feeds, plus inline carriage of the standardized Ref Manifest on items (inlineManifest).",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -60,7 +60,8 @@
         "Curator metadata with DID-based verifiable identities",
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
-        "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core"
+        "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
+        "Inline Manifest: a full Ref Manifest document carried on a PlaylistItem as inlineManifest — same schema and validation as a ref-fetched manifest, ref overrides inline, integrity via the playlist signature (no refHash needed)"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -69,6 +70,14 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.4",
+      "date": "2026-07-28T00:00:00Z",
+      "changes": [
+        "Playlist extension: optional inlineManifest on each PlaylistItem — a complete Ref Manifest document inline, validated by the unmodified ref-manifest schema; ref overrides inlineManifest when both are present; inline bytes are covered by the DP-1 playlist signature so no refHash is required.",
+        "Playlist extension: validated via the extension fragment and composed playlist schema (allOf); canonical core playlist.json unchanged; status remains draft extension v0.1.0."
+      ]
+    },
     {
       "version": "1.0.3",
       "date": "2026-05-20T00:00:00Z",
