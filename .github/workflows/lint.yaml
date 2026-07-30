@@ -59,7 +59,7 @@ jobs:
           # unknown keywords. Examples have no "$id" and are covered by the
           # next step instead.
           mapfile -t schemas < <(
-            find . -type f -name "*.json" -not -path "./node_modules/*" | sort | while read -r f; do
+            find . -type f -name "*.json" -not -path "./node_modules/*" | sed 's|^\./||' | sort | while read -r f; do
               jq -e '
                 type == "object" and has("$schema") and has("$id")
                 and (has("type") or has("properties") or has("allOf")
