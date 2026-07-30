@@ -3,8 +3,8 @@
   "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.3",
-  "lastUpdated": "2026-05-20T00:00:00Z",
+  "version": "1.0.4",
+  "lastUpdated": "2026-07-21T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -38,18 +38,18 @@
     {
       "id": "playlists",
       "name": "Playlist Extension",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "status": "draft",
-      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional experimental Note (intermission) fields on the playlist and on each item. Enables playlists to transition from static collections to live, personalized feeds.",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, and displayAt scheduling (item-level displayAt; activates automatically when any item has displayAt). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
       },
       "published": "2026-03-11T00:00:00Z",
       "resources": {
-        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist.md",
-        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
-        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/playlist_with_extension.json",
+        "specification": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/playlist.md",
+        "schema": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
+        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/playlist_with_extension.json",
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/playlists"
       },
       "features": [
@@ -60,7 +60,8 @@
         "Curator metadata with DID-based verifiable identities",
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
-        "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core"
+        "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
+        "displayAt scheduling: automatically active when any item has displayAt; playback includes only the current release (latest past displayAt instant) plus items without displayAt (ISO 8601; bare local = display locale, Z/offset absolute; date-only not accepted); transitions apply immediately"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -69,6 +70,18 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.4",
+      "date": "2026-07-21T00:00:00Z",
+      "changes": [
+        "Playlist extension: bump to v0.2.0 (minor additive release).",
+        "Playlist extension: item-level displayAt (ISO 8601 subset; local datetime or RFC 3339 date-time; date-only not accepted) for time-based playback filtering; activates automatically when any item has displayAt (immediate apply on threshold; display locale for bare local).",
+        "Playlist extension: DisplayAt schema uses oneOf with mutually exclusive patterns (local datetime / date-time with bounded offset; portable without Format-Assertion).",
+        "Playlist extension: document timezone and DST gap/fold rules, playback eligibility and transition rules, Favorites strip guidance, and independence of displayAt from dynamicQuery item sourcing.",
+        "Playlist extension: add examples/daily-by-display-at.json Daily playlist example.",
+        "Registry: Playlist Extension version, resource URLs, description, and features list updated for displayAt scheduling (draft v0.2.0)."
+      ]
+    },
     {
       "version": "1.0.3",
       "date": "2026-05-20T00:00:00Z",
