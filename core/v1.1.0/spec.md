@@ -25,7 +25,6 @@
 | **Playlist Defaults**           | Top‑level object whose values pre‑populate items unless explicitly overridden.                                                                                                                                                                          |
 | **Capsule (`*.dp1c`)**          | Tar+Zstd container bundling a playlist with its immutable asset tree \+ optional engine layer.                                                                                                                                                          |
 | **Player**                      | Software or device capable of rendering a DP‑1 playlist.                                                                                                                                                                                                |
-| **Exhibition / Playlist‑Group** | A curator‑authored collection of one or more playlists with shared metadata (outside DP‑1 core, see §15).                                                                                                                                               |
 | **Feed Operator**               | Entity hosting and signing a playlist endpoint.                                                                                                                                                                                                         |
 
 ---
@@ -408,7 +407,7 @@ Tar \+ Zstd; SHA‑256 of archive \= capsule CID.
 
 ---
 
-## 15 · Directory & Exhibition API (beta)
+## 15 · Directory API (beta)
 
 *REST‑ish JSON, paginated.*
 
@@ -420,33 +419,11 @@ GET /api/v1/playlists?chain=tezos&type=code&limit=50
 
 Returns array of playlist summaries.
 
-### 15.2 Playlist‑Groups (Exhibitions)
-
-```
-GET /api/v1/playlist-groups/{id}
-```
-
-```
-{
-  "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
-  "slug": "generative‑geometry‑2025",
-  "title": "Generative Geometry",
-  "curator": "Alice Example",
-  "summary": "Exploring procedural form…",
-  "playlists": [
-    "https://feed.feralfile.com/geom‑p1/playlist.json",
-    "https://feed.feralfile.com/geom‑p2/playlist.json"
-  ],
-  "created": "2025-05-20T00:00:00Z",
-  "coverImage": "ipfs://bafyb…/cover.jpg"
-}
-```
-
-Players iterate playlists in `playlists[]` order by default; exhibition‐level scheduling extensions may appear in future XP‑1 spec.
-
 ---
 
 ## 16 · Changelog
+
+* **Editorial (2026-07-31)** Removed the beta Playlist-Group (Exhibition) object: §15.2, the `playlist-group.json` schema, and the terminology entry. Channels (extensions/channels) superseded it before it saw production use — zero groups were ever published; the channels extension no longer references it. Historical changelog entries below are unchanged.
 
 * **v1.1.0 (2025-10-17)** Introduced **multi-signature chain** model with new `signatures` array field. Supports multiple signing entities with distinct roles (`curator`, `feed`, `agent`, `institution`, `licensor`). Signatures use DID-based key identifiers (`kid`) and support multiple algorithms (`ed25519`, `eip191`, `ecdsa-p256`,etc.). Legacy single `signature` field deprecated but remains supported for backward compatibility. Players can verify keys via DID resolution, JWKS endpoints, or local trust stores. See §7.1 for complete specification.
 
