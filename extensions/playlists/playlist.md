@@ -118,7 +118,7 @@ This extension uses the same unified entity shape as the Channel Extension.
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `name` | string | **REQUIRED** | Entity display name. |
+| `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
 | `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
 | `url` | string | OPTIONAL | Entity website or profile URL. |
 

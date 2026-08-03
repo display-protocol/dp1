@@ -95,7 +95,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Entity display name"
+          "description": "Entity display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because an entity name is empty; display SHOULD fall back to the key."
         },
         "key": {
           "type": "string",
