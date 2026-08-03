@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/bundles/playlist-core-v1.1.0.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/bundles/playlist-core-v1.1.0.json",
   "title": "DP-1 Playlist (core bundle for playlists extension)",
   "description": "Aligned with core v1.1.0 playlist.json except items.minItems is relaxed and empty items requires dynamicQuery. Used only as part of the playlists extension composed schema; validators for core-only documents must still use the canonical core playlist schema.",
   "type": "object",
