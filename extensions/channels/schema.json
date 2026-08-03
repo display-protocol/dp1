@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
   "title": "DP-1 Channel Extension",
-  "description": "Channel schema extending DP-1 Playlist-Group for collaborative, persistent feeds with enhanced metadata and curation capabilities",
+  "description": "Channel schema for collaborative, persistent feeds with enhanced metadata and curation capabilities",
   "type": "object",
   "required": ["id", "slug", "title", "version", "created", "playlists"],
   "anyOf": [
@@ -95,7 +95,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Entity display name"
+          "description": "Entity display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because an entity name is empty; display SHOULD fall back to the key."
         },
         "key": {
           "type": "string",

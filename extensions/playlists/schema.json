@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.1.0/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
   "title": "DP-1 Playlist Extension",
-  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, and optional intermission notes",
+  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, displayAt scheduling, and inline Ref Manifest carriage (inlineManifest)",
   "type": "object",
   "properties": {
     "note": {
@@ -10,12 +10,15 @@
     },
     "items": {
       "type": "array",
-      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note and inlineManifest.",
+      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note, displayAt, and inlineManifest.",
       "items": {
         "type": "object",
         "properties": {
           "note": {
             "$ref": "#/$defs/Note"
+          },
+          "displayAt": {
+            "$ref": "#/$defs/DisplayAt"
           },
           "inlineManifest": {
             "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
@@ -48,6 +51,26 @@
     }
   },
   "$defs": {
+    "DisplayAt": {
+      "description": "ISO 8601 subset when this item becomes eligible for playback. Local datetime without timezone: display-locale local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
+      "oneOf": [
+        {
+          "title": "Local datetime without timezone (display-locale local)",
+          "type": "string",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$"
+        },
+        {
+          "title": "Absolute datetime with timezone",
+          "type": "string",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$"
+        }
+      ],
+      "examples": [
+        "2026-07-21T00:00:00",
+        "2026-07-21T00:00:00Z",
+        "2026-07-21T09:00:00+07:00"
+      ]
+    },
     "Note": {
       "type": "object",
       "description": "Experimental intermission card: short artist-authored text between works. May be removed or changed in a future Playlist Extension version.",
@@ -79,7 +102,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Entity display name"
+          "description": "Entity display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because an entity name is empty; display SHOULD fall back to the key."
         },
         "key": {
           "type": "string",
