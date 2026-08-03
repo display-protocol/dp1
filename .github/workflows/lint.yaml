@@ -45,11 +45,72 @@ jobs:
       - name: Validate JSON Schema files
         run: |
           echo "Validating JSON Schema files structure..."
-          # Find all JSON files in any 'schemas' folder and any files ending with 'schema.json'
-          find . -type f \( -path "*/schemas/*.json" -o -name "*schema.json" \) -not -path "./node_modules/*" | while read schema; do
+          # Discover schemas by what the documents are, not what they are
+          # named. The previous globs ("*/schemas/*.json" or "*schema.json")
+          # silently excluded every composed schema and bundle — exactly the
+          # files that carry cross-schema "$ref"s, so the refs most likely to
+          # break were the ones never compiled.
+          #
+          # A schema declares "$schema" and "$id" AND asserts something about
+          # instances. That last clause is what separates a schema from a data
+          # document that merely labels itself with the same two keys:
+          # extensions/registry.json has both, but no type/properties/allOf/
+          # $defs, and compiling it as a schema would fail on strict-mode
+          # unknown keywords. Examples have no "$id" and are covered by the
+          # next step instead.
+          mapfile -t schemas < <(
+            find . -type f -name "*.json" -not -path "./node_modules/*" | sed 's|^\./||' | sort | while read -r f; do
+              jq -e '
+                type == "object" and has("$schema") and has("$id")
+                and (has("type") or has("properties") or has("allOf")
+                     or has("anyOf") or has("oneOf") or has("$defs"))
+              ' "$f" >/dev/null 2>&1 && echo "$f" || true
+            done
+          )
+          printf '%s\n' "${schemas[@]}" > "$RUNNER_TEMP/schemas.txt"
+          echo "Discovered ${#schemas[@]} schema(s):"
+          printf '  %s\n' "${schemas[@]}"
+          # Every other schema is registered with -r so that a cross-schema
+          # "$ref" by $id resolves (e.g. the playlists extension referencing
+          # core ref-manifest.json). The schema under compile is excluded from
+          # its own -r set, since re-adding it would be a duplicate $id.
+          status=0
+          for schema in "${schemas[@]}"; do
             echo "Compiling schema: $schema"
-            ajv compile -s "$schema" --spec=draft2020 -c ajv-formats
+            refs=()
+            for other in "${schemas[@]}"; do
+              [ "$other" = "$schema" ] || refs+=(-r "$other")
+            done
+            ajv compile -s "$schema" "${refs[@]}" --spec=draft2020 -c ajv-formats || status=1
           done
+          # Report every bad schema in one run rather than stopping at the first.
+          exit $status
+
+      - name: Validate examples against their composed schema
+        run: |
+          # Compiling a composed schema proves it is well-formed; it does not
+          # prove the examples we ship still satisfy it. Without this, an
+          # example can drift from the extension it demonstrates and nothing
+          # notices.
+          mapfile -t schemas < "$RUNNER_TEMP/schemas.txt"
+          status=0
+          shopt -s nullglob
+          for dir in extensions/*/examples; do
+            ext="$(dirname "$dir")"
+            composed="$ext/playlist_with_extension.json"
+            [ -f "$composed" ] || { echo "No composed schema for $ext, skipping"; continue; }
+            examples=("$dir"/*.json)
+            [ ${#examples[@]} -gt 0 ] || { echo "No examples in $dir, skipping"; continue; }
+            refs=()
+            for other in "${schemas[@]}"; do
+              [ "$other" = "$composed" ] || refs+=(-r "$other")
+            done
+            echo "Validating ${#examples[@]} example(s) in $dir against $composed"
+            ajv validate -s "$composed" "${refs[@]}" \
+              $(printf -- '-d %s ' "${examples[@]}") \
+              --spec=draft2020 -c ajv-formats || status=1
+          done
+          exit $status
 
       - name: Validate JSON files syntax
         run: |
