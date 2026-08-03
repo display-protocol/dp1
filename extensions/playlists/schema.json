@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dp1.feralfile.com/extensions/playlists/v0.2.0/schema.json",
   "title": "DP-1 Playlist Extension",
-  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, and displayAt scheduling",
+  "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional intermission notes, displayAt scheduling, and inline Ref Manifest carriage (inlineManifest)",
   "type": "object",
   "properties": {
     "note": {
@@ -10,7 +10,7 @@
     },
     "items": {
       "type": "array",
-      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note and displayAt.",
+      "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note, displayAt, and inlineManifest.",
       "items": {
         "type": "object",
         "properties": {
@@ -19,6 +19,10 @@
           },
           "displayAt": {
             "$ref": "#/$defs/DisplayAt"
+          },
+          "inlineManifest": {
+            "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
+            "description": "A full DP-1 Ref Manifest document carried inline — same schema and validation as a manifest fetched via ref. When both are present, ref overrides inlineManifest."
           }
         }
       }
@@ -70,7 +74,9 @@
     "Note": {
       "type": "object",
       "description": "Experimental intermission card: short artist-authored text between works. May be removed or changed in a future Playlist Extension version.",
-      "required": ["text"],
+      "required": [
+        "text"
+      ],
       "properties": {
         "text": {
           "type": "string",
@@ -89,7 +95,10 @@
     "Entity": {
       "type": "object",
       "description": "Unified entity format for curators and publishers with verifiable identities",
-      "required": ["name", "key"],
+      "required": [
+        "name",
+        "key"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -110,12 +119,19 @@
     "DynamicQuery": {
       "type": "object",
       "description": "Machine-executable interface for fetching playlist items dynamically from external indexers",
-      "required": ["profile", "endpoint", "responseMapping"],
+      "required": [
+        "profile",
+        "endpoint",
+        "responseMapping"
+      ],
       "properties": {
         "profile": {
           "type": "string",
           "description": "Resolution profile with version",
-          "enum": ["https-json-v1", "graphql-v1"]
+          "enum": [
+            "https-json-v1",
+            "graphql-v1"
+          ]
         },
         "endpoint": {
           "type": "string",
@@ -125,7 +141,10 @@
         "method": {
           "type": "string",
           "description": "HTTP method (default: POST for graphql-v1, GET for https-json-v1)",
-          "enum": ["GET", "POST"]
+          "enum": [
+            "GET",
+            "POST"
+          ]
         },
         "headers": {
           "type": "object",
@@ -147,18 +166,28 @@
     "ResponseMapping": {
       "type": "object",
       "description": "Configuration for extracting playlist items from indexer response",
-      "required": ["itemsPath", "itemSchema"],
+      "required": [
+        "itemsPath",
+        "itemSchema"
+      ],
       "properties": {
         "itemsPath": {
           "type": "string",
           "description": "JSON path to the array of items (dot notation)",
-          "examples": ["data.works", "artworks", "data.userWorks"]
+          "examples": [
+            "data.works",
+            "artworks",
+            "data.userWorks"
+          ]
         },
         "itemSchema": {
           "type": "string",
           "description": "Schema identifier referencing DP-1 version",
           "pattern": "^dp1/\\d+\\.\\d+$",
-          "examples": ["dp1/1.0", "dp1/1.1"]
+          "examples": [
+            "dp1/1.0",
+            "dp1/1.1"
+          ]
         },
         "itemMap": {
           "type": "object",

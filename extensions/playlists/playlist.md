@@ -18,6 +18,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 2. **Enhanced Metadata**: Additional fields for curators, summary, and cover images
 3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
 4. **displayAt Scheduling**: Optional time-based filtering so conforming implementations play only items that are eligible at a given time (for example, Daily-style one artwork per day)
+5. **Inline Manifest**: Optional inline carriage of the standardized Ref Manifest on a `PlaylistItem`, for playlists with nowhere to host a `ref`
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -43,6 +44,7 @@ These extensions enable playlists to transition from static collections to live,
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
 | **Display locale** | The local timezone and clock of the display that presents the playlist; authority for timezone-less `displayAt` values (not the casting client). |
+| **Inline Manifest** | A complete DP-1 Ref Manifest document carried directly on a `PlaylistItem` as `inlineManifest`, instead of behind a `ref` URL. Same schema, same validation. |
 
 ---
 
@@ -357,6 +359,50 @@ See also `extensions/playlists/examples/daily-by-display-at.json` (same item ord
 | 2026-07-22, 00:00 (timer fires → immediate transition) | Evergreen Intro, Day 2 Work | New `max_instant` → Day 2 Work (not Intro restart) |
 | 2026-07-23, 00:00 (timer fires → immediate transition) | Evergreen Intro, Day 3 Work | New `max_instant` → Day 3 Work |
 | 2026-07-24, 10:00 (post-Day 3; no future `displayAt`) | Evergreen Intro, Day 3 Work | `max_instant` unchanged → continue current item if still present |
+
+### 3.6 Inline Manifest
+
+The **`inlineManifest`** field carries a **DP-1 Ref Manifest document inline on a `PlaylistItem`**, as an alternative to hosting it behind `ref`. It introduces **no new schema**: the value is a complete Ref Manifest (see [ref-manifest.md](../../core/v1.1.0/ref-manifest.md)) and **MUST** validate against the same schema (`schemas/v1.1.0/ref-manifest.json`) as a remote manifest. One standardized document, two carriage options.
+
+**Motivation:** Ref manifests carry the standardized metadata block (title, `artists[]`, `creditLine`, …) that players use for labeling and crediting. Playlists built locally (e.g. by `ff-cli`) have nowhere to host a `ref`, which in practice left their items without structured metadata. Inline carriage closes that gap without inventing a parallel metadata concept.
+
+**Field:**
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `inlineManifest` | object (Ref Manifest) | OPTIONAL | A full Ref Manifest document, inline. Same schema and validation as a manifest fetched via `ref`. |
+
+**Precedence:** When both `ref` and `inlineManifest` are present on an item, **`ref` overrides `inlineManifest`** — the remote manifest is authoritative and the inline copy serves as a fallback (e.g. for offline or degraded fetch). Within the core resolution order (ref-manifest.md §7) the inline manifest occupies the same slot as `ref`, immediately below it:
+
+```
+defaults → inlineManifest → ref → item.local
+```
+
+**Integrity:** A remote manifest served over mutable HTTPS requires `refHash`. An inline manifest needs no separate hash: its bytes are part of the playlist document and are therefore **covered by the DP-1 playlist signature** (core §7.1) directly.
+
+**Validation:** Validators and SDKs **MUST** apply the unmodified Ref Manifest schema to `inlineManifest`. A playlist whose `inlineManifest` fails that schema is invalid in the same way a fetched manifest failing it would be. Emitters **MUST** populate the manifest envelope (`refVersion`, `id`, `created`, `locale`) exactly as they would for a hosted manifest.
+
+**Player behavior:** Players that consume ref manifests **SHOULD** consume `inlineManifest` through the same code path, applying the precedence above. Players that ignore ref manifests **MAY** ignore `inlineManifest`; unknown-field tolerance in core DP-1 makes it invisible to them.
+
+**Example (item with inline manifest):**
+
+```json
+{
+  "title": "Pre-Process",
+  "source": "https://example.com/art/pre-process.html",
+  "duration": 240,
+  "inlineManifest": {
+    "refVersion": "0.1.0",
+    "id": "ref-9d26ecb3",
+    "created": "2026-07-28T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Pre-Process",
+      "artists": [{ "name": "Casey Reas", "id": "" }]
+    }
+  }
+}
+```
 
 ---
 

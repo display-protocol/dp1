@@ -1,8 +1,8 @@
 {
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.4",
-  "lastUpdated": "2026-07-21T00:00:00Z",
+  "version": "1.0.5",
+  "lastUpdated": "2026-08-03T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -38,7 +38,7 @@
       "name": "Playlist Extension",
       "version": "0.2.0",
       "status": "draft",
-      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, and displayAt scheduling (item-level displayAt; activates automatically when any item has displayAt). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, displayAt scheduling (item-level displayAt; activates automatically when any item has displayAt), and inline carriage of the standardized Ref Manifest on items (inlineManifest). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -59,7 +59,8 @@
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
         "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
-        "displayAt scheduling: automatically active when any item has displayAt; playback includes only the current release (latest past displayAt instant) plus items without displayAt (ISO 8601; bare local = display locale, Z/offset absolute; date-only not accepted); transitions apply immediately"
+        "displayAt scheduling: automatically active when any item has displayAt; playback includes only the current release (latest past displayAt instant) plus items without displayAt (ISO 8601; bare local = display locale, Z/offset absolute; date-only not accepted); transitions apply immediately",
+        "Inline Manifest: a full Ref Manifest document carried on a PlaylistItem as inlineManifest — same schema and validation as a ref-fetched manifest, ref overrides inline, integrity via the playlist signature (no refHash needed)"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -68,6 +69,14 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.5",
+      "date": "2026-08-03T00:00:00Z",
+      "changes": [
+        "Playlist extension: optional inlineManifest on each PlaylistItem — a complete Ref Manifest document inline, validated by the unmodified ref-manifest schema; ref overrides inlineManifest when both are present; inline bytes are covered by the DP-1 playlist signature so no refHash is required.",
+        "Playlist extension: validated via the extension fragment and composed playlist schema (allOf); canonical core playlist.json unchanged; status remains draft extension v0.2.0."
+      ]
+    },
     {
       "version": "1.0.4",
       "date": "2026-07-21T00:00:00Z",
