@@ -19,6 +19,7 @@
       "if": {
         "properties": {
           "items": {
+            "type": "array",
             "maxItems": 0
           }
         }

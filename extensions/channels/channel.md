@@ -17,11 +17,11 @@ The **Channel Extension** formalizes higher-level groupings of playlists as pers
 - **Publisher attribution** for institutions, galleries, and collectives
 - **Exhibition hierarchies** preserving publisher → exhibition → playlist relationships
 
-Channels extend the Playlist-Group concept (DP-1 §15) with additive fields only, maintaining full backward compatibility with existing DP-1 v1.0.0+ implementations.
+Channels are self-contained curated-feed documents: ordered playlist URLs with publisher and curator attribution. They add no requirements to DP-1 core playlists and remain fully compatible with existing DP-1 v1.0.0+ implementations.
 
 ### 1.1 Relationship to Core DP-1
 
-- **Builds on:** Playlist-Group schema (§15) and Feed API
+- **Builds on:** DP-1 core playlists and the Feed API
 - **Transport:** Delivered as signed JSON per DP-1 §7.1 (via HTTP/IPFS/offline, §8)
 - **Authority:** Channel signature covers the channel object; individual playlists maintain their own signatures
 - **Signing (channels):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` before treating a channel as valid (§5.2). The JSON Schema does not enforce which roles appear in `signatures`; it only validates structure and allowed `role` values.
@@ -41,7 +41,7 @@ Channels extend the Playlist-Group concept (DP-1 §15) with additive fields only
 
 ## 3 · Channel Schema
 
-Channels extend the Playlist-Group object from DP-1 §15 with **optional** additive fields. All new fields are backward-compatible.
+A channel is an ordered list of playlist URLs plus attribution metadata. All fields beyond that list are **optional** and backward-compatible.
 
 ### 3.1 Channel JSON
 
@@ -360,9 +360,8 @@ GET /api/v1/channels/generative-geometry-2025
 
 ### 6.3 Backward Compatibility
 
-- Existing `/api/v1/playlist-groups` endpoints remain functional
-- Channels are **supersets** of playlist-groups
-- Players implementing channel support **MUST** also support legacy playlist-groups
+- Channels are additive: players without channel support ignore them and keep playing plain playlists
+- Historical note: channels began as a superset of the since-removed playlist-group object (DP-1 ≤ v1.1.0 §15.2, zero production usage). The legacy-support requirement was dropped with it.
 
 ---
 
@@ -571,7 +570,7 @@ Current version: **1.0.0**
 **Normative clarification (2026-05-20):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` (§5.2). This requirement is specified in prose and is **not** enforced by `schema.json`.
 
 **Core Features:**
-- Channel schema extending DP-1 Playlist-Group (§15)
+- Self-contained channel schema (ordered playlist URLs + attribution)
 - Unified entity format for curators and publisher (`name`, `key`, optional `url`)
 - Multi-curator support with verifiable identities (DID-based)
 - Publisher attribution for institutions and collectives
@@ -609,7 +608,7 @@ Current version: **1.0.0**
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://feralfile.com/schemas/dp1-channel-1.0.0.json",
   "title": "DP-1 Channel Extension",
-  "description": "Channel schema extending DP-1 Playlist-Group",
+  "description": "Channel schema for collaborative, persistent feeds",
   "type": "object",
   "required": ["id", "slug", "title", "version", "created", "playlists", "signatures"],
   "properties": {

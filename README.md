@@ -34,7 +34,7 @@ dp1 playlist validate ./playlist.json --json
 | Project | Role |
 | :--- | :--- |
 | [dp1-cli](https://github.com/display-protocol/dp1-cli) | Command-line client: validate, sign, verify, draft, and publish to a compatible feed |
-| [dp1-feed-v2](https://github.com/display-protocol/dp1-feed-v2) | Spec-compliant HTTP API: create, sign, store, and serve playlists, playlist-groups, and channels |
+| [dp1-feed-v2](https://github.com/display-protocol/dp1-feed-v2) | Spec-compliant HTTP API: create, sign, store, and serve playlists and channels |
 | [dp1-go](https://github.com/display-protocol/dp1-go) | Go library for DP-1 validation, canonical signing, and verification |
 
 **Feed quick start:** run a local server with Docker (`make up`) or `go run ./cmd/server` — see the [dp1-feed-v2 README](https://github.com/display-protocol/dp1-feed-v2#quick-start). Publish from the CLI when a feed URL and API key are configured (`DP1_FEED_URL`, `DP1_FEED_API_KEY`, or `~/.dp1/config.yaml`).

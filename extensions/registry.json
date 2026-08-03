@@ -1,6 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/registry.json",
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
   "version": "1.0.4",
@@ -11,10 +9,10 @@
       "name": "Channel Extension",
       "version": "1.0.0",
       "status": "released",
-      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Extends Playlist-Group with multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema).",
+      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Adds multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema).",
       "compatibility": {
         "dpVersion": "1.0.0+",
-        "extends": "playlist-group"
+        "extends": "playlist"
       },
       "published": "2026-03-11T00:00:00Z",
       "resources": {
