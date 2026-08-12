@@ -70,6 +70,8 @@ Carries human-readable information used for labeling, crediting, and exhibition.
 
 All text fields are UTF-8 encoded and localizable through the `i18n` block.
 
+Within `thumbnails`, each entry requires only `uri`. `w` and `h` are **optional**: when present they are the intrinsic image dimensions in pixels; producers that only hold a bare thumbnail URL omit them rather than guess. Consumers **MUST** treat `w` and `h` as possibly absent.
+
 ---
 
 ## 5. Controls Block

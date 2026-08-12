@@ -423,6 +423,8 @@ Returns array of playlist summaries.
 
 ## 16 · Changelog
 
+* **Editorial (2026-08-12)** Ref-manifest schema (`schemas/ref-manifest.json`): `Thumbnail.w` and `Thumbnail.h` are now **optional** (`required` relaxed from `["uri", "w", "h"]` to `["uri"]`) — producers holding only a bare thumbnail URL omit dimensions rather than guess; when present they are the intrinsic image dimensions in pixels. Loosening only: every previously valid document remains valid, but consumers **MUST** treat `w`/`h` as possibly absent.
+
 * **Editorial (2026-07-31)** Removed the beta Playlist-Group (Exhibition) object: §15.2, the `playlist-group.json` schema, and the terminology entry. Channels (extensions/channels) superseded it before it saw production use — zero groups were ever published; the channels extension no longer references it. Historical changelog entries below are unchanged.
 
 * **v1.1.0 (2025-10-17)** Introduced **multi-signature chain** model with new `signatures` array field. Supports multiple signing entities with distinct roles (`curator`, `feed`, `agent`, `institution`, `licensor`). Signatures use DID-based key identifiers (`kid`) and support multiple algorithms (`ed25519`, `eip191`, `ecdsa-p256`,etc.). Legacy single `signature` field deprecated but remains supported for backward compatibility. Players can verify keys via DID resolution, JWKS endpoints, or local trust stores. See §7.1 for complete specification.
