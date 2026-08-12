@@ -119,7 +119,7 @@
     "Thumbnail": {
       "type": "object",
       "description": "Thumbnail image specification",
-      "required": ["uri", "w", "h"],
+      "required": ["uri"],
       "properties": {
         "uri": {
           "type": "string",
@@ -128,12 +128,12 @@
         },
         "w": {
           "type": "integer",
-          "description": "Width in pixels",
+          "description": "Intrinsic image width in pixels. Optional: producers that only hold a bare thumbnail URL omit it rather than guess.",
           "minimum": 1
         },
         "h": {
           "type": "integer",
-          "description": "Height in pixels",
+          "description": "Intrinsic image height in pixels. Optional: producers that only hold a bare thumbnail URL omit it rather than guess.",
           "minimum": 1
         },
         "sha256": {
