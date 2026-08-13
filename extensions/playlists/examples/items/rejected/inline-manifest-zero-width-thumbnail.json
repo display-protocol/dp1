@@ -1,0 +1,21 @@
+{
+  "id": "385f79b6-a45f-4c1c-8080-e93a192adccc",
+  "title": "Pre-Process",
+  "source": "https://example.com/art/pre-process.html",
+  "inlineManifest": {
+    "refVersion": "0.1.0",
+    "id": "ref-9d26ecb3",
+    "created": "2026-07-28T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Pre-Process",
+      "thumbnails": {
+        "default": {
+          "uri": "https://example.com/art/pre-process-thumb.png",
+          "w": 0,
+          "h": 900
+        }
+      }
+    }
+  }
+}
