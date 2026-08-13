@@ -112,6 +112,60 @@ jobs:
           done
           exit $status
 
+      - name: Validate item examples against the single-item composed schema
+        run: |
+          # The step above only ever names playlist_with_extension.json, so
+          # playlist_item_with_extension.json was compiled but never run
+          # against an instance. That is how #45 survived ten green builds: a
+          # property absent from a schema is unconstrained, not invalid, so
+          # compilation cannot see the gap and no instance was there to.
+          #
+          # Positive fixtures alone would not have caught it either — a valid
+          # item with a valid inlineManifest passed both before and after the
+          # fix. The rejected/ fixtures are the ones that carry the signal:
+          # each is a single-field mutation of a passing item that the schema
+          # MUST refuse. If a field silently drops out of the item overlay
+          # again, its rejected/ fixture starts passing and this step fails.
+          mapfile -t schemas < "$RUNNER_TEMP/schemas.txt"
+          status=0
+          shopt -s nullglob
+          for dir in extensions/*/examples/items; do
+            ext="$(dirname "$(dirname "$dir")")"
+            composed="$ext/playlist_item_with_extension.json"
+            [ -f "$composed" ] || { echo "No single-item schema for $ext, skipping"; continue; }
+            refs=()
+            for other in "${schemas[@]}"; do
+              [ "$other" = "$composed" ] || refs+=(-r "$other")
+            done
+
+            accepted=("$dir"/*.json)
+            if [ ${#accepted[@]} -gt 0 ]; then
+              echo "Validating ${#accepted[@]} item example(s) in $dir against $composed"
+              ajv validate -s "$composed" "${refs[@]}" \
+                $(printf -- '-d %s ' "${accepted[@]}") \
+                --spec=draft2020 -c ajv-formats || status=1
+            else
+              echo "No item examples in $dir, skipping"
+            fi
+
+            # Validated one at a time: a batch run reports only "invalid", and
+            # we need to name the fixture that wrongly passed. The schema was
+            # already compiled in the first step, so a non-zero exit here means
+            # the instance was rejected rather than the schema failing to load.
+            rejected=("$dir"/rejected/*.json)
+            [ ${#rejected[@]} -gt 0 ] && echo "Checking ${#rejected[@]} fixture(s) in $dir/rejected are refused by $composed"
+            for bad in "${rejected[@]}"; do
+              if ajv validate -s "$composed" "${refs[@]}" -d "$bad" \
+                   --spec=draft2020 -c ajv-formats >/dev/null 2>&1; then
+                echo "❌ $bad validated, but it MUST be rejected"
+                status=1
+              else
+                echo "✓ $bad correctly rejected"
+              fi
+            done
+          done
+          exit $status
+
       - name: Validate JSON files syntax
         run: |
           echo "Validating JSON syntax..."
