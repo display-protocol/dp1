@@ -12,19 +12,7 @@
       "type": "array",
       "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note, displayAt, and inlineManifest.",
       "items": {
-        "type": "object",
-        "properties": {
-          "note": {
-            "$ref": "#/$defs/Note"
-          },
-          "displayAt": {
-            "$ref": "#/$defs/DisplayAt"
-          },
-          "inlineManifest": {
-            "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
-            "description": "A full DP-1 Ref Manifest document carried inline — same schema and validation as a manifest fetched via ref. When both are present, ref overrides inlineManifest."
-          }
-        }
+        "$ref": "#/$defs/PlaylistItemExtension"
       }
     },
     "curators": {
@@ -51,6 +39,22 @@
     }
   },
   "$defs": {
+    "PlaylistItemExtension": {
+      "type": "object",
+      "description": "The playlists-extension overlay applied to a single PlaylistItem. Defined once here and referenced by both composed schemas (playlist_with_extension.json via this fragment's items, and playlist_item_with_extension.json directly) so the two validation paths cannot drift.",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/Note"
+        },
+        "displayAt": {
+          "$ref": "#/$defs/DisplayAt"
+        },
+        "inlineManifest": {
+          "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
+          "description": "A full DP-1 Ref Manifest document carried inline — same schema and validation as a manifest fetched via ref. When both are present, ref overrides inlineManifest."
+        }
+      }
+    },
     "DisplayAt": {
       "description": "ISO 8601 subset when this item becomes eligible for playback. Local datetime without timezone: display-locale local. RFC 3339 date-time with Z or offset (hours 00-23, minutes 00-59): absolute/global. Date-only (YYYY-MM-DD) is not accepted. Top-level item field (same level as source), not inside display. Patterns are syntactic only; invalid calendar values are rejected at resolve time.",
       "oneOf": [

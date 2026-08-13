@@ -1,8 +1,8 @@
 {
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.5",
-  "lastUpdated": "2026-08-03T00:00:00Z",
+  "version": "1.0.6",
+  "lastUpdated": "2026-08-13T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -69,6 +69,15 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.6",
+      "date": "2026-08-13T00:00:00Z",
+      "changes": [
+        "Playlist extension: playlist_item_with_extension.json now enforces inlineManifest. The single-item composed schema hand-copied the per-item overlay and listed only note and displayAt, so a dynamicQuery item with a malformed inline Ref Manifest passed validation despite the §3.6 MUST; the whole-playlist path was unaffected.",
+        "Playlist extension: the per-item overlay is defined once as schema.json#/$defs/PlaylistItemExtension and referenced by both composed schemas, so the whole-playlist and single-item validation paths can no longer drift apart.",
+        "Playlist extension: §4.5.1 field list and Validation path prose corrected to name inlineManifest; extension version remains draft v0.2.0 and no schema $id changed."
+      ]
+    },
     {
       "version": "1.0.5",
       "date": "2026-08-03T00:00:00Z",
