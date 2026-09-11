@@ -117,7 +117,7 @@
         },
         "addresses": {
           "type": "array",
-          "description": "Raw wallet addresses this producer attributes to the artist (0x... EVM, tz1|tz2|tz3|KT1... Tezos). The only field consumers MAY use to correlate an artist across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one artist.",
+          "description": "Raw wallet addresses this producer attributes to the artist (0x... EVM, tz1|tz2|tz3|tz4... Tezos). Contract addresses (Tezos KT1..., EVM collection contracts) name a collection, not a person, and MUST NOT be listed; see provenance.contract. The only field consumers MAY use to correlate an artist across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one artist.",
           "items": {
             "type": "string",
             "minLength": 1
