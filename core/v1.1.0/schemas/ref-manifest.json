@@ -150,7 +150,7 @@
       "properties": {
         "text": {
           "type": "string",
-          "description": "Plain text, no markup. Localizable through the i18n block.",
+          "description": "Plain text, no markup.",
           "minLength": 1
         },
         "source": {

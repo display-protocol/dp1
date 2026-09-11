@@ -59,11 +59,11 @@ Carries human-readable information used for labeling, crediting, and exhibition.
     {
       "name": "Artist Name",
       "id": "",                               // producer-scoped, not an identity
-      "url": "",                              // deprecated as of 1.1.0 — use links
       "addresses": ["0x…", "tz1…"],           // the only cross-producer identity
       "avatar": { "uri": "ipfs://.../avatar.jpg", "sha256": "..." },
-      "biographies": [ { "text": "One paragraph...", "source": "", "sourceUrl": "" } ],
+      "biographies": [ { "text": "One paragraph...", "source": "Publisher", "sourceUrl": "https://..." } ],
       "links": [ { "type": "website", "url": "https://..." } ]
+      // "url" (1.0.0) is deprecated as of 1.1.0 — write a links entry of type "website" instead
     }
   ],
   "creditLine": "© Artist, courtesy Feral File",
@@ -84,18 +84,18 @@ Within `thumbnails`, each entry requires only `uri`. `w` and `h` are **optional*
 
 ### 4.1 Artist entries
 
-Only `name` is required. The remaining fields were added in refVersion 1.1.0 and describe the artist rather than the work, so they carry a different contract from the rest of the block.
+Only `name` is required. `addresses`, `avatar`, `biographies` and `links` were added in refVersion 1.1.0; together with `id` and `url` they describe the artist rather than the work, so they carry a different contract from the rest of the block.
 
 | Field | Contract |
 |:------|:---------|
-| `id` | **Producer-scoped.** An opaque label such as a platform UUID or database key. Two producers publishing the same artist can and do use different ids, so consumers **MUST NOT** treat `id` as an identity or correlate artists across manifests by it. Equal ids from one producer mean one artist; nothing else may be inferred. |
-| `addresses` | **The only cross-producer identity.** Raw wallet addresses the producer attributes to the artist — EVM (`0x…`) and Tezos (`tz1`, `tz2`, `tz3`, `KT1…`) forms are distinguished by shape, so no chain field is carried; every EVM chain shares one key pair and therefore one identity. Producers **SHOULD** include the address that minted or is credited on-chain for the work. Consumers compare EVM addresses case-insensitively and Tezos addresses as-is. |
+| `id` | **Producer-scoped.** An opaque label such as a platform UUID or database key. Two producers publishing the same artist can and do use different ids, so consumers **MUST NOT** treat `id` as an identity or correlate artists across producers by it. Equal, non-empty ids from one producer mean one artist; an empty `id` means nothing at all. |
+| `addresses` | **The only cross-producer identity.** Raw wallet addresses the producer attributes to the artist — EVM (`0x…`) and Tezos (`tz1`, `tz2`, `tz3`, `tz4`, `KT1…`) forms are distinguished by shape, so no chain field is carried: an externally owned account's key pair is chain-independent, so one EVM address is one identity wherever it mints. Producers **SHOULD** include the address that minted or is credited on-chain for the work. Consumers **MUST** compare EVM addresses case-insensitively and Tezos addresses as-is. |
 | `avatar` | A `Thumbnail` (§4): `uri` required, `w`/`h`/`sha256` optional. |
-| `biographies` | Ordered by the producer's preference; when only one fits, show the first. `text` is plain text with no markup and is localizable through `i18n` (§6). `source`/`sourceUrl` attribute where the text was taken from and are omitted when unknown. |
-| `links` | `url` is always a full URL, never a bare handle, so players carry no per-network URL rules. |
-| `url` | **Deprecated as of 1.1.0.** The 1.0.0 single profile URL. It remains valid for backward compatibility but **SHOULD NOT** be emitted by new manifests; write a `links` entry of type `website` instead. A producer that still emits both **MUST** keep `url` equal to that entry. Consumers read `links` first and fall back to `url` only when `links` is absent. |
+| `biographies` | Ordered by the producer's preference; when only one fits, show the first. `text` is plain text with no markup. `source`/`sourceUrl` attribute where the text was taken from and are omitted when unknown. |
+| `links` | `type` is one of `website`, `twitter`, `instagram`, `other`; any other value is invalid, so a destination the enumeration does not name is written as `other`. `url` is always a full URL, never a bare handle, so players carry no per-network URL rules. |
+| `url` | **Deprecated as of 1.1.0.** The 1.0.0 single profile URL. It remains valid for backward compatibility but **SHOULD NOT** be emitted by new manifests; write a `links` entry of type `website` instead. A producer that still emits both **MUST** keep `url` equal to that entry. Consumers read `links` first and fall back to `url` only when `links` is absent or empty. |
 
-**Identity is a claim, not a fact.** `addresses` is covered by whatever signs or hashes the manifest, so it is exactly as trustworthy as its producer. A wallet may be shared — collectives, studios and collaborative mints all mint from one address — so two producers whose lists overlap on an address have **not** thereby described one artist. Consumers **MUST NOT** merge two artist records solely because their `addresses` intersect; they combine the producer's claim with their own registry and with the trust they extend to that producer. What `addresses` does settle is attribution of *this work*: a work whose artist entry carries a wallet belongs to every artist that wallet resolves to.
+**Identity is a claim, not a fact.** `addresses` is covered by whatever signs or hashes the manifest, so it is exactly as trustworthy as its producer. A wallet may be shared — collectives, studios and collaborative mints all mint from one address — so two producers whose lists overlap on an address have **not** thereby described one artist. Consumers **MUST NOT** merge two artist records solely because their `addresses` intersect; they combine the producer's claim with their own registry and with the trust they extend to that producer. What `addresses` does settle is attribution of *this work* to *this entry*: a consumer that indexes works by wallet **MAY** list the work under every artist record its own registry holds for that wallet — two records that share a wallet each receive the work; they are not thereby merged into one.
 
 **Profile fields are a snapshot.** Avatar, biographies and links change independently of the work and of the manifest that pins them. They are the offline fallback, not the source of truth: consumers **MAY** replace them with fresher data from a registry keyed by `addresses` whenever one is reachable, and producers **SHOULD NOT** reissue a manifest solely because a profile field drifted.
 
@@ -236,7 +236,7 @@ Field additions follow [Semantic Versioning 2.0](https://semver.org/):
 
 Players must ignore unknown fields from higher minor versions and continue playback.
 
-* **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`; `id` is documented as producer-scoped; `url` is deprecated in favour of `links` (§4.1). Additive: every 1.0.0 manifest remains valid, and a consumer that predates 1.1.0 sees an unchanged `name`/`id`/`url` triple.
+* **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`; `id` is documented as producer-scoped; `url` is deprecated in favour of `links` (§4.1). Additive: every 1.0.0 manifest remains valid and a 1.0.0 consumer reads it unchanged. The one cost of the deprecation is that a 1.1.0 producer which follows the SHOULD NOT and omits `url` shows no profile link to a 1.0.0 consumer.
 
 ---
 
