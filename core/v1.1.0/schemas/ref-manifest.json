@@ -98,7 +98,7 @@
     },
     "Artist": {
       "type": "object",
-      "description": "Information about an artist",
+      "description": "Information about an artist. Beyond name, this is a profile snapshot taken when the manifest was authored; consumers MAY overlay fresher registry data keyed by addresses.",
       "required": ["name"],
       "properties": {
         "name": {
@@ -107,11 +107,75 @@
         },
         "id": {
           "type": "string",
-          "description": "Unique identifier for the artist"
+          "description": "Producer-scoped opaque identifier. Not an identity: two producers can label the same artist with different ids, so consumers MUST NOT correlate artists across producers by it."
         },
         "url": {
           "type": "string",
-          "description": "URL to artist's website or profile",
+          "description": "URL to artist's website or profile. Kept from refVersion 1.0.0; equivalent to a links[] entry of type \"website\".",
+          "format": "uri"
+        },
+        "addresses": {
+          "type": "array",
+          "description": "Raw wallet addresses this producer attributes to the artist (0x... EVM, tz1|tz2|tz3|KT1... Tezos). The only field consumers MAY use to correlate an artist across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one artist.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "avatar": {
+          "$ref": "#/$defs/Thumbnail",
+          "description": "Portrait or profile image of the artist"
+        },
+        "biographies": {
+          "type": "array",
+          "description": "Biographical texts in the producer's order of preference; the first entry is the one to show when only one fits",
+          "items": {
+            "$ref": "#/$defs/Biography"
+          }
+        },
+        "links": {
+          "type": "array",
+          "description": "External profile links",
+          "items": {
+            "$ref": "#/$defs/Link"
+          }
+        }
+      }
+    },
+    "Biography": {
+      "type": "object",
+      "description": "One biographical text with optional attribution",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Plain text, no markup. Localizable through the i18n block.",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "description": "Name of the publication or platform the text comes from"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "description": "URL of the source the text comes from",
+          "format": "uri"
+        }
+      }
+    },
+    "Link": {
+      "type": "object",
+      "description": "External profile link",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Kind of destination",
+          "enum": ["website", "twitter", "instagram", "other"]
+        },
+        "url": {
+          "type": "string",
+          "description": "Full URL, never a bare handle, so players need no per-network URL rules",
           "format": "uri"
         }
       }

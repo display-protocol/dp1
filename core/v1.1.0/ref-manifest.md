@@ -55,7 +55,17 @@ Carries human-readable information used for labeling, crediting, and exhibition.
 ```json
 "metadata": {
   "title": "Work Title",
-  "artists": [ { "name": "Artist Name", "id": "", "url": "" } ],
+  "artists": [
+    {
+      "name": "Artist Name",
+      "id": "",                               // producer-scoped, not an identity
+      "url": "",
+      "addresses": ["0x…", "tz1…"],           // the only cross-producer identity
+      "avatar": { "uri": "ipfs://.../avatar.jpg", "sha256": "..." },
+      "biographies": [ { "text": "One paragraph...", "source": "", "sourceUrl": "" } ],
+      "links": [ { "type": "website", "url": "https://..." } ]
+    }
+  ],
   "creditLine": "© Artist, courtesy Feral File",
   "description": "One or two paragraphs...",
   "tags": ["computational", "generative"],
@@ -71,6 +81,22 @@ Carries human-readable information used for labeling, crediting, and exhibition.
 All text fields are UTF-8 encoded and localizable through the `i18n` block.
 
 Within `thumbnails`, each entry requires only `uri`. `w` and `h` are **optional**: when present they are the intrinsic image dimensions in pixels; producers that only hold a bare thumbnail URL omit them rather than guess. Consumers **MUST** treat `w` and `h` as possibly absent.
+
+### 4.1 Artist entries
+
+Only `name` is required. The remaining fields were added in refVersion 1.1.0 and describe the artist rather than the work, so they carry a different contract from the rest of the block.
+
+| Field | Contract |
+|:------|:---------|
+| `id` | **Producer-scoped.** An opaque label such as a platform UUID or database key. Two producers publishing the same artist can and do use different ids, so consumers **MUST NOT** treat `id` as an identity or correlate artists across manifests by it. Equal ids from one producer mean one artist; nothing else may be inferred. |
+| `addresses` | **The only cross-producer identity.** Raw wallet addresses the producer attributes to the artist — EVM (`0x…`) and Tezos (`tz1`, `tz2`, `tz3`, `KT1…`) forms are distinguished by shape, so no chain field is carried; every EVM chain shares one key pair and therefore one identity. Producers **SHOULD** include the address that minted or is credited on-chain for the work. Consumers compare EVM addresses case-insensitively and Tezos addresses as-is. |
+| `avatar` | A `Thumbnail` (§4): `uri` required, `w`/`h`/`sha256` optional. |
+| `biographies` | Ordered by the producer's preference; when only one fits, show the first. `text` is plain text with no markup and is localizable through `i18n` (§6). `source`/`sourceUrl` attribute where the text was taken from and are omitted when unknown. |
+| `links` | `url` is always a full URL, never a bare handle, so players carry no per-network URL rules. `url` on the entry itself is kept from 1.0.0 and is equivalent to a `links` entry of type `website`. |
+
+**Identity is a claim, not a fact.** `addresses` is covered by whatever signs or hashes the manifest, so it is exactly as trustworthy as its producer. A wallet may be shared — collectives, studios and collaborative mints all mint from one address — so two producers whose lists overlap on an address have **not** thereby described one artist. Consumers **MUST NOT** merge two artist records solely because their `addresses` intersect; they combine the producer's claim with their own registry and with the trust they extend to that producer. What `addresses` does settle is attribution of *this work*: a work whose artist entry carries a wallet belongs to every artist that wallet resolves to.
+
+**Profile fields are a snapshot.** Avatar, biographies and links change independently of the work and of the manifest that pins them. They are the offline fallback, not the source of truth: consumers **MAY** replace them with fresher data from a registry keyed by `addresses` whenever one is reachable, and producers **SHOULD NOT** reissue a manifest solely because a profile field drifted.
 
 ---
 
@@ -208,6 +234,8 @@ Field additions follow [Semantic Versioning 2.0](https://semver.org/):
 * Major version → breaking schema changes.
 
 Players must ignore unknown fields from higher minor versions and continue playback.
+
+* **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`, and `id` is documented as producer-scoped (§4.1). Additive: every 1.0.0 manifest remains valid, and a consumer that predates 1.1.0 sees an unchanged `name`/`id`/`url` triple.
 
 ---
 
