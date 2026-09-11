@@ -111,8 +111,9 @@
         },
         "url": {
           "type": "string",
-          "description": "URL to artist's website or profile. Kept from refVersion 1.0.0; equivalent to a links[] entry of type \"website\".",
-          "format": "uri"
+          "description": "Legacy single profile URL (refVersion 1.0.0, deprecated). Use links[] instead; when both are present, url MUST equal the url of a links[] entry of type \"website\".",
+          "format": "uri",
+          "deprecated": true
         },
         "addresses": {
           "type": "array",
