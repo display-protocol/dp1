@@ -107,7 +107,7 @@
         },
         "id": {
           "type": "string",
-          "description": "Producer-scoped opaque identifier. Not an identity: two producers can label the same artist with different ids, so consumers MUST NOT correlate artists across producers by it."
+          "description": "Unique identifier for the artist"
         },
         "url": {
           "type": "string",
