@@ -6,7 +6,7 @@
 **Status:** Draft Extension  
 **DP-1 compatibility:** v1.0.0+  
 **Published:** 2026-03-11  
-**Updated:** 2026-07-21
+**Updated:** 2026-08-13
 
 ---
 
@@ -627,9 +627,10 @@ Response items **MUST** conform to the DP-1 PlaylistItem schema specified by the
 - `provenance` (object)
 - `note` (object; experimental intermission per §3.4)
 - `displayAt` (string; ISO 8601 scheduling datetime per §3.5) — optional on mapped items
+- `inlineManifest` (object; a full Ref Manifest carried inline per §3.6, validated by the unmodified Ref Manifest schema)
 - All other PlaylistItem fields per DP-1 §3.2
 
-**Validation path:** Core `itemSchema` versions define base PlaylistItem fields. When the playlists extension is in use, items **MUST** be validated against core PlaylistItem composed with the extension item overlay (`note`, `displayAt`) — the same overlay used for static items in `playlist_with_extension.json` / `playlist_item_with_extension.json`. This applies to items in the signed playlist document and to items accepted from `dynamicQuery` before they enter the playlist item list. How `displayAt` affects playback after acceptance is defined only in §3.5 (independent of item sourcing).
+**Validation path:** Core `itemSchema` versions define base PlaylistItem fields. When the playlists extension is in use, items **MUST** be validated against core PlaylistItem composed with the extension item overlay (`note`, `displayAt`, `inlineManifest`) — the same overlay used for static items in `playlist_with_extension.json` / `playlist_item_with_extension.json`. Both composed schemas reference a single definition of that overlay (`schema.json#/$defs/PlaylistItemExtension`), so the whole-playlist and single-item paths enforce identical per-item constraints. This applies to items in the signed playlist document and to items accepted from `dynamicQuery` before they enter the playlist item list. How `displayAt` affects playback after acceptance is defined only in §3.5 (independent of item sourcing).
 
 **Field mapping (optional):**
 
@@ -905,6 +906,14 @@ Current version: **0.2.0**
 ---
 
 ## 11 · Changelog
+
+### Amendment (2026-08-13) — single-item schema covers inlineManifest
+
+- Fixed: `playlist_item_with_extension.json` hand-copied the per-item overlay and listed only `note` and `displayAt`, so validating a **single item** silently ignored `inlineManifest` while validating a **whole playlist** checked it. That contradicted §3.6, which requires validators to apply the unmodified Ref Manifest schema to `inlineManifest`, on exactly the path §4.5.1 mandates for `dynamicQuery` items.
+- The overlay is now defined once as `schema.json#/$defs/PlaylistItemExtension` and referenced from both composed schemas (`playlist_with_extension.json` through the fragment's `items`, `playlist_item_with_extension.json` directly), so the two validation paths cannot drift apart again. `$ref` targets a `$defs` entry rather than `#/properties/items/items`, which would silently retarget if `items` ever changed shape.
+- §4.5.1 corrected: the optional-fields list and the **Validation path** paragraph now both name `inlineManifest` alongside `note` and `displayAt`.
+- Loosening-plus-editorial: no document that validates today stops validating. A single item carrying a malformed `inlineManifest` — which passed before — is now correctly rejected.
+- No `$id` changed; the extension remains **v0.2.0** (draft).
 
 ### v0.2.0 (2026-07-21) — displayAt scheduling
 
