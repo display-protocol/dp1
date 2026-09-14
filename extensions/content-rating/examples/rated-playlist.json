@@ -1,0 +1,37 @@
+{
+  "dpVersion": "1.1.0",
+  "id": "7c1f2a3e-5b6d-4e8f-9a0b-1c2d3e4f5a6b",
+  "slug": "night-studies",
+  "title": "Night Studies",
+  "created": "2026-09-01T00:00:00Z",
+  "items": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "Tidal Field",
+      "source": "https://cdn.example.com/tidal-field.html",
+      "contentRating": "general"
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "Anatomy Lesson",
+      "source": "https://cdn.example.com/anatomy-lesson.html",
+      "contentRating": "mature",
+      "contentReasons": ["nudity", "medical imagery"]
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "title": "Untitled (archive scan)",
+      "source": "https://cdn.example.com/archive-0193.html"
+    }
+  ],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "ts": "2026-09-01T00:00:00Z",
+      "payload_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "role": "curator",
+      "sig": "example-signature-bytes-not-for-production-use-only"
+    }
+  ]
+}

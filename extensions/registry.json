@@ -1,8 +1,8 @@
 {
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.6",
-  "lastUpdated": "2026-08-13T00:00:00Z",
+  "version": "1.0.7",
+  "lastUpdated": "2026-09-14T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
@@ -66,9 +66,48 @@
         "name": "Feral File",
         "contact": "https://feralfile.com"
       }
+    },
+    {
+      "id": "content-rating",
+      "name": "Content Rating Extension",
+      "version": "0.1.0",
+      "status": "draft",
+      "description": "Signed, per-item audience labels for playlist items: an optional contentRating of general or mature (absence is unrated) and optional open-vocabulary contentReasons in the curator's own words. Defines the label and its meaning only; viewer policy (what a device hides, and who may change that) is a consumer concern. Filtered playback is a projection, never a re-signed document; contentBlocked is reserved for valid documents a consumer's policy fully excludes.",
+      "compatibility": {
+        "dpVersion": "1.0.0+",
+        "extends": "playlist"
+      },
+      "published": "2026-09-14T00:00:00Z",
+      "resources": {
+        "specification": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/content-rating.md",
+        "schema": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/schema.json",
+        "composedPlaylistSchema": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/playlist_with_extension.json",
+        "composedPlaylistWithPlaylistsExtensionSchema": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/playlist_with_playlists_extension.json",
+        "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/content-rating"
+      },
+      "features": [
+        "Per-item contentRating: general | mature; absence means unrated; null and unknown values are rejected on the extension path",
+        "Per-item contentReasons: open-vocabulary non-empty strings; explanatory, never a filtering taxonomy",
+        "Overlay on PlaylistItem via allOf; canonical core playlist.json unchanged; composes with the Playlist Extension v0.2.0 (four composed schemas, one shared $defs/PlaylistItemExtension)",
+        "Consumer rules: filtering is a consumer concern; a filtered projection is never presented as signed and signatures verify on the original bytes; non-aware consumers accept and ignore the fields",
+        "Reserved player error code contentBlocked for a valid document whose items are all excluded by consumer policy; malformed labels remain playlistInvalid"
+      ],
+      "maintainer": {
+        "name": "Feral File",
+        "contact": "https://feralfile.com"
+      }
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.7",
+      "date": "2026-09-14T00:00:00Z",
+      "changes": [
+        "Registered Content Rating Extension v0.1.0 (draft): per-item contentRating (general | mature; absence is unrated; null invalid) and open-vocabulary contentReasons on PlaylistItem, as an allOf overlay; canonical core playlist.json unchanged.",
+        "Content Rating extension: four composed schemas (core and Playlist Extension v0.2.0, whole-playlist and single-item) all referencing schema.json#/$defs/PlaylistItemExtension; fixtures under examples/ including rejected/ mutations.",
+        "Content Rating extension: consumer rules documented (filtering as consumer policy, unsigned projections, contentBlocked reserved, non-aware consumers accept and ignore)."
+      ]
+    },
     {
       "version": "1.0.6",
       "date": "2026-08-13T00:00:00Z",

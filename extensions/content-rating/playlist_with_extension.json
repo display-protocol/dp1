@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/playlist_with_extension.json",
+  "title": "DP-1 Playlist with content-rating extension (composed)",
+  "description": "Validates a full core playlist plus optional per-item contentRating and contentReasons fields.",
+  "allOf": [
+    { "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/playlist.json" },
+    { "$ref": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/schema.json" }
+  ]
+}
