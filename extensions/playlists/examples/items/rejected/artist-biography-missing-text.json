@@ -1,0 +1,54 @@
+{
+  "id": "04954e0c-fbe7-46ef-a571-3095321a8ef7",
+  "title": "Pre-Process",
+  "source": "https://example.com/art/pre-process.html",
+  "duration": 240,
+  "inlineManifest": {
+    "refVersion": "1.1.0",
+    "id": "ref-artist-profile",
+    "created": "2026-09-11T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Pre-Process",
+      "artists": [
+        {
+          "name": "Casey Reas",
+          "id": "58",
+          "addresses": [
+            "0x457ee5f723c7606c12a7264b52e285906f91eea6",
+            "tz1LBwyJMRkH4tcG19KwYzAW7fLYbjFmWdWy"
+          ],
+          "avatar": {
+            "uri": "https://example.com/artists/casey-reas/avatar.jpg",
+            "w": 512,
+            "h": 512
+          },
+          "biographies": [
+            {
+              "source": "DAM - Digital Art Museum"
+            }
+          ],
+          "links": [
+            {
+              "type": "website",
+              "url": "https://reas.com"
+            },
+            {
+              "type": "twitter",
+              "url": "https://x.com/REAS"
+            },
+            {
+              "type": "instagram",
+              "url": "https://instagram.com/REAS"
+            }
+          ]
+        }
+      ],
+      "thumbnails": {
+        "default": {
+          "uri": "https://example.com/art/pre-process-thumb.png"
+        }
+      }
+    }
+  }
+}

@@ -98,7 +98,7 @@
     },
     "Artist": {
       "type": "object",
-      "description": "Information about an artist",
+      "description": "Information about an artist. Beyond name, this is a profile snapshot taken when the manifest was authored; consumers MAY overlay fresher registry data keyed by addresses.",
       "required": ["name"],
       "properties": {
         "name": {
@@ -111,7 +111,72 @@
         },
         "url": {
           "type": "string",
-          "description": "URL to artist's website or profile",
+          "description": "Legacy single profile URL (refVersion 1.0.0, deprecated). Use links[] instead; when both are present, url MUST equal the url of a links[] entry of type \"website\".",
+          "format": "uri",
+          "deprecated": true
+        },
+        "addresses": {
+          "type": "array",
+          "description": "Raw wallet addresses this producer attributes to the artist (0x... EVM, tz1|tz2|tz3|tz4... Tezos). Contract addresses (Tezos KT1..., EVM collection contracts) name a collection, not a person, and MUST NOT be listed; see provenance.contract. The only field consumers MAY use to correlate an artist across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one artist.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "avatar": {
+          "$ref": "#/$defs/Thumbnail",
+          "description": "Portrait or profile image of the artist"
+        },
+        "biographies": {
+          "type": "array",
+          "description": "Biographical texts in the producer's order of preference; the first entry is the one to show when only one fits",
+          "items": {
+            "$ref": "#/$defs/Biography"
+          }
+        },
+        "links": {
+          "type": "array",
+          "description": "External profile links",
+          "items": {
+            "$ref": "#/$defs/Link"
+          }
+        }
+      }
+    },
+    "Biography": {
+      "type": "object",
+      "description": "One biographical text with optional attribution",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Plain text, no markup.",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "description": "Name of the publication or platform the text comes from"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "description": "URL of the source the text comes from",
+          "format": "uri"
+        }
+      }
+    },
+    "Link": {
+      "type": "object",
+      "description": "External profile link",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Kind of destination",
+          "enum": ["website", "twitter", "instagram", "other"]
+        },
+        "url": {
+          "type": "string",
+          "description": "Full URL, never a bare handle, so players need no per-network URL rules",
           "format": "uri"
         }
       }
