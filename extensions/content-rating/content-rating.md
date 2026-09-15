@@ -33,6 +33,7 @@ The extension defines the label and its meaning. It does not define viewer polic
 - Not a claim that the media was inspected. The label is a curatorial judgment by the signer.
 - Not a content-classification taxonomy. `contentReasons` is an open vocabulary and consumers **MUST NOT** treat its values as protocol-defined.
 - Not a parental-control mechanism. Filtering happens on the consumer, and this extension carries no enforcement guarantee.
+- Not an audience declaration. `contentRating` says what to exclude, not whom a work is for. Suitability for an audience (for example, a show curated for children, with an age floor) is a positive declaration by a curator on a playlist or channel and is reserved for a separate future `audience` field. It will not be expressed as additional `contentRating` values.
 
 ---
 
@@ -161,6 +162,8 @@ This extension follows SemVer independently of DP-1 core:
 
 Current version: **0.1.0**
 
+The `contentRating` vocabulary is expected to stay small. Audience suitability and age ranges are out of scope for this field at every version (§1.2); a consumer that wants an allow-list for a child's profile should expect a separate `audience` extension rather than new values here.
+
 ---
 
 ## 8 · Governance
@@ -191,6 +194,7 @@ Current version: **0.1.0**
 - Four composed schemas covering core and Playlist Extension documents and single items.
 - Consumer rules: filtering is a consumer concern; projections are never signed; `contentBlocked` reserved for valid documents fully excluded by policy; non-aware consumers accept and ignore.
 - Fixtures under `examples/`.
+- Scope boundary: audience suitability (for whom, age ranges) is reserved for a separate future `audience` field on playlists and channels, never as new `contentRating` values.
 
 ---
 

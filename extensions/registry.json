@@ -90,7 +90,8 @@
         "Per-item contentReasons: open-vocabulary non-empty strings; explanatory, never a filtering taxonomy",
         "Overlay on PlaylistItem via allOf; canonical core playlist.json unchanged; composes with the Playlist Extension v0.2.0 (four composed schemas, one shared $defs/PlaylistItemExtension)",
         "Consumer rules: filtering is a consumer concern; a filtered projection is never presented as signed and signatures verify on the original bytes; non-aware consumers accept and ignore the fields",
-        "Reserved player error code contentBlocked for a valid document whose items are all excluded by consumer policy; malformed labels remain playlistInvalid"
+        "Reserved player error code contentBlocked for a valid document whose items are all excluded by consumer policy; malformed labels remain playlistInvalid",
+        "Scope boundary: audience suitability (for whom, age ranges) is reserved for a separate future audience field on playlists and channels, never as new contentRating values"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -105,7 +106,8 @@
       "changes": [
         "Registered Content Rating Extension v0.1.0 (draft): per-item contentRating (general | mature; absence is unrated; null invalid) and open-vocabulary contentReasons on PlaylistItem, as an allOf overlay; canonical core playlist.json unchanged.",
         "Content Rating extension: four composed schemas (core and Playlist Extension v0.2.0, whole-playlist and single-item) all referencing schema.json#/$defs/PlaylistItemExtension; fixtures under examples/ including rejected/ mutations.",
-        "Content Rating extension: consumer rules documented (filtering as consumer policy, unsigned projections, contentBlocked reserved, non-aware consumers accept and ignore)."
+        "Content Rating extension: consumer rules documented (filtering as consumer policy, unsigned projections, contentBlocked reserved, non-aware consumers accept and ignore).",
+        "Content Rating extension: audience suitability reserved for a separate future audience field; contentRating remains an exclusion label only."
       ]
     },
     {
