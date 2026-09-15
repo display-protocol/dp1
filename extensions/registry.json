@@ -72,7 +72,7 @@
       "name": "Content Rating Extension",
       "version": "0.1.0",
       "status": "draft",
-      "description": "Signed, per-item audience labels for playlist items: an optional contentRating of general or mature (absence is unrated) and optional open-vocabulary contentReasons in the curator's own words. Defines the label and its meaning only; viewer policy (what a device hides, and who may change that) is a consumer concern. Filtered playback is a projection, never a re-signed document; contentBlocked is reserved for valid documents a consumer's policy fully excludes.",
+      "description": "Signed, per-item audience labels for playlist items: an optional contentRating with defined values general and mature (absence, or a value a consumer does not recognize, is unrated; nothing is assumed from an unknown label) and optional open-vocabulary contentReasons in the curator's own words. Defines the label and its meaning only; viewer policy (what a device hides, and who may change that) is a consumer concern. Filtered playback is a projection, never a re-signed document; contentBlocked is reserved for valid documents a consumer's policy fully excludes.",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -86,7 +86,7 @@
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/content-rating"
       },
       "features": [
-        "Per-item contentRating: general | mature; absence means unrated; null and unknown values are rejected on the extension path",
+        "Per-item contentRating: defined values general | mature; absence or an unrecognized value means unrated, so the vocabulary is open on the wire and only mature hides anything",
         "Per-item contentReasons: open-vocabulary non-empty strings; explanatory, never a filtering taxonomy",
         "Overlay on PlaylistItem via allOf; canonical core playlist.json unchanged; composes with the Playlist Extension v0.2.0 (four composed schemas, one shared $defs/PlaylistItemExtension)",
         "Consumer rules: filtering is a consumer concern; a filtered projection is never presented as signed and signatures verify on the original bytes; non-aware consumers accept and ignore the fields",
@@ -104,7 +104,7 @@
       "version": "1.0.7",
       "date": "2026-09-14T00:00:00Z",
       "changes": [
-        "Registered Content Rating Extension v0.1.0 (draft): per-item contentRating (general | mature; absence is unrated; null invalid) and open-vocabulary contentReasons on PlaylistItem, as an allOf overlay; canonical core playlist.json unchanged.",
+        "Registered Content Rating Extension v0.1.0 (draft): per-item contentRating (defined values general | mature; absence or an unrecognized value is unrated) and open-vocabulary contentReasons on PlaylistItem, as an allOf overlay; canonical core playlist.json unchanged.",
         "Content Rating extension: four composed schemas (core and Playlist Extension v0.2.0, whole-playlist and single-item) all referencing schema.json#/$defs/PlaylistItemExtension; fixtures under examples/ including rejected/ mutations.",
         "Content Rating extension: consumer rules documented (filtering as consumer policy, unsigned projections, contentBlocked reserved, non-aware consumers accept and ignore).",
         "Content Rating extension: audience suitability reserved for a separate future audience field; contentRating remains an exclusion label only."

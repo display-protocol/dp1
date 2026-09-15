@@ -18,8 +18,7 @@
       "properties": {
         "contentRating": {
           "type": "string",
-          "enum": ["general", "mature"],
-          "description": "Curatorial audience label. Absence means unrated; null is not valid."
+          "description": "Curatorial audience label. Values defined by v0.1.0: general, mature. Absence, or a value the consumer does not recognize, means unrated; nothing is assumed from an unknown label. Non-string values are invalid."
         },
         "contentReasons": {
           "type": "array",

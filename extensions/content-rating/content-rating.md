@@ -13,7 +13,7 @@
 
 The **Content Rating Extension** lets the person who signs a playlist say, per item, which audience the work is for. It adds two optional fields to a `PlaylistItem`:
 
-1. **`contentRating`**: a closed audience label, `general` or `mature`.
+1. **`contentRating`**: an audience label. This version defines two values, `general` and `mature`.
 2. **`contentReasons`**: optional free-text reasons, in the curator's own words, supporting the label.
 
 Both fields are covered by the playlist signature (DP-1 §7.1). A consumer that filters on them is acting on the curator's judgment, not on an inspection of the media.
@@ -67,7 +67,7 @@ The extension defines the label and its meaning. It does not define viewer polic
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `contentRating` | string, `general` \| `mature` | OPTIONAL | Curatorial audience label. Absence means unrated. `null` is not valid. |
+| `contentRating` | string | OPTIONAL | Curatorial audience label. Values defined by this version: `general`, `mature`. Absence, or a value a consumer does not recognize, means unrated. |
 | `contentReasons` | array of strings | OPTIONAL | Reasons supporting `contentRating`, in the curator's own vocabulary. Each entry **MUST** be a non-empty string. An empty array is valid and means the curator gave no reasons. |
 
 Both fields sit at the top level of the item, beside `source`, not inside `display`.
@@ -75,8 +75,9 @@ Both fields sit at the top level of the item, beside `source`, not inside `displ
 ### 3.3 Semantics
 
 - **Absence is unrated.** A missing `contentRating` says nothing about the work. Consumers **MUST NOT** infer `general` from absence.
-- **`null` is invalid.** A present `contentRating` with the value `null` fails validation. There is no wire form for "explicitly unrated" beyond omitting the member.
-- **Unknown values are invalid.** A `contentRating` outside the enum fails validation on the extension path (§3.5). A future label is a minor version bump of this extension (§7), and a consumer at the older version will refuse documents carrying it. That is deliberate: a label a consumer cannot interpret is not silently downgraded to unrated.
+- **An unrecognized value is unrated.** Nothing is assumed from a label a consumer does not know. A consumer **MUST** treat a `contentRating` outside the values it implements exactly as if the member were absent, and **MUST NOT** refuse the document, hide the item, or infer `mature` from it. The vocabulary is open on the wire so that publishers can label ahead of consumers; a consumer acts only on the values it knows.
+- **`mature` is the only value that hides anything.** It is the label a curator applies so that a viewer does not come across the work by accident. `general` is a positive statement and has no filtering effect beyond confirming that no label was withheld.
+- **`null` is a type error.** `contentRating` is a string; `null` or a non-string fails schema validation like any other malformed member. The wire form for "no label" is omitting the member.
 - **Reasons do not change the label.** `contentReasons` is explanatory. A consumer **MAY** show it and **MUST NOT** filter on it as if it were a controlled taxonomy.
 - **Reasons without a rating.** `contentReasons` **MAY** appear on an item with no `contentRating`. Validation accepts it; consumers **SHOULD** treat such an item as unrated.
 
@@ -144,8 +145,9 @@ Playlists carrying this extension are signed per DP-1 §7.1. `contentRating` and
 **Requirements:**
 
 - Validate documents with the composed schema for the extensions in use (§3.4) before decoding.
-- Reject `null` and unknown `contentRating` values and malformed `contentReasons` as `playlistInvalid`.
-- Treat absence as unrated and never infer `general`.
+- Reject non-string `contentRating` and malformed `contentReasons` as `playlistInvalid`.
+- Treat absence and any unrecognized `contentRating` value as unrated; never infer `general` or `mature` from either.
+- Hide only `mature`, and only when the consumer's own policy says so.
 - When filtering, verify signatures on the original bytes and never re-sign a projection (§4.2).
 - Report `contentBlocked` when policy excludes every item of a valid document (§4.3).
 - Pass the fixtures in `examples/`: the playlist and item examples **MUST** validate; every file under `examples/items/rejected/` **MUST** be refused.
@@ -157,12 +159,12 @@ Playlists carrying this extension are signed per DP-1 §7.1. `contentRating` and
 This extension follows SemVer independently of DP-1 core:
 
 - **Major:** a change to the meaning of an existing label, or removal of a field.
-- **Minor:** a new label value or a new optional field. Because consumers reject unknown labels (§3.3), publishers **SHOULD** check that their audience's consumers have adopted the new minor version before emitting a new label.
+- **Minor:** a new label value or a new optional field. Because consumers treat unknown labels as unrated (§3.3), a new label degrades safely: older consumers play the item as if it were unlabeled. A new value that is meant to hide content therefore protects viewers only on consumers that have adopted it, and publishers **SHOULD** keep using `mature` for anything that must be hidden today.
 - **Patch:** editorial changes and clarifications.
 
 Current version: **0.1.0**
 
-The `contentRating` vocabulary is expected to stay small. Audience suitability and age ranges are out of scope for this field at every version (§1.2); a consumer that wants an allow-list for a child's profile should expect a separate `audience` extension rather than new values here.
+The `contentRating` vocabulary is open on the wire and expected to stay small in practice. Audience suitability and age ranges are out of scope for this field at every version (§1.2); a consumer that wants an allow-list for a child's profile should expect a separate `audience` extension rather than new values here.
 
 ---
 
@@ -190,7 +192,7 @@ The `contentRating` vocabulary is expected to stay small. Audience suitability a
 
 **Initial draft release of the Content Rating Extension.**
 
-- Per-item `contentRating` (`general` | `mature`; absence is unrated; `null` invalid) and `contentReasons` (open-vocabulary non-empty strings).
+- Per-item `contentRating` (defined values `general` and `mature`; absence or an unrecognized value is unrated; nothing is assumed from a label a consumer does not know) and `contentReasons` (open-vocabulary non-empty strings).
 - Four composed schemas covering core and Playlist Extension documents and single items.
 - Consumer rules: filtering is a consumer concern; projections are never signed; `contentBlocked` reserved for valid documents fully excluded by policy; non-aware consumers accept and ignore.
 - Fixtures under `examples/`.
@@ -223,8 +225,7 @@ The normative schema is `extensions/content-rating/schema.json`, reproduced here
       "properties": {
         "contentRating": {
           "type": "string",
-          "enum": ["general", "mature"],
-          "description": "Curatorial audience label. Absence means unrated; null is not valid."
+          "description": "Curatorial audience label. Values defined by v0.1.0: general, mature. Absence, or a value the consumer does not recognize, means unrated; nothing is assumed from an unknown label. Non-string values are invalid."
         },
         "contentReasons": {
           "type": "array",
