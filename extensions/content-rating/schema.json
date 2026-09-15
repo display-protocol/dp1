@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dp1.feralfile.com/extensions/content-rating/v0.1.0/schema.json",
+  "title": "DP-1 Content Rating Extension",
+  "description": "Optional signed, per-item audience labels and open-vocabulary curatorial reasons.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PlaylistItemExtension"
+      }
+    }
+  },
+  "$defs": {
+    "PlaylistItemExtension": {
+      "type": "object",
+      "properties": {
+        "contentRating": {
+          "type": "string",
+          "description": "Curatorial audience label. Values defined by v0.1.0: general, mature. Absence, or a value the consumer does not recognize, means unrated; nothing is assumed from an unknown label. Non-string values are invalid."
+        },
+        "contentReasons": {
+          "type": "array",
+          "description": "Optional open-vocabulary curatorial reasons supporting contentRating. Consumers must not treat values as a closed protocol taxonomy.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
