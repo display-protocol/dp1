@@ -58,7 +58,7 @@ Carries human-readable information used for labeling, crediting, and exhibition.
   "artists": [
     {
       "name": "Artist Name",
-      "id": "",                               // producer-scoped, not an identity
+      "id": "",                               // identifies exactly one artist when non-empty (see §4.1)
       "addresses": ["0x…", "tz1…"],           // the only cross-producer identity
       "avatar": { "uri": "ipfs://.../avatar.jpg", "sha256": "..." },
       "biographies": [ { "text": "One paragraph...", "source": "Publisher", "sourceUrl": "https://..." } ],
@@ -88,7 +88,7 @@ Only `name` is required. `addresses`, `avatar`, `biographies` and `links` were a
 
 | Field | Contract |
 |:------|:---------|
-| `id` | **Producer-scoped.** An opaque label such as a platform UUID or database key. Two producers publishing the same artist can and do use different ids, so consumers **MUST NOT** treat `id` as an identity or correlate artists across producers by it. Equal, non-empty ids from one producer mean one artist; an empty `id` means nothing at all. |
+| `id` | An identifier for the artist. Format is producer-defined — an opaque label such as a platform UUID or database key. Each non-empty `id` identifies exactly one artist; an empty `id` means nothing at all. |
 | `addresses` | **The only cross-producer identity.** Raw wallet addresses the producer attributes to the artist — EVM (`0x…`) and Tezos (`tz1`, `tz2`, `tz3`, `tz4…`) forms are distinguished by shape, so no chain field is carried: an externally owned account's key pair is chain-independent, so one EVM address is one identity wherever it mints. Contract addresses — Tezos `KT1…`, or an EVM collection contract — name a collection, not a person, and **MUST NOT** be listed; a collection belongs in `provenance.contract`. Producers **SHOULD** include the externally owned account that minted or is credited on-chain for the work. Consumers **MUST** compare EVM addresses case-insensitively and Tezos addresses as-is. |
 | `avatar` | A `Thumbnail` (§4): `uri` required, `w`/`h`/`sha256` optional. |
 | `biographies` | Ordered by the producer's preference; when only one fits, show the first. `text` is plain text with no markup. `source`/`sourceUrl` attribute where the text was taken from and are omitted when unknown. |
