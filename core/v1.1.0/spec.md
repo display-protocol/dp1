@@ -124,6 +124,7 @@ See [document](ref-manifest.md)
 | `background`            | string           | "\#000000" | Hex/RGB color used outside the artwork and beneath any transparent pixels. Special value "transparent" lets the underlying screen show through.                              |
 | `autoplay`              | bool             | true       | Attempt to start playback automatically. Player MUST fall back to waiting for a first user gesture when the runtime blocks WebAudio/video autoplay (e.g., browser policies). |
 | `loop`                  | bool             | true       | When `true`, time-based sources (video, audio) repeat continuously. When `false`, players **MUST** advance to the next playlist item at end-of-stream (see §4.1). Has no effect on non-time-based sources. |
+| `imageRendering`        | "auto" \| "pixelated" | "auto"   | How raster images are resampled when scaled. `pixelated` keeps hard pixel edges (nearest-neighbour) for pixel art and bitmaps; `auto` lets the player smooth. Independent of `scaling`, which decides how the artwork fits. |
 | `interaction.keyboard`  | string\[\]       | \[\]       | Allowed keys, using [W3C UI Events code values](https://www.w3.org/TR/uievents-code/) (e.g., `"ArrowLeft"`, `"Space"`, `"KeyW"`). Players MUST ignore unknown codes.         |
 | `interaction.mouse`     | object           | all false  | `{click, scroll, drag, hover}` booleans.                                                                                                                                     |
 | `userOverrides.<field>` | bool             | true       | Viewer may change field if true.                                                                                                                                             |
@@ -172,7 +173,7 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
     "chain":    "evm" | "tezos" | "bitmark" | "other",
     "standard": "erc721" | "erc1155" | "fa2" | "other",   // OPTIONAL
     "address":  "0x61d45475fe81ef46bdd8093b5c73efee03167e0", // OPTIONAL
-    "seriesId": 777,                 // OPTIONAL
+    "seriesId": 777,                 // OPTIONAL; integer, or string when too large for a JSON number
     "tokenId":  "42",                // OPTIONAL (one specific edition)
     "uri":      "ipfs://bafybeih...",// ipfs://  eth://  https://…
     "metaHash": "c517b7e8dc9c4d5a…"  // OPTIONAL; REQUIRED if uri is mutable
@@ -204,6 +205,8 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 | One specific edition              | `seriesRegistry` or `onChain` with `seriesId` **and** `tokenId`.           |
 | Contract with no “series” concept | `type:"onChain"` and provide `uri`/`address`; omit `seriesId`.             |
 | Off-chain certificate / PDF       | `type:"offChainURI"` and put the canonical link in `uri`; omit `contract`. |
+
+`seriesId` is the identifier the contract itself uses for the series — whatever name the contract gives it (a series, a project, an artwork with editions). Write it as an integer when it fits in a JSON number exactly; otherwise as a decimal string.
 
 `dependencies` exist **solely for documentation & verification**—players **MUST NOT** fetch or execute remote code at runtime.
 
@@ -422,6 +425,11 @@ Returns array of playlist summaries.
 ---
 
 ## 16 · Changelog
+
+* **Editorial (2026-10-20)** Display and identity fields that producers already hold but could not express:
+  * `display.imageRendering` (`auto` | `pixelated`) on `DisplayPrefs` (§4) and on the Ref Manifest's `controls.display`, for pixel art that must keep hard edges when scaled.
+  * `provenance.contract.seriesId` accepts a string as well as an integer (§6), for series identifiers too large for a JSON number to hold exactly — 256-bit ids, the same reason `tokenId` is a string. Loosening only: every previously valid document remains valid, but consumers **MUST** accept either type.
+  * Ref Manifest refVersion 1.2.0: one `Entity` model for every place DP-1 names someone, plus `Link` types and `controls.permissions` — see [ref-manifest.md](ref-manifest.md) §12.
 
 * **Editorial (2026-08-12)** Ref-manifest schema (`schemas/ref-manifest.json`): `Thumbnail.w` and `Thumbnail.h` are now **optional** (`required` relaxed from `["uri", "w", "h"]` to `["uri"]`) — producers holding only a bare thumbnail URL omit dimensions rather than guess; when present they are the intrinsic image dimensions in pixels. Loosening only: every previously valid document remains valid, but consumers **MUST** treat `w`/`h` as possibly absent.
 

@@ -33,6 +33,13 @@
       "description": "Playlist cover image (ipfs://, https://, ar://)",
       "format": "uri"
     },
+    "links": {
+      "type": "array",
+      "description": "Editorial content about the playlist, such as articles, events and news, in the order to show them. References only: the content itself stays at the URL.",
+      "items": {
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Link"
+      }
+    },
     "dynamicQuery": {
       "description": "Dynamic item fetching configuration",
       "$ref": "#/$defs/DynamicQuery"
@@ -93,32 +100,22 @@
           "description": "How long to show the intermission page before continuing, in seconds. Omitted means 20.",
           "default": 20,
           "exclusiveMinimum": 0
+        },
+        "title": {
+          "type": "string",
+          "description": "Heading shown above the text",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "author": {
+          "$ref": "#/$defs/Entity",
+          "description": "Who wrote the text. Omitted, the note is the curators' own."
         }
       }
     },
     "Entity": {
-      "type": "object",
-      "description": "Unified entity format for curators and publishers with verifiable identities",
-      "required": [
-        "name",
-        "key"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Entity display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because an entity name is empty; display SHOULD fall back to the key."
-        },
-        "key": {
-          "type": "string",
-          "description": "Verifiable identity in DID format",
-          "pattern": "^did:[a-z]+:.+$"
-        },
-        "url": {
-          "type": "string",
-          "description": "Entity website or profile URL",
-          "format": "uri"
-        }
-      }
+      "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity",
+      "description": "The unified DP-1 Entity, defined once in the core Ref Manifest schema and shared with the channels extension and with metadata.artists[]"
     },
     "DynamicQuery": {
       "type": "object",

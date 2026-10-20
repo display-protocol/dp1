@@ -39,8 +39,8 @@ These extensions enable playlists to transition from static collections to live,
 | **Resolution Profile** | Versioned interface contract defining request/response format (e.g., `graphql-v1`, `https-json-v1`). |
 | **Template Variable** | Placeholder in query configuration that gets hydrated with runtime data (e.g., `{{viewer_address}}`). |
 | **Indexer** | External service providing blockchain data or content discovery via standardized query interfaces. |
-| **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
-| **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
+| **Entity Format** | The one DP-1 structure for a person or organization — artists, curators, partners, publishers, note authors. Defined in the core Ref Manifest (refVersion 1.2.0, §4.1). |
+| **Note** | Optional intermission object (`text`, optional `duration`, `title`, `author`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
 | **Display locale** | The local timezone and clock of the display that presents the playlist; authority for timezone-less `displayAt` values (not the casting client). |
@@ -98,13 +98,14 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
+| `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (`type`, `url`, optional `title`, `date`). References only: the content stays at the URL. See §3.3.1. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
 ### 3.3 Entity Format (Curators)
 
-This extension uses the same unified entity shape as the Channel Extension.
+This extension uses the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.1) — the same model the Channel Extension uses for curators and publishers and the Ref Manifest uses for `metadata.artists[]`. A curator therefore carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -112,7 +113,10 @@ This extension uses the same unified entity shape as the Channel Extension.
 {
   "name": "Curator Name",
   "key": "did:key:z6Mk...",
-  "url": "https://curator.example.com"
+  "location": "City, Country",
+  "avatar": { "uri": "https://curator.example.com/avatar.jpg" },
+  "biographies": [ { "text": "One paragraph..." } ],
+  "links": [ { "type": "profile", "url": "https://curator.example.com" } ]
 }
 ```
 
@@ -121,10 +125,12 @@ This extension uses the same unified entity shape as the Channel Extension.
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
-| `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
-| `url` | string | OPTIONAL | Entity website or profile URL. |
+| `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only — signatures carry their own `kid`. |
+| `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted in `curators[]`, the entity is a curator; a partner presenting the show is listed in `curators[]` with `role: "partner"`. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.1. |
+| `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
-In the Playlist Extension, this entity shape is currently used by `curators[]`.
+In the Playlist Extension, this entity shape is used by `curators[]` and by `note.author` (§3.4).
 
 **Example:**
 
@@ -138,7 +144,23 @@ In the Playlist Extension, this entity shape is currently used by `curators[]`.
   {
     "name": "Bob Collaborator",
     "key": "did:key:z6Mkf5rG..."
+  },
+  {
+    "name": "Example Art Museum",
+    "role": "partner",
+    "links": [ { "type": "website", "url": "https://museum.example.org" } ]
   }
+]
+```
+
+#### 3.3.1 Links
+
+`links` lists editorial content about the playlist — a curatorial essay, an opening event, an announcement — as Ref Manifest `Link` objects, in the order a consumer shows them. `type` is `article`, `event` or `news` (or `other`); `title` labels the entry and `date` (RFC 3339 date-time) dates it — when an article was published, when an event starts. The content itself stays at `url`; a playlist carries references, not the text.
+
+```json
+"links": [
+  { "type": "article", "url": "https://example.com/journal/essay", "title": "Curatorial essay", "date": "2026-10-01T00:00:00Z" },
+  { "type": "event", "url": "https://example.com/events/opening", "title": "Opening night", "date": "2026-10-10T19:00:00-04:00" }
 ]
 ```
 
@@ -154,6 +176,8 @@ The **`note`** object is an **optional** intermission card: short, **artist-auth
 |:------|:-----|:---------|:------------|
 | `text` | string | **REQUIRED** | Body copy for the intermission (1–500 characters). |
 | `duration` | number (seconds) | OPTIONAL | How long the intermission page stays visible **before** the player continues. **Default: 20** when omitted. **MUST** be greater than zero when present. |
+| `title` | string | OPTIONAL | Heading shown above `text` (1–200 characters). |
+| `author` | object | OPTIONAL | Who wrote the text, as an Entity (§3.3). Omitted, the note is the curators' own. |
 
 **Playlist-level `note`:** When present, players **SHOULD** render a **dedicated intermission page** (full-screen or player-defined “card”) **before** starting playback of the playlist body (including before the first static or dynamic item), for the effective duration.
 
@@ -959,8 +983,8 @@ Current version: **0.2.0**
 - Graceful fallback on failures (screen never goes dark)
 
 **Entity Format:**
-- Unified curator format: `name` (required), `key` (required), `url` (optional)
-- DID-based verifiable identities
+- One Entity model for curators, partners, publishers, note authors and artists, defined in the core Ref Manifest (refVersion 1.2.0): `name` (required); `key`, `role`, `location`, `avatar`, `biographies`, `links` (optional)
+- DID-based identities when the entity has one; `key` is informational only
 
 **Player Requirements:**
 - Immediate rendering of static content
@@ -1013,13 +1037,13 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
     "curators": {
       "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "key"],
-        "properties": {
-          "name": { "type": "string" },
-          "key": { "type": "string" },
-          "url": { "type": "string", "format": "uri" }
-        }
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Link"
       }
     },
     "summary": {
@@ -1108,6 +1132,14 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
           "type": "number",
           "default": 20,
           "exclusiveMinimum": 0
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "author": {
+          "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
         }
       }
     }

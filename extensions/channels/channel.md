@@ -139,8 +139,7 @@ A channel is an ordered list of playlist URLs plus attribution metadata. All fie
 
 ### 3.3 Entity Format (Curators & Publisher)
 
-Both `curators` and `publisher` use a unified entity format with verifiable identities.
-This is the same entity shape used by the Playlist Extension.
+Both `curators` and `publisher` use the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.1). It is the same model the Playlist Extension uses for curators and note authors and the Ref Manifest uses for `metadata.artists[]`, so a curator or publisher carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -148,7 +147,8 @@ This is the same entity shape used by the Playlist Extension.
 {
   "name": "Entity Name",
   "key": "did:key:z6Mk...",
-  "url": "https://example.com"
+  "location": "City, Country",
+  "links": [ { "type": "profile", "url": "https://example.com" } ]
 }
 ```
 
@@ -157,8 +157,10 @@ This is the same entity shape used by the Playlist Extension.
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
-| `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
-| `url` | string | OPTIONAL | Entity website or profile URL. |
+| `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only (§5.3). |
+| `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted, the role follows the position: `curators[]` is curator, `publisher` is publisher. A partner presenting the channel is listed in `curators[]` with `role: "partner"`. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.1. |
+| `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
 **Curators:**
 - Array of entity objects
@@ -295,7 +297,7 @@ See DP-1 §7.1 for complete signature specification.
 ### 5.3 Key Management
 
 **Entity keys:**
-- All entities (curators and publisher) **MUST** include `key` fields with DID-based identifiers
+- Entities (curators and publisher) **SHOULD** include `key` with a DID-based identifier when they have one; `key` is optional, so a curator or partner without a DID is named by `name` and `links`
 - Entity keys in `curators[].key` and `publisher.key` are **informational only** (not used for signature verification)
 - Actual signature verification uses `signatures[].kid` per DP-1 §7.1
 - Entity keys establish identity claims; signature keys establish authority
@@ -571,7 +573,7 @@ Current version: **1.0.0**
 
 **Core Features:**
 - Self-contained channel schema (ordered playlist URLs + attribution)
-- Unified entity format for curators and publisher (`name`, `key`, optional `url`)
+- One Entity model for curators and publisher, shared with the Playlist Extension and Ref Manifest artists (`name` required; `key`, `role`, `location`, `avatar`, `biographies`, `links` optional)
 - Multi-curator support with verifiable identities (DID-based)
 - Publisher attribution for institutions and collectives
 - Multi-signature support (aligned with DP-1 v1.1.0)

@@ -1,0 +1,60 @@
+{
+  "id": "b7a0e6d2-5c1f-4e8a-9d3b-2f6c8a1e4b90",
+  "title": "Bitmap Garden #3",
+  "source": "https://example.com/art/bitmap-garden/3/index.html",
+  "duration": 300,
+  "display": {
+    "scaling": "fit",
+    "imageRendering": "pixelated"
+  },
+  "provenance": {
+    "type": "onChain",
+    "contract": {
+      "chain": "evm",
+      "standard": "erc721",
+      "address": "0x1234567890abcdef1234567890abcdef12345678",
+      "seriesId": "6205bad672520e8cb295b1e64e86bb2358924651c50bb0b1ff5d04eb6e1d7a57",
+      "tokenId": "44336782902772445271281414922165901279839521989210301461051430933994540"
+    }
+  },
+  "inlineManifest": {
+    "refVersion": "1.2.0",
+    "id": "ref-entity-links-permissions",
+    "created": "2026-10-20T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Bitmap Garden #3",
+      "artists": [
+        {
+          "name": "Ada Example",
+          "id": "ada-example",
+          "key": "did:pkh:eip155:1:0x457ee5f723c7606c12a7264b52e285906f91eea6",
+          "role": "artist",
+          "location": "Berlin, Germany",
+          "links": [
+            {
+              "type": "profile",
+              "url": "https://example.com/artists/ada-example",
+              "title": "Ada Example on Example Gallery"
+            },
+            {
+              "type": "publication",
+              "url": "https://example.com/journal/ada-interview",
+              "title": "In conversation with Ada Example",
+              "date": "2025-04-02T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    "controls": {
+      "display": {
+        "imageRendering": "pixelated"
+      },
+      "permissions": [
+        "camera",
+        "microphone"
+      ]
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "dpVersion": "1.0.0",
+  "id": "c3d2a1b0-9e8f-4a7b-8c6d-5e4f3a2b1c0d",
+  "slug": "sound-machines",
+  "title": "Sound Machines",
+  "created": "2026-10-20T00:00:00Z",
+  "summary": "A group exhibition of works that listen, speak and play back.",
+  "curators": [
+    {
+      "name": "Ada Curator",
+      "key": "did:pkh:eip155:1:0x9b2055d370f73ec7d8a03e965129118dc8f5bf83",
+      "location": "New York, USA",
+      "avatar": {
+        "uri": "https://example.com/curators/ada-curator/avatar.jpg"
+      },
+      "biographies": [
+        {
+          "text": "Curator and writer working on sound and software art."
+        }
+      ],
+      "links": [
+        {
+          "type": "profile",
+          "url": "https://example.com/curators/ada-curator"
+        }
+      ]
+    },
+    {
+      "name": "Example Art Museum",
+      "role": "partner",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://museum.example.org"
+        }
+      ]
+    }
+  ],
+  "note": {
+    "title": "Machines That Listen",
+    "text": "Every work here hears the room it is shown in.",
+    "author": {
+      "name": "Ada Curator",
+      "links": [
+        {
+          "type": "profile",
+          "url": "https://example.com/curators/ada-curator"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "type": "article",
+      "url": "https://example.com/journal/sound-machines-essay",
+      "title": "Curatorial essay",
+      "date": "2026-10-01T00:00:00Z"
+    },
+    {
+      "type": "event",
+      "url": "https://example.com/events/sound-machines-opening",
+      "title": "Opening night",
+      "date": "2026-10-10T19:00:00-04:00"
+    },
+    {
+      "type": "news",
+      "url": "https://example.com/news/sound-machines-announced",
+      "title": "Sound Machines announced"
+    }
+  ],
+  "items": [
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-9f1a-2b3c4d5e6f70",
+      "title": "Listening Room",
+      "source": "https://example.com/art/listening-room/index.html"
+    }
+  ],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "ts": "2026-07-01T00:00:00Z",
+      "payload_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "role": "curator",
+      "sig": "example-signature-bytes-not-for-production-use-only"
+    }
+  ]
+}
