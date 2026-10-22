@@ -8,6 +8,10 @@
     "note": {
       "$ref": "#/$defs/Note"
     },
+    "openAt": {
+      "$ref": "#/$defs/DisplayAt",
+      "description": "When this playlist's own subject became public — an exhibition's opening, a collection's release. Reuses DisplayAt's wire shape (local or absolute datetime, date-only rejected) for one consistent date format across DP-1, but is unrelated to §3.5 displayAt Scheduling: that mechanism gates which ITEMS are eligible to play and activates only from an item-level `displayAt`; `openAt` is a playlist-level fact for ordering and display, and sets no eligibility, no timer, no activation. Distinct from `created` too, which is the document's own issuance time and churns on every re-export; `openAt` is the real-world event and does not."
+    },
     "items": {
       "type": "array",
       "description": "Per-item extension fields. Composed with the core playlist schema via allOf: each element must still satisfy PlaylistItem from the bundle, and may include optional note, displayAt, and inlineManifest.",
