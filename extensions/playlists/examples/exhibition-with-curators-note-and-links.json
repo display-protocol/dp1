@@ -54,13 +54,25 @@
       "type": "article",
       "url": "https://example.com/journal/sound-machines-essay",
       "title": "Curatorial essay",
-      "date": "2026-10-01T00:00:00Z"
+      "date": "2026-10-01T00:00:00Z",
+      "thumbnail": {
+        "uri": "https://example.com/images/sound-machines-essay-cover.jpg",
+        "w": 1600,
+        "h": 900
+      },
+      "authors": [
+        { "name": "Ada Example" },
+        { "name": "Bo Example" }
+      ]
     },
     {
       "type": "event",
       "url": "https://example.com/events/sound-machines-opening",
       "title": "Opening night",
-      "date": "2026-10-10T19:00:00-04:00"
+      "date": "2026-10-10T19:00:00-04:00",
+      "thumbnail": {
+        "uri": "https://example.com/images/sound-machines-opening-still.jpg"
+      }
     },
     {
       "type": "news",

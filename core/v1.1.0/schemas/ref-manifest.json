@@ -207,6 +207,17 @@
           "type": "string",
           "description": "RFC3339 timestamp the linked content refers to, such as when an article was published or when an event starts",
           "format": "date-time"
+        },
+        "thumbnail": {
+          "$ref": "#/$defs/Thumbnail",
+          "description": "Representative image for the destination: an article's cover, a video's still, a publication's jacket. The same Thumbnail shape used everywhere else in DP-1, so a consumer that already renders one needs no new code."
+        },
+        "authors": {
+          "type": "array",
+          "description": "Who wrote or presented the linked content, credited the way metadata.artists[] credits a work. A producer that holds one joined credit line emits a single entry carrying it, as it would for a collaboration.",
+          "items": {
+            "$ref": "#/$defs/Entity"
+          }
         }
       }
     },
