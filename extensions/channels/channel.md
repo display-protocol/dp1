@@ -596,9 +596,8 @@ Current version: **1.0.0**
 - Test suite with 10+ scenarios
 
 **Entity Format:**
-- All entities use unified format
-- `name` and `key` required
-- `url` optional
+- One Entity model for curators and publisher, shared with the Playlist Extension and Ref Manifest artists
+- `name` required; `key`, `role`, `location`, `avatar`, `biographies`, `links` optional; `url` deprecated
 - No implicit string format for curators
 
 ---
@@ -634,23 +633,11 @@ Current version: **1.0.0**
     "curators": {
       "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "key"],
-        "properties": {
-          "name": { "type": "string" },
-          "key": { "type": "string" },
-          "url": { "type": "string", "format": "uri" }
-        }
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
       }
     },
     "publisher": {
-      "type": "object",
-      "required": ["name", "key"],
-      "properties": {
-        "name": { "type": "string" },
-        "key": { "type": "string" },
-        "url": { "type": "string", "format": "uri" }
-      }
+      "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
     },
     "summary": {
       "type": "string",
