@@ -98,7 +98,7 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
-| `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (`type`, `url`, optional `title`, `date`). References only: the content stays at the URL. See §3.3.1. |
+| `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (same type enum as everywhere else `Link` is used — `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other` — plus `url` and optional `title`, `date`). References only: the content stays at the URL. See §3.3.1. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
@@ -155,7 +155,9 @@ In the Playlist Extension, this entity shape is used by `curators[]` and by `not
 
 #### 3.3.1 Links
 
-`links` lists editorial content about the playlist — a curatorial essay, an opening event, an announcement — as Ref Manifest `Link` objects, in the order a consumer shows them. `type` is `article`, `event` or `news` (or `other`); `title` labels the entry and `date` (RFC 3339 date-time) dates it — when an article was published, when an event starts. The content itself stays at `url`; a playlist carries references, not the text.
+`links` lists editorial content about the playlist — a curatorial essay, an opening event, an announcement — as Ref Manifest `Link` objects, in the order a consumer shows them. `title` labels the entry and `date` (RFC 3339 date-time) dates it — when an article was published, when an event starts. The content itself stays at `url`; a playlist carries references, not the text.
+
+`type` is the one `Link.type` enum defined once in the core Ref Manifest schema (`$defs/Link`) and used unchanged everywhere a `Link` appears — artist and curator profiles, playlist `links`. It is not narrowed at the playlist level, so the same nine values (`website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other`) are valid here too; `article`, `event` and `news` are the ones a playlist's own editorial content is expected to use, but a producer MAY reuse `website`/`profile`/`publication` etc. when that is the better fit (for example, crediting a presenting institution's own site in the same list), and consumers MUST accept any of the nine.
 
 ```json
 "links": [
