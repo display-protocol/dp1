@@ -58,7 +58,7 @@ Carries human-readable information used for labeling, crediting, and exhibition.
   "artists": [
     {
       "name": "Artist Name",
-      "id": "",                               // identifies exactly one artist when non-empty (see §4.1)
+      "id": "",                               // identifies exactly one artist when non-empty (see §4.2)
       "addresses": ["0x…", "tz1…"],           // the only cross-producer identity
       "avatar": { "uri": "ipfs://.../avatar.jpg", "sha256": "..." },
       "biographies": [ { "text": "One paragraph...", "source": "Publisher", "sourceUrl": "https://..." } ],
@@ -69,6 +69,10 @@ Carries human-readable information used for labeling, crediting, and exhibition.
   ],
   "creditLine": "© Artist, courtesy Feral File",
   "description": "One or two paragraphs...",
+  "medium": {
+    "type": "video",                          // what a catalog filters on (see 4.1)
+    "details": ["Video (color, sound)", "1920 x 1080 pixels", "1 minute 19 seconds"]
+  },
   "tags": ["computational", "generative"],
   "thumbnails": {
     "small": { "uri": "ipfs://.../thumb_s.jpg", "w": 320,  "h": 180, "sha256": "..." },
@@ -83,7 +87,24 @@ All text fields are UTF-8 encoded and localizable through the `i18n` block.
 
 Within `thumbnails`, each entry requires only `uri`. `w` and `h` are **optional**: when present they are the intrinsic image dimensions in pixels; producers that only hold a bare thumbnail URL omit them rather than guess. Consumers **MUST** treat `w` and `h` as possibly absent.
 
-### 4.1 Artist entries — the Entity model
+### 4.1 Medium — what the work is made of
+
+A gallery page says what a work is made of twice over: once as a type it filters
+the catalog by, and once as the lines a reader sees under the title. The two are
+not the same string. `type` is the filter — a closed enumeration, so a consumer
+groups works without parsing prose, and omitted where the producer does not know
+it. `details` is the reading: short lines in the order they are shown, each one
+fact — the format with its colour and sound, the dimensions, the duration, the
+technique, the toolchain. A producer writes as many as it has and no more; a
+consumer renders them in order and **MUST NOT** reorder or parse them.
+
+Neither field is a title or a description, and `details` is not a place for
+sentences: a line is a label, bounded at 200 characters, and at most eight lines
+describe one work. A consumer that reads only `type` still groups the work
+correctly; one that reads only `details` still shows what a visitor reads on the
+page today.
+
+### 4.2 Artist entries — the Entity model
 
 An artist entry is an **Entity**: the one model DP-1 uses wherever a document names someone. As of refVersion 1.2.0 the same model is used for `curators[]` and `note.author` in the Playlists extension and for `curators[]` and `publisher` in the Channels extension, so an artist, a curator, a partner and a publisher carry the same fields. It is defined once, as `$defs/Entity` in `schemas/ref-manifest.json`; `$defs/Artist` refers to it so existing references keep resolving.
 
@@ -251,6 +272,7 @@ Players must ignore unknown fields from higher minor versions and continue playb
 
 * **1.2.0** — One **Entity** model for every place DP-1 names someone (§4.1): artist entries gain `key`, `role` and `location`, and the Playlists and Channels extensions use the same model for curators, partners, publishers and note authors, so curators gain `avatar`, `biographies` and `links`. `Link.type` gains `profile`, `publication`, `article`, `event` and `news`, and `Link` gains optional `title`, `date`, `thumbnail` and `authors`. `controls` gains `permissions` and `controls.display` gains `imageRendering` (§5). Additive for manifests: every 1.1.0 manifest remains valid. For the extensions, `key` becomes optional on curators and publishers — a loosening that a validator built for the old shape rejects, so producers relying on keyless entities need consumers on the new schema.
 
+* **1.2.0** — `metadata.medium` carries what the work is made of: a `type` from a closed enumeration for filtering and `details[]` for the lines a page shows (§4.1). Additive: a consumer that does not read it is unaffected.
 * **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`; `id` is documented as producer-scoped; `url` is deprecated in favour of `links` (§4.1). Additive: every 1.0.0 manifest remains valid and a 1.0.0 consumer reads it unchanged. The one cost of the deprecation is that a 1.1.0 producer which follows the SHOULD NOT and omits `url` shows no profile link to a 1.0.0 consumer.
 
 ---

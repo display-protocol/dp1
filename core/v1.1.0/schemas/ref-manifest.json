@@ -66,6 +66,38 @@
           "type": "string",
           "description": "Detailed description of the work (one or two paragraphs)"
         },
+        "medium": {
+          "type": "object",
+          "description": "What the work is made of: a type a catalog can filter on, and the lines its page shows beneath it.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Machine-readable medium type. Omitted where the producer does not know it.",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "software",
+                "3d",
+                "animated-gif",
+                "pdf",
+                "text",
+                "other"
+              ]
+            },
+            "details": {
+              "type": "array",
+              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with colour and sound, dimensions, duration, technique, toolchain.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 8
+            }
+          },
+          "additionalProperties": false
+        },
         "tags": {
           "type": "array",
           "description": "Categorical tags for the work",

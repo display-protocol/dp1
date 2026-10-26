@@ -1,0 +1,19 @@
+{
+  "id": "0a9d3f27-5c84-4e61-b2f9-8e7a1c6d4035",
+  "title": "Unknown medium type",
+  "source": "https://example.com/art/unknown-medium.html",
+  "duration": 120,
+  "inlineManifest": {
+    "refVersion": "1.2.0",
+    "id": "ref-7f3a90c2",
+    "created": "2026-07-28T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Unknown medium type",
+      "medium": {
+        "type": "hologram",
+        "details": ["Hologram (color)"]
+      }
+    }
+  }
+}

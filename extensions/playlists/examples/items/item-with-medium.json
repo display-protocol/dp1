@@ -1,0 +1,29 @@
+{
+  "id": "6c1f2a94-3b7d-4f58-9a10-2d4e8c5b7f31",
+  "title": "Neonumens",
+  "source": "https://example.com/art/neonumens.mp4",
+  "duration": 79,
+  "inlineManifest": {
+    "refVersion": "1.2.0",
+    "id": "ref-4b7c21ad",
+    "created": "2026-07-28T00:00:00Z",
+    "locale": "en",
+    "metadata": {
+      "title": "Neonumens",
+      "artists": [
+        {
+          "name": "Artist Name",
+          "id": ""
+        }
+      ],
+      "medium": {
+        "type": "video",
+        "details": [
+          "Video (color, sound)",
+          "1920 x 1080 pixels",
+          "1 minute 19 seconds"
+        ]
+      }
+    }
+  }
+}
