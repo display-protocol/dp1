@@ -204,9 +204,12 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 | Entire series only                | `seriesRegistry` \+ `contract.seriesId`; omit `tokenId`.                   |
 | One specific edition              | `seriesRegistry` or `onChain` with `seriesId` **and** `tokenId`.           |
 | Contract with no “series” concept | `type:"onChain"` and provide `uri`/`address`; omit `seriesId`.             |
+| Edition published, not yet on chain | `type:"offChainURI"` with `contract.seriesId` **and** `contract.tokenId`; `uri` names the published record. |
 | Off-chain certificate / PDF       | `type:"offChainURI"` and put the canonical link in `uri`; omit `contract`. |
 
 `seriesId` is the identifier the contract itself uses for the series — whatever name the contract gives it (a series, a project, an artwork with editions). Write it as an integer when it fits in a JSON number exactly; otherwise as a decimal string.
+
+An edition a publisher has announced but not minted — one that mints when it sells — has no token to name, and is still one of the editions a consumer groups by its series. State it as `offChainURI` keeping the `seriesId` and the `tokenId` it will take: the identity is settled, only the chain has not caught up, and leaving it out drops the edition from the series instead. `uri` names whatever record stands for it until then. Consumers **MUST NOT** read such a `tokenId` as a claim that the token exists on chain; verify it only when `type` says the chain holds it.
 
 `dependencies` exist **solely for documentation & verification**—players **MUST NOT** fetch or execute remote code at runtime.
 
@@ -430,6 +433,8 @@ Returns array of playlist summaries.
   * `display.imageRendering` (`auto` | `pixelated`) on `DisplayPrefs` (§4) and on the Ref Manifest's `controls.display`, for pixel art that must keep hard edges when scaled.
   * `provenance.contract.seriesId` accepts a string as well as an integer (§6), for series identifiers too large for a JSON number to hold exactly — 256-bit ids, the same reason `tokenId` is a string. Loosening only: every previously valid document remains valid, but consumers **MUST** accept either type.
   * Ref Manifest refVersion 1.2.0: one `Entity` model for every place DP-1 names someone, plus `Link` types and `controls.permissions` — see [ref-manifest.md](ref-manifest.md) §12.
+
+* **Editorial (2026-10-27)** §6 Field guidance gained a row for an **edition published but not yet on chain**: `offChainURI` keeping `contract.seriesId` and the `contract.tokenId` the edition will take, so an unminted edition is still named by the series a consumer groups by. Prose only — the schema already allowed `contract` on `offChainURI`, and nothing previously valid changes.
 
 * **Editorial (2026-08-12)** Ref-manifest schema (`schemas/ref-manifest.json`): `Thumbnail.w` and `Thumbnail.h` are now **optional** (`required` relaxed from `["uri", "w", "h"]` to `["uri"]`) — producers holding only a bare thumbnail URL omit dimensions rather than guess; when present they are the intrinsic image dimensions in pixels. Loosening only: every previously valid document remains valid, but consumers **MUST** treat `w`/`h` as possibly absent.
 
