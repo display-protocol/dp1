@@ -109,6 +109,26 @@ jobs:
             ajv validate -s "$composed" "${refs[@]}" \
               $(printf -- '-d %s ' "${examples[@]}") \
               --spec=draft2020 -c ajv-formats || status=1
+
+            # Same contract as examples/items/rejected, one level up: a
+            # playlist-level fixture that MUST be refused. The accepted
+            # examples above cannot carry this signal — an undeclared property
+            # is unconstrained, not invalid, so a passing example validates
+            # just as happily when the constraint it relies on drops out.
+            # Validated one at a time so the fixture that wrongly passed can
+            # be named; the schema is already known to compile from the step
+            # before, so a non-zero exit here is the instance being rejected.
+            rejected=("$dir"/rejected/*.json)
+            [ ${#rejected[@]} -gt 0 ] && echo "Checking ${#rejected[@]} fixture(s) in $dir/rejected are refused by $composed"
+            for bad in "${rejected[@]}"; do
+              if ajv validate -s "$composed" "${refs[@]}" -d "$bad" \
+                   --spec=draft2020 -c ajv-formats >/dev/null 2>&1; then
+                echo "❌ $bad validated, but it MUST be rejected"
+                status=1
+              else
+                echo "✓ $bad correctly rejected"
+              fi
+            done
           done
           exit $status
 

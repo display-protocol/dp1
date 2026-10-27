@@ -1,0 +1,74 @@
+{
+  "dpVersion": "1.1.0",
+  "id": "4225a453-c4d6-474e-be36-e0e15d0f1595",
+  "slug": "console-spirituality",
+  "title": "Console Spirituality",
+  "created": "2025-02-26T00:23:11Z",
+  "series": [
+    {
+      "provenance": {
+        "type": "seriesRegistry",
+        "contract": {
+          "chain": "evm",
+          "standard": "erc721",
+          "address": "0x614d5475FE81ef4b6Dd8093b5C73EfEEE03167e0",
+          "seriesId": 2,
+          "tokenId": "2991915549"
+        }
+      },
+      "inlineManifest": {
+        "refVersion": "1.2.0",
+        "id": "ref-dungeoneer",
+        "created": "2025-02-26T00:23:11Z",
+        "locale": "en",
+        "metadata": {
+          "title": "Dungeoneer",
+          "artists": [
+            {
+              "name": "John Provencher",
+              "id": ""
+            }
+          ],
+          "description": "A self-running program that navigates a generated dungeon.",
+          "medium": {
+            "type": "software"
+          }
+        }
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "79132388-9082-42bc-884b-f5de1b9be34d",
+      "title": "00void",
+      "source": "https://example.com/art/00void.html",
+      "duration": 300,
+      "provenance": {
+        "type": "onChain",
+        "contract": {
+          "chain": "evm",
+          "standard": "erc721",
+          "address": "0x614d5475FE81ef4b6Dd8093b5C73EfEEE03167e0",
+          "tokenId": "2991915549",
+          "seriesId": 2
+        }
+      }
+    },
+    {
+      "id": "1f7a2c05-4b3e-4a9d-9c28-5a6d7e8f0b11",
+      "title": "A one-of-one, in no series",
+      "source": "https://example.com/art/solo.html",
+      "duration": 120
+    }
+  ],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "ts": "2026-07-01T00:00:00Z",
+      "payload_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "role": "curator",
+      "sig": "example-signature-bytes-not-for-production-use-only"
+    }
+  ]
+}
