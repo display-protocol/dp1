@@ -33,6 +33,10 @@
       "description": "Playlist cover image (ipfs://, https://, ar://)",
       "format": "uri"
     },
+    "visibility": {
+      "type": "string",
+      "description": "Whether directories may list the playlist (§3.7). Values defined by this version: public (the default when absent) and unlisted. A listing request, not access control: an unlisted playlist is still served to anyone with its address. Directories treat any value other than public as unlisted. Non-string values are invalid."
+    },
     "dynamicQuery": {
       "description": "Dynamic item fetching configuration",
       "$ref": "#/$defs/DynamicQuery"
