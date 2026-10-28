@@ -100,7 +100,6 @@ These extensions enable playlists to transition from static collections to live,
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
 | `openAt` | string (ISO 8601 subset) | OPTIONAL | When this playlist's own subject became public — an exhibition's opening, a collection's release. Same wire shape as item-level `displayAt` (§3.5.2: local datetime or absolute `date-time`, date-only rejected), **not** the same mechanism: `openAt` sets no eligibility and starts no timer, it is a fact for ordering and display. See the note after this table. |
 | `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (same type enum as everywhere else `Link` is used — `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other` — plus `url` and optional `title`, `date`, `thumbnail`, `authors`). References only: the content stays at the URL — but the card a consumer draws travels with the entry. See §3.3.1. |
-| `series` | array of objects | OPTIONAL | The series its items belong to, for a consumer that groups by series rather than listing every item. Each entry names one series by the same provenance its items carry and carries that series' Ref Manifest. See §3.7. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
@@ -437,72 +436,6 @@ defaults → inlineManifest → ref → item.local
 ```
 
 ---
-
-### 3.7 Series — the groups items already belong to
-
-A playlist of editions is a flat list, but the works in it are rarely flat: many
-items are tokens of one series in an on-chain series registry, and a consumer may
-want to show the series rather than every token of it. The key for that grouping
-is already on the item — `provenance.contract` plus `seriesId` names the series
-each token belongs to (DP-1 core 1.1.0, "One specific edition"). What is missing
-is the series itself: group by that key today and there is nothing to display,
-no title, no artist, no cover.
-
-`series` supplies exactly that and nothing more. Each entry names one series the
-way core already names an entire series — `seriesRegistry` provenance with
-`contract.seriesId` and **no** `tokenId` — and carries its Ref Manifest, by `ref`
-or inline, the same document and the same two carriage options an item has
-(§3.6). It introduces no new metadata schema: a consumer that renders an item's
-manifest renders a series' manifest with the code it already has.
-
-An item belongs to the entry whose contract and `seriesId` its own provenance
-names. An item that matches no entry belongs to no series and is still a valid
-item — a playlist may mix tokens of a registered series with one-of-one works
-that have no series at all. Two entries **MUST NOT** name the same contract and
-`seriesId`.
-
-`series` carries **no playback semantics**. Players **MUST** play `items` in
-order whether or not they read it, and **MAY** use it for display. Grouping is a
-presentation choice, never a change to what plays or in what order.
-
-An entry is deliberately **not** a playlist item. An item is something to play,
-which is why core requires `source`; a registry row has no media of its own —
-its tokens are the media. Carrying the series in `items` would mean one of two
-bad trades: an entry that plays, so every grouped playlist gains a redundant
-pass over a cover image before the editions that cover describes, or `source`
-made optional, so an unplayable entry is admitted to the one list a player is
-told to play. A separate array leaves `items` exactly what it has always been —
-everything that plays, in order — and the schema holds an entry to the registry
-row it claims to be: `seriesRegistry`, a `seriesId`, and no `tokenId`.
-
-```jsonc
-"series": [
-  {
-    "provenance": {
-      "type": "seriesRegistry",
-      "contract": { "chain": "evm", "standard": "erc721", "address": "0x…", "seriesId": 2 }
-    },
-    "inlineManifest": {                      // or "ref": "https://…/series-2.json"
-      "refVersion": "1.2.0", "id": "ref-…", "created": "2026-02-26T00:23:11Z", "locale": "en",
-      "metadata": {
-        "title": "Dungeoneer",
-        "artists": [{ "name": "John Provencher" }],
-        "description": "A self-running program that navigates a generated dungeon…",
-        "medium": { "type": "software" }
-      }
-    }
-  }
-],
-"items": [
-  { "id": "…", "title": "00void", "source": "https://…",
-    "provenance": { "type": "onChain",
-      "contract": { "chain": "evm", "standard": "erc721", "address": "0x…", "tokenId": "299…", "seriesId": 2 } } }
-]
-```
-
-Nothing here is specific to one producer: a registry entry is an Art Blocks
-project, an fxhash generator, a Manifold series, or any other contract that
-issues tokens under a shared id.
 
 ## 4 · Dynamic Query
 

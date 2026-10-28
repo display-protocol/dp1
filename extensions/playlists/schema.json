@@ -47,13 +47,6 @@
     "dynamicQuery": {
       "description": "Dynamic item fetching configuration",
       "$ref": "#/$defs/DynamicQuery"
-    },
-    "series": {
-      "type": "array",
-      "description": "The series the playlist's items belong to — one entry per series registry row, for a consumer that groups items by series instead of listing every item. A lookup table, not a second list of content: `items` stays the whole playable list and its order, and nothing here plays. A consumer that groups joins an item to an entry on `contract.address` and `contract.seriesId`; one that does not group ignores this field.",
-      "items": {
-        "$ref": "#/$defs/SeriesEntry"
-      }
     }
   },
   "$defs": {
@@ -216,55 +209,6 @@
           ]
         }
       }
-    },
-    "SeriesEntry": {
-      "type": "object",
-      "description": "One row of a series registry, resolved: the key the registry holds, and the metadata document that key points at. A registry row has no media of its own, which is why an entry carries no source, duration, license, display or repro and is never played — the tokens of the series are the playable things, and they are items. It defines no new metadata vocabulary either: the document is the same Ref Manifest an item carries.",
-      "required": [
-        "provenance"
-      ],
-      "properties": {
-        "provenance": {
-          "description": "The series itself, never one of its tokens: `seriesRegistry` with `contract.seriesId` and no `contract.tokenId` (DP-1 core 1.1.0, \"Entire series only\"). This is also the group key — an item belongs to this entry when its own provenance names the same `contract.address` and `contract.seriesId`.",
-          "allOf": [
-            {
-              "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/playlist.json#/$defs/ProvenanceBlock"
-            },
-            {
-              "type": "object",
-              "required": [
-                "contract"
-              ],
-              "properties": {
-                "type": {
-                  "const": "seriesRegistry"
-                },
-                "contract": {
-                  "type": "object",
-                  "required": [
-                    "seriesId"
-                  ],
-                  "not": {
-                    "required": [
-                      "tokenId"
-                    ]
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "ref": {
-          "type": "string",
-          "description": "URI of the series' Ref Manifest.",
-          "format": "uri"
-        },
-        "inlineManifest": {
-          "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json",
-          "description": "The series' Ref Manifest inline, for a producer with nowhere to host a `ref`. When both are present, `ref` overrides `inlineManifest`, as on an item."
-        }
-      },
-      "additionalProperties": false
     }
   }
 }
