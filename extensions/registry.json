@@ -1,15 +1,15 @@
 {
   "title": "DP-1 Extension Registry",
   "description": "Official registry of DP-1 protocol extensions",
-  "version": "1.0.8",
-  "lastUpdated": "2026-10-28T00:00:00Z",
+  "version": "1.0.9",
+  "lastUpdated": "2026-10-29T00:00:00Z",
   "extensions": [
     {
       "id": "channels",
       "name": "Channel Extension",
       "version": "1.0.0",
       "status": "released",
-      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Adds multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema).",
+      "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Adds multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema). Curators and publisher use the one DP-1 Entity model, defined in the core Ref Manifest schema and shared with the Playlist Extension and metadata.artists[].",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -23,7 +23,8 @@
       "features": [
         "Multi-curator exhibitions with verifiable identities",
         "Publisher attribution for institutions and collectives",
-        "DID-based entity format (curators and publisher)",
+        "DID-based entity format (curators and publisher); key is optional and informational, so a partner organization without a DID is named by name and links",
+        "One Entity model: curators[] and publisher $ref the core Ref Manifest $defs/Entity, so they carry role, location, addresses, avatar, biographies and links exactly as an artist does (url deprecated in favour of a links entry of type profile or website). schema.json is therefore no longer self-contained: compiling it requires resolving the core ref-manifest schema",
         "Multi-signature support (aligned with DP-1 v1.1.0), including `publisher` as a signature role alongside curator, feed, agent, institution, and licensor",
         "Player verification: conforming implementations MUST verify at least one `feed` and one `publisher` signature before accepting a channel (specified in channel.md; JSON Schema validates structure and role enum only)",
         "Enhanced metadata (summary, coverImage)"
@@ -38,7 +39,7 @@
       "name": "Playlist Extension",
       "version": "0.2.0",
       "status": "draft",
-      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, displayAt scheduling (item-level displayAt; activates automatically when any item has displayAt), inline carriage of the standardized Ref Manifest on items (inlineManifest), and playlist-level visibility (unlisted playlists stay out of directory listings). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
+      "description": "Extensions to DP-1 playlists for dynamic item fetching, enhanced metadata, optional experimental Note (intermission) fields, displayAt scheduling (item-level displayAt; activates automatically when any item has displayAt), inline carriage of the standardized Ref Manifest on items (inlineManifest), playlist-level visibility (unlisted playlists stay out of directory listings), and the editorial and identity fields a gallery needs (the shared Entity model for curators and note authors, playlist-level links[] and openAt, and a note title and author). Enables playlists to transition from static collections to live, personalized, and time-filtered feeds.",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
@@ -55,7 +56,11 @@
         "Multiple resolution profiles (graphql-v1, https-json-v1)",
         "Template variable hydration ({{viewer_address}}, {{chain}}, etc.)",
         "Response mapping with schema validation",
-        "Curator metadata with DID-based verifiable identities",
+        "Curator metadata with DID-based verifiable identities (key optional and informational)",
+        "One Entity model: $defs/Entity $refs the core Ref Manifest $defs/Entity, so a curator, partner or note author carries role, location, addresses, avatar, biographies and links exactly as an artist does; the channels extension references the same definition, so the two cannot drift",
+        "Playlist-level links[]: editorial content about the playlist — articles, events, news — in display order, each a core $defs/Link carrying title, date, thumbnail and authors so a consumer draws a card from the entry alone; references only, the content stays at the URL",
+        "Playlist-level openAt: when the playlist's subject became public (an exhibition's opening), reusing DisplayAt's wire shape for one date format but outside §3.5 displayAt Scheduling — no eligibility, no timer, no activation — and distinct from created, which churns on re-export",
+        "Note title and author: an optional heading (1-200 characters) and an Entity who wrote the text; omitting author means the note is the curators' own",
         "Enhanced metadata (summary, coverImage)",
         "Fast start, rich upgrade rendering strategy",
         "Experimental Note (intermission): optional short artist-authored text with optional display duration on the playlist and on each item; extension-only (allOf overlay), not canonical DP-1 core",
@@ -101,6 +106,19 @@
     }
   ],
   "changelog": [
+    {
+      "version": "1.0.9",
+      "date": "2026-10-29T00:00:00Z",
+      "changes": [
+        "Channel and Playlist extensions: one Entity model. Both now $ref $defs/Entity in the core Ref Manifest schema (refVersion 1.2.0) instead of keeping their own copies, so curators, partners, publishers and note authors carry the same fields as metadata.artists[]: optional role (artist | curator | partner | sponsor | publisher | other), location, addresses, avatar, biographies and links, with url deprecated.",
+        "Channel and Playlist extensions: key is no longer required on an entity. It is informational only (channel.md §5.3, MUST relaxed to SHOULD), so a partner organization with no DID is named by name and links rather than a placeholder. Loosening: every document valid before this change stays valid, but a validator built on the previous shape rejects a keyless entity.",
+        "Channel and Playlist extensions: neither schema.json is self-contained any more. Compiling either one requires resolving https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json, which the Playlist Extension already required for inlineManifest and the Channel Extension did not.",
+        "Playlist extension: optional playlist-level links[] (§3.3.1) for editorial content — articles, events, news — in display order, and optional playlist-level openAt (§3.4) for when the subject became public. openAt reuses DisplayAt's wire shape for one date format but takes no part in §3.5 displayAt Scheduling and sets no eligibility.",
+        "Playlist extension: note gains an optional title (1-200 characters) and author (an Entity).",
+        "Core: Link.type gains profile, publication, article, event and news, and Link gains optional title, date, thumbnail and authors, so a consumer renders a link as a card without fetching the page. controls gains permissions (camera, microphone), controls.display and DisplayPrefs gain imageRendering (auto | pixelated), metadata.medium carries a closed-enumeration type plus details[], and provenance.contract.seriesId accepts a decimal string as well as an integer.",
+        "No extension version or schema $id changed: the Channel Extension remains v1.0.0 (channel.md §10.1 and the 2026-05-20 precedent) and the Playlist Extension remains draft v0.2.0 (playlist.md §8.1 draft amendments). Both record the change as a dated amendment in their own changelog; core stays 1.1.0 with a spec §16 Editorial entry."
+      ]
+    },
     {
       "version": "1.0.8",
       "date": "2026-10-28T00:00:00Z",

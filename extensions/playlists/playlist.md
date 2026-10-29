@@ -985,6 +985,17 @@ Current version: **0.2.0**
 
 ## 11 · Changelog
 
+### Amendment (2026-10-29) — Entity, links, note title and author, openAt
+
+- `$defs/Entity` now references the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`), so a curator, partner or note author carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`, with `url` deprecated in favour of a `links` entry. The channels extension references the same definition, so the two cannot drift.
+- `key` is no longer required on a curator. It is informational only, and a partner organization that has no DID is named by `name` and `links` instead of a placeholder.
+- Documented optional playlist-level **`links[]`** (§3.3.1): editorial content about the playlist — articles, events, news — in the order to show it. References only; the content stays at the URL. Each entry is the core `$defs/Link`, which gains `profile`, `publication`, `article`, `event` and `news` types and optional `title`, `date`, `thumbnail` and `authors`, so a consumer draws a card from the entry alone without fetching the page behind it.
+- Documented optional playlist-level **`openAt`** (§3.4): when the playlist's own subject became public, such as an exhibition's opening. It reuses `$defs/DisplayAt`'s wire shape for one date format, but it is **not** part of §3.5 displayAt Scheduling: it sets no eligibility, starts no timer and causes no activation. It is distinct from `created`, which is the document's issuance time and churns on re-export.
+- `note` gains optional **`title`** (1–200 characters) and **`author`** (an Entity). Omitting `author` means the note is the curators' own.
+- Additive for documents, following the Note, Inline Manifest and Visibility precedent (see §8.1): every playlist valid before this amendment stays valid, and none of the new fields asks a conforming player to do anything it did not do before. Two costs land on consumers rather than producers. A validator built on the previous shape rejects a playlist that uses a keyless curator or a new `Link.type` — the price of the loosening. And `schema.json` has referenced the core Ref Manifest since v0.2.0, but now does so for `Entity` and `Link` as well, so a validator must resolve `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json` to compile it.
+- JSON: `extensions/playlists/schema.json` (`openAt`, `links`, `note.title`, `note.author`, `$defs/Entity`) and `extensions/playlists/bundles/playlist-core-v1.1.0.json` (mirrors the core edits). Examples: `examples/exhibition-with-curators-note-and-links.json`, `examples/items/item-with-entity-links-and-permissions.json`, `examples/items/item-with-medium.json`, and eight single-field mutations under `examples/items/rejected/`.
+- No `$id` changed, and the extension remains **v0.2.0** (draft).
+
 ### Amendment (2026-10-28) — visibility
 
 - Documented optional playlist-level **`visibility`** (§3.7): `public` (the default when absent) or `unlisted`. Directories that implement §3.7 leave an unlisted playlist out of every listing; it stays reachable by its address. It is a listing request inside the signed bytes, not access control: a directory built before this amendment may still list it.

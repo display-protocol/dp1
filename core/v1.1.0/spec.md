@@ -433,12 +433,12 @@ A directory that implements Playlist Extension §3.7 leaves out every playlist i
 
 * **Editorial (2026-10-28)** §15 Directory API: directories leave out playlists marked `"visibility": "unlisted"` (Playlist Extension §3.7), and list a playlist only when `visibility` is absent or exactly `public`. No schema change; the field is defined by the Playlist Extension.
 
+* **Editorial (2026-10-27)** §6 Field guidance gained a row for an **edition published but not yet on chain**: `offChainURI` keeping `contract.seriesId` and the `contract.tokenId` the edition will take, so an unminted edition is still named by the series a consumer groups by. Prose only — the schema already allowed `contract` on `offChainURI`, and nothing previously valid changes.
+
 * **Editorial (2026-10-20)** Display and identity fields that producers already hold but could not express:
   * `display.imageRendering` (`auto` | `pixelated`) on `DisplayPrefs` (§4) and on the Ref Manifest's `controls.display`, for pixel art that must keep hard edges when scaled.
   * `provenance.contract.seriesId` accepts a string as well as an integer (§6), for series identifiers too large for a JSON number to hold exactly — 256-bit ids, the same reason `tokenId` is a string. Loosening only: every previously valid document remains valid, but consumers **MUST** accept either type.
-  * Ref Manifest refVersion 1.2.0: one `Entity` model for every place DP-1 names someone, plus `Link` types and `controls.permissions` — see [ref-manifest.md](ref-manifest.md) §12.
-
-* **Editorial (2026-10-27)** §6 Field guidance gained a row for an **edition published but not yet on chain**: `offChainURI` keeping `contract.seriesId` and the `contract.tokenId` the edition will take, so an unminted edition is still named by the series a consumer groups by. Prose only — the schema already allowed `contract` on `offChainURI`, and nothing previously valid changes.
+  * Ref Manifest refVersion 1.2.0: one `Entity` model for every place DP-1 names someone, plus `Link` types, `controls.permissions` and `metadata.medium` — see [ref-manifest.md](ref-manifest.md) §12.
 
 * **Editorial (2026-08-12)** Ref-manifest schema (`schemas/ref-manifest.json`): `Thumbnail.w` and `Thumbnail.h` are now **optional** (`required` relaxed from `["uri", "w", "h"]` to `["uri"]`) — producers holding only a bare thumbnail URL omit dimensions rather than guess; when present they are the intrinsic image dimensions in pixels. Loosening only: every previously valid document remains valid, but consumers **MUST** treat `w`/`h` as possibly absent.
 

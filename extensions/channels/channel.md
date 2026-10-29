@@ -571,9 +571,11 @@ Current version: **1.0.0**
 
 **Normative clarification (2026-05-20):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` (§5.2). This requirement is specified in prose and is **not** enforced by `schema.json`.
 
+**Entity model amendment (2026-10-29):** `curators[]` and `publisher` now reference the **Entity** model defined once in the core Ref Manifest schema (§3.3), so a curator, partner or publisher carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`. `key` relaxes from **MUST** to **SHOULD** (§5.3), so a partner organization that has no DID can still be named. Additive and loosening for documents: every channel valid before this amendment stays valid. Two costs for consumers — a validator built on the previous shape rejects a channel with a keyless entity, and `schema.json` is no longer self-contained, so compiling it requires resolving `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json`. The extension remains **v1.0.0** with its `$id` unchanged, per §10.1 and the 2026-05-20 precedent.
+
 **Core Features:**
 - Self-contained channel schema (ordered playlist URLs + attribution)
-- One Entity model for curators and publisher, shared with the Playlist Extension and Ref Manifest artists (`name` required; `key`, `role`, `location`, `avatar`, `biographies`, `links` optional)
+- Unified entity format for curators and publisher (`name`, `key`, optional `url`)
 - Multi-curator support with verifiable identities (DID-based)
 - Publisher attribution for institutions and collectives
 - Multi-signature support (aligned with DP-1 v1.1.0)
@@ -596,8 +598,9 @@ Current version: **1.0.0**
 - Test suite with 10+ scenarios
 
 **Entity Format:**
-- One Entity model for curators and publisher, shared with the Playlist Extension and Ref Manifest artists
-- `name` required; `key`, `role`, `location`, `avatar`, `biographies`, `links` optional; `url` deprecated
+- All entities use unified format
+- `name` and `key` required
+- `url` optional
 - No implicit string format for curators
 
 ---
