@@ -1,11 +1,11 @@
-# DP-1 Channel Extension (v1.0.0)
+# DP-1 Channel Extension (v1.1.0)
 
 *A formal extension to DP-1 v1.0.0+ for collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities.*
 
-**Specification version:** 1.0.0  
+**Specification version:** 1.1.0  
 **Status:** Released Extension  
 **DP-1 compatibility:** v1.0.0+  
-**Published:** 2026-03-11
+**Published:** 2026-10-29
 
 ---
 
@@ -139,8 +139,7 @@ A channel is an ordered list of playlist URLs plus attribution metadata. All fie
 
 ### 3.3 Entity Format (Curators & Publisher)
 
-Both `curators` and `publisher` use a unified entity format with verifiable identities.
-This is the same entity shape used by the Playlist Extension.
+Both `curators` and `publisher` use the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.2). It is the same model the Playlist Extension uses for curators and note authors and the Ref Manifest uses for `metadata.artists[]`, so a curator or publisher carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -148,7 +147,8 @@ This is the same entity shape used by the Playlist Extension.
 {
   "name": "Entity Name",
   "key": "did:key:z6Mk...",
-  "url": "https://example.com"
+  "location": "City, Country",
+  "links": [ { "type": "profile", "url": "https://example.com" } ]
 }
 ```
 
@@ -157,8 +157,10 @@ This is the same entity shape used by the Playlist Extension.
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
-| `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
-| `url` | string | OPTIONAL | Entity website or profile URL. |
+| `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only (§5.3). |
+| `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted, the role follows the position: `curators[]` is curator, `publisher` is publisher. A partner presenting the channel is listed in `curators[]` with `role: "partner"`. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.2. |
+| `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
 **Curators:**
 - Array of entity objects
@@ -295,7 +297,7 @@ See DP-1 §7.1 for complete signature specification.
 ### 5.3 Key Management
 
 **Entity keys:**
-- All entities (curators and publisher) **MUST** include `key` fields with DID-based identifiers
+- Entities (curators and publisher) **SHOULD** include `key` with a DID-based identifier when they have one; `key` is optional, so a curator or partner without a DID is named by `name` and `links`
 - Entity keys in `curators[].key` and `publisher.key` are **informational only** (not used for signature verification)
 - Actual signature verification uses `signatures[].kid` per DP-1 §7.1
 - Entity keys establish identity claims; signature keys establish authority
@@ -516,7 +518,7 @@ Channel extension follows SemVer:
 - **Minor:** Additive features, backward-compatible
 - **Patch:** Bug fixes, clarifications, editorial changes
 
-Current version: **1.0.0**
+Current version: **1.1.0**
 
 ### 10.2 Proposed Future Features
 
@@ -526,7 +528,7 @@ Current version: **1.0.0**
 - Enhanced analytics/tracking fields
 - Playlist ordering strategies (shuffle, personalized)
 
-**Potential v1.1.0 changes:**
+**Potential v1.2.0 changes:**
 - Production-ready status after community feedback
 - Finalized compliance badge requirements
 - Reference implementation validation
@@ -562,6 +564,14 @@ Current version: **1.0.0**
 ---
 
 ## 13 · Changelog
+
+### v1.1.0 (2026-10-29)
+
+**One Entity model for curators, partners and publishers.** `curators[]` and `publisher` now reference the **Entity** model defined once in the core Ref Manifest schema (§3.3), so a curator, partner or publisher carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`. `key` relaxes from **MUST** to **SHOULD** (§5.3), so a partner organization that has no DID can still be named.
+
+Additive and loosening for documents: every channel valid under v1.0.0 stays valid, and a document that uses none of the new fields may keep declaring `"version": "1.0.0"`. Two costs for consumers — a validator built on the v1.0.0 shape rejects a channel with a keyless entity, and `schema.json` is no longer self-contained, so compiling it requires resolving `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json`.
+
+**Why the version moved.** v1.0.0 was self-contained: resolving its `$id` fully determined what a channel document had to satisfy. Referencing the core Ref Manifest changes that permanently — the core schema is edited in place under an unchanged `$id`, so every later additive edit to its `Entity`, `Link` or `Thumbnail` definitions would also change what validates under this extension's identifier, with nothing here to signal it. A released `$id` has to keep denoting stable content, so the live `$ref` is adopted under a new version and `$id` (`.../extensions/channels/v1.1.0/schema.json`) rather than grafted onto the published one. v1.0.0's content stands as published.
 
 ### v1.0.0 (2026-03-11)
 
@@ -632,23 +642,11 @@ Current version: **1.0.0**
     "curators": {
       "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "key"],
-        "properties": {
-          "name": { "type": "string" },
-          "key": { "type": "string" },
-          "url": { "type": "string", "format": "uri" }
-        }
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
       }
     },
     "publisher": {
-      "type": "object",
-      "required": ["name", "key"],
-      "properties": {
-        "name": { "type": "string" },
-        "key": { "type": "string" },
-        "url": { "type": "string", "format": "uri" }
-      }
+      "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
     },
     "summary": {
       "type": "string",

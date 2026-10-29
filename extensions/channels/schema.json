@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
+  "$id": "https://dp1.feralfile.com/extensions/channels/v1.1.0/schema.json",
   "title": "DP-1 Channel Extension",
   "description": "Channel schema for collaborative, persistent feeds with enhanced metadata and curation capabilities",
   "type": "object",
@@ -89,25 +89,8 @@
   },
   "$defs": {
     "Entity": {
-      "type": "object",
-      "description": "Unified entity format for curators and publishers with verifiable identities",
-      "required": ["name", "key"],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Entity display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because an entity name is empty; display SHOULD fall back to the key."
-        },
-        "key": {
-          "type": "string",
-          "description": "Verifiable identity in DID format",
-          "pattern": "^did:[a-z]+:.+$"
-        },
-        "url": {
-          "type": "string",
-          "description": "Entity website or profile URL",
-          "format": "uri"
-        }
-      }
+      "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity",
+      "description": "The unified DP-1 Entity, defined once in the core Ref Manifest schema and shared with the playlists extension and with metadata.artists[]"
     },
     "Signature": {
       "type": "object",

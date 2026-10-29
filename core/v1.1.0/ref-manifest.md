@@ -58,16 +58,21 @@ Carries human-readable information used for labeling, crediting, and exhibition.
   "artists": [
     {
       "name": "Artist Name",
-      "id": "",                               // identifies exactly one artist when non-empty (see §4.1)
+      "id": "",                               // identifies exactly one artist when non-empty (see §4.2)
       "addresses": ["0x…", "tz1…"],           // the only cross-producer identity
       "avatar": { "uri": "ipfs://.../avatar.jpg", "sha256": "..." },
       "biographies": [ { "text": "One paragraph...", "source": "Publisher", "sourceUrl": "https://..." } ],
-      "links": [ { "type": "website", "url": "https://..." } ]
-      // "url" (1.0.0) is deprecated as of 1.1.0 — write a links entry of type "website" instead
+      "location": "City, Country",
+      "links": [ { "type": "website", "url": "https://..." }, { "type": "profile", "url": "https://..." } ]
+      // "url" (1.0.0) is deprecated as of 1.1.0 — write a links entry of type "website" or "profile" instead
     }
   ],
   "creditLine": "© Artist, courtesy Feral File",
   "description": "One or two paragraphs...",
+  "medium": {
+    "type": "video",                          // what a catalog filters on (see 4.1)
+    "details": ["Video (color, sound)", "1920 x 1080 pixels", "1 minute 19 seconds"]
+  },
   "tags": ["computational", "generative"],
   "thumbnails": {
     "small": { "uri": "ipfs://.../thumb_s.jpg", "w": 320,  "h": 180, "sha256": "..." },
@@ -82,18 +87,41 @@ All text fields are UTF-8 encoded and localizable through the `i18n` block.
 
 Within `thumbnails`, each entry requires only `uri`. `w` and `h` are **optional**: when present they are the intrinsic image dimensions in pixels; producers that only hold a bare thumbnail URL omit them rather than guess. Consumers **MUST** treat `w` and `h` as possibly absent.
 
-### 4.1 Artist entries
+### 4.1 Medium — what the work is made of
 
-Only `name` is required. `addresses`, `avatar`, `biographies` and `links` were added in refVersion 1.1.0; together with `id` and `url` they describe the artist rather than the work, so they carry a different contract from the rest of the block.
+A gallery page says what a work is made of twice over: once as a type it filters
+the catalog by, and once as the lines a reader sees under the title. The two are
+not the same string. `type` is the filter — a closed enumeration, so a consumer
+groups works without parsing prose, and omitted where the producer does not know
+it. `details` is the reading: short lines in the order they are shown, each one
+fact — the format with its colour and sound, the dimensions, the duration, the
+technique, the toolchain. A producer writes as many as it has and no more; a
+consumer renders them in order and **MUST NOT** reorder or parse them.
+
+Neither field is a title or a description, and `details` is not a place for
+sentences: a line is a label, bounded at 200 characters, and at most eight lines
+describe one work. A consumer that reads only `type` still groups the work
+correctly; one that reads only `details` still shows what a visitor reads on the
+page today.
+
+### 4.2 Artist entries — the Entity model
+
+An artist entry is an **Entity**: the one model DP-1 uses wherever a document names someone. As of refVersion 1.2.0 the same model is used for `curators[]` and `note.author` in the Playlists extension and for `curators[]` and `publisher` in the Channels extension, so an artist, a curator, a partner and a publisher carry the same fields. It is defined once, as `$defs/Entity` in `schemas/ref-manifest.json`; `$defs/Artist` refers to it so existing references keep resolving.
+
+Only `name` is required. `addresses`, `avatar`, `biographies` and `links` were added in refVersion 1.1.0, and `key`, `role` and `location` in 1.2.0; together with `id` and `url` they describe the person or organization rather than the work, so they carry a different contract from the rest of the block.
 
 | Field | Contract |
 |:------|:---------|
+| `name` | Display name. Required but **MAY** be empty: a wallet-based publisher can emit its signing identity unnamed. Consumers **MUST NOT** reject a document because a name is empty; display **SHOULD** fall back to `key`. |
+| `key` | A DID (`did:<method>:…`). **Optional** and **informational only**: signatures carry their own `kid` and are never verified against `key`. Producers **SHOULD** include it when the entity has one. |
+| `role` | One of `artist`, `curator`, `partner`, `sponsor`, `publisher`, `other`. Omitted, the role follows the position — `metadata.artists[]` is `artist`, `curators[]` is `curator`, `publisher` is `publisher` — so it is written only where the position does not already say it, such as a partner listed in `curators[]`. A consumer that does not read `role` treats the entity by its position. |
+| `location` | Where the person or organization is based, as free text (for example a city and country). |
 | `id` | An identifier for the artist. Format is producer-defined — an opaque label such as a platform UUID or database key. Each non-empty `id` identifies exactly one artist; an empty `id` means nothing at all. |
 | `addresses` | **The only cross-producer identity.** Raw wallet addresses the producer attributes to the artist — EVM (`0x…`) and Tezos (`tz1`, `tz2`, `tz3`, `tz4…`) forms are distinguished by shape, so no chain field is carried: an externally owned account's key pair is chain-independent, so one EVM address is one identity wherever it mints. Contract addresses — Tezos `KT1…`, or an EVM collection contract — name a collection, not a person, and **MUST NOT** be listed; a collection belongs in `provenance.contract`. Producers **SHOULD** include the externally owned account that minted or is credited on-chain for the work. Consumers **MUST** compare EVM addresses case-insensitively and Tezos addresses as-is. |
 | `avatar` | A `Thumbnail` (§4): `uri` required, `w`/`h`/`sha256` optional. |
 | `biographies` | Ordered by the producer's preference; when only one fits, show the first. `text` is plain text with no markup. `source`/`sourceUrl` attribute where the text was taken from and are omitted when unknown. |
-| `links` | `type` is one of `website`, `twitter`, `instagram`, `other`; any other value is invalid, so a destination the enumeration does not name is written as `other`. `url` is always a full URL, never a bare handle, so players carry no per-network URL rules. |
-| `url` | **Deprecated as of 1.1.0.** The 1.0.0 single profile URL. It remains valid for backward compatibility but **SHOULD NOT** be emitted by new manifests; write a `links` entry of type `website` instead. A producer that still emits both **MUST** keep `url` equal to that entry. Consumers read `links` first and fall back to `url` only when `links` is absent or empty. |
+| `links` | `type` is one of `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other`; any other value is invalid, so a destination the enumeration does not name is written as `other`. `profile` is the producer's own page about the entity — the page a consumer links a name to; `publication` is writing by or about the entity. `url` is always a full URL, never a bare handle, so players carry no per-network URL rules. Optional `title` labels the destination and optional `date` (RFC 3339 date-time) dates it, such as a publication's release. Optional `thumbnail` is a representative image for the destination — an article's cover, a video's still — as the same `Thumbnail` object used for `avatar` and `metadata.thumbnails`, so a consumer renders it with the code it already has. Optional `authors` credits who wrote or presented it, as Entity entries, the way `metadata.artists[]` credits a work. |
+| `url` | **Deprecated as of 1.1.0.** The 1.0.0 single profile URL. It remains valid for backward compatibility but **SHOULD NOT** be emitted by new manifests; write a `links` entry of type `website` or `profile` instead. A producer that still emits both **MUST** keep `url` equal to that entry. Consumers read `links` first and fall back to `url` only when `links` is absent or empty. |
 
 **Identity is a claim, not a fact.** `addresses` is covered by whatever signs or hashes the manifest, so it is exactly as trustworthy as its producer. A wallet may be shared — collectives, studios and collaborative mints all mint from one address — so two producers whose lists overlap on an address have **not** thereby described one artist. Consumers **MUST NOT** merge two artist records solely because their `addresses` intersect; they combine the producer's claim with their own registry and with the trust they extend to that producer. What `addresses` does settle is attribution of *this work* to *this entry*: a consumer that indexes works by wallet **MAY** list the work under every artist record its own registry holds for that wallet — two records that share a wallet each receive the work; they are not thereby merged into one.
 
@@ -113,6 +141,7 @@ Defines display preference.
     "background": "#000000",
     "autoplay": true,
     "loop": false,
+    "imageRendering": "auto",
     "interaction": {
         "keyboard": [],
         "mouse": {}
@@ -122,9 +151,14 @@ Defines display preference.
     "orientation": ["landscape", "portrait", "any"],
     "maxCpuPct": 90,
     "maxMemMB": 1024
-  }
+  },
+  "permissions": ["camera", "microphone"]
 }
 ```
+
+`display.imageRendering` (`auto` | `pixelated`, added in refVersion 1.2.0) sets how raster images are resampled when scaled: `pixelated` keeps hard pixel edges for pixel art and bitmaps, `auto` lets the player smooth. It is independent of `scaling`, which decides how the artwork fits, and matches `imageRendering` in the playlist item's `display` (core spec §4).
+
+`permissions` (added in refVersion 1.2.0) lists the device capabilities the work needs to run as intended — `camera`, `microphone`. A player that cannot grant one **SHOULD NOT** start the work silently; it **SHOULD** show why the work cannot play.
 
 ## 6. Localization (`i18n`)
 
@@ -236,7 +270,8 @@ Field additions follow [Semantic Versioning 2.0](https://semver.org/):
 
 Players must ignore unknown fields from higher minor versions and continue playback.
 
-* **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`; `id` is documented as producer-scoped; `url` is deprecated in favour of `links` (§4.1). Additive: every 1.0.0 manifest remains valid and a 1.0.0 consumer reads it unchanged. The one cost of the deprecation is that a 1.1.0 producer which follows the SHOULD NOT and omits `url` shows no profile link to a 1.0.0 consumer.
+* **1.2.0** — One **Entity** model for every place DP-1 names someone (§4.2): artist entries gain `key`, `role` and `location`, and the Playlists and Channels extensions use the same model for curators, partners, publishers and note authors, so curators gain `avatar`, `biographies` and `links`. `Link.type` gains `profile`, `publication`, `article`, `event` and `news`, and `Link` gains optional `title`, `date`, `thumbnail` and `authors`. `controls` gains `permissions` and `controls.display` gains `imageRendering` (§5). Additive for manifests: every 1.1.0 manifest remains valid. For the extensions, `key` becomes optional on curators and publishers — a loosening that a validator built for the old shape rejects, so producers relying on keyless entities need consumers on the new schema. The same version adds `metadata.medium` — a `type` from a closed enumeration for filtering and `details[]` for the lines a work's page shows (§4.1) — which is additive and ignorable.
+* **1.1.0** — `metadata.artists[]` gains `addresses`, `avatar`, `biographies` and `links`; `id` is documented as producer-scoped; `url` is deprecated in favour of `links` (§4.2). Additive: every 1.0.0 manifest remains valid and a 1.0.0 consumer reads it unchanged. The one cost of the deprecation is that a 1.1.0 producer which follows the SHOULD NOT and omits `url` shows no profile link to a 1.0.0 consumer.
 
 ---
 

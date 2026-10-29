@@ -10,7 +10,7 @@
       "type": "string",
       "description": "Semantic version of the manifest schema",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "examples": ["0.1.0", "1.0.0"]
+      "examples": ["0.1.0", "1.0.0", "1.2.0"]
     },
     "id": {
       "type": "string",
@@ -66,6 +66,38 @@
           "type": "string",
           "description": "Detailed description of the work (one or two paragraphs)"
         },
+        "medium": {
+          "type": "object",
+          "description": "What the work is made of: a type a catalog can filter on, and the lines its page shows beneath it.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Machine-readable medium type. Omitted where the producer does not know it.",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "software",
+                "3d",
+                "animated-gif",
+                "pdf",
+                "text",
+                "other"
+              ]
+            },
+            "details": {
+              "type": "array",
+              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with colour and sound, dimensions, duration, technique, toolchain.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 8
+            }
+          },
+          "additionalProperties": false
+        },
         "tags": {
           "type": "array",
           "description": "Categorical tags for the work",
@@ -96,24 +128,39 @@
         }
       }
     },
-    "Artist": {
+    "Entity": {
       "type": "object",
-      "description": "Information about an artist. Beyond name, this is a profile snapshot taken when the manifest was authored; consumers MAY overlay fresher registry data keyed by addresses.",
+      "description": "A person or organization named by a DP-1 document: an artist credited on a work, a curator or partner of a playlist or channel, a channel publisher, or the author of a note. One model for every place DP-1 names someone. Beyond name, the fields are a profile snapshot taken when the document was authored; consumers MAY overlay fresher registry data keyed by addresses or key.",
       "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
-          "description": "Artist's name"
+          "description": "Display name. Required but MAY be empty: wallet-based publishers can emit the signing identity with an empty name. Consumers MUST NOT reject a document because a name is empty; display SHOULD fall back to the key."
+        },
+        "key": {
+          "type": "string",
+          "description": "Verifiable identity in DID format. Informational only: signatures carry their own kid, and this field is never used to verify them.",
+          "pattern": "^did:[a-z]+:.+$"
         },
         "id": {
           "type": "string",
-          "description": "Unique identifier for the artist"
+          "description": "Unique identifier for the entity"
         },
         "url": {
           "type": "string",
-          "description": "Legacy single profile URL (refVersion 1.0.0, deprecated). Use links[] instead; when both are present, url MUST equal the url of a links[] entry of type \"website\".",
+          "description": "Legacy single profile URL (deprecated). Use links[] instead; when both are present, url MUST equal the url of a links[] entry of type \"website\" or \"profile\".",
           "format": "uri",
           "deprecated": true
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the entity where its position does not already say it. Omitted, the role follows the position: metadata.artists[] is artist, curators[] is curator, publisher is publisher. A consumer that does not read role treats the entity by its position.",
+          "enum": ["artist", "curator", "partner", "sponsor", "publisher", "other"]
+        },
+        "location": {
+          "type": "string",
+          "description": "Where the person or organization is based, as free text (for example a city and country)",
+          "minLength": 1
         },
         "addresses": {
           "type": "array",
@@ -143,6 +190,10 @@
         }
       }
     },
+    "Artist": {
+      "$ref": "#/$defs/Entity",
+      "description": "An artist credited on the work. Same model as every other Entity; the name is kept so existing references resolve."
+    },
     "Biography": {
       "type": "object",
       "description": "One biographical text with optional attribution",
@@ -166,18 +217,39 @@
     },
     "Link": {
       "type": "object",
-      "description": "External profile link",
+      "description": "External link, from an entity's profile or from a playlist",
       "required": ["type", "url"],
       "properties": {
         "type": {
           "type": "string",
-          "description": "Kind of destination",
-          "enum": ["website", "twitter", "instagram", "other"]
+          "description": "Kind of destination. profile: the producer's own page about this entity. publication: writing by or about the entity. article, event, news: editorial content about a playlist.",
+          "enum": ["website", "twitter", "instagram", "profile", "publication", "article", "event", "news", "other"]
         },
         "url": {
           "type": "string",
           "description": "Full URL, never a bare handle, so players need no per-network URL rules",
           "format": "uri"
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable label for the destination, such as a publication or article title",
+          "minLength": 1
+        },
+        "date": {
+          "type": "string",
+          "description": "RFC3339 timestamp the linked content refers to, such as when an article was published or when an event starts",
+          "format": "date-time"
+        },
+        "thumbnail": {
+          "$ref": "#/$defs/Thumbnail",
+          "description": "Representative image for the destination: an article's cover, a video's still, a publication's jacket. The same Thumbnail shape used everywhere else in DP-1, so a consumer that already renders one needs no new code."
+        },
+        "authors": {
+          "type": "array",
+          "description": "Who wrote or presented the linked content, credited the way metadata.artists[] credits a work. A producer that holds one joined credit line emits a single entry carrying it, as it would for a collaboration.",
+          "items": {
+            "$ref": "#/$defs/Entity"
+          }
         }
       }
     },
@@ -210,13 +282,22 @@
     },
     "Controls": {
       "type": "object",
-      "description": "Display preferences and safety constraints",
+      "description": "Display preferences, safety constraints and device permissions",
       "properties": {
         "display": {
           "$ref": "#/$defs/DisplayControls"
         },
         "safety": {
           "$ref": "#/$defs/SafetyControls"
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Device capabilities the work needs to run as intended. A player that cannot grant one SHOULD NOT start the work silently; it SHOULD show why the work cannot play.",
+          "items": {
+            "type": "string",
+            "enum": ["camera", "microphone"]
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -265,6 +346,11 @@
           "type": "boolean",
           "description": "Repeat automatically",
           "default": false
+        },
+        "imageRendering": {
+          "type": "string",
+          "description": "How raster images are resampled when scaled. \"pixelated\" keeps hard pixel edges (nearest-neighbour), for pixel art and bitmaps; \"auto\" lets the player smooth. Independent of scaling, which decides how the artwork fits",
+          "enum": ["auto", "pixelated"]
         },
         "interaction": {
           "type": "object",

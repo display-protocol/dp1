@@ -40,8 +40,8 @@ These extensions enable playlists to transition from static collections to live,
 | **Resolution Profile** | Versioned interface contract defining request/response format (e.g., `graphql-v1`, `https-json-v1`). |
 | **Template Variable** | Placeholder in query configuration that gets hydrated with runtime data (e.g., `{{viewer_address}}`). |
 | **Indexer** | External service providing blockchain data or content discovery via standardized query interfaces. |
-| **Entity Format** | Unified structure for representing people or organizations with verifiable identities. |
-| **Note** | Optional intermission object (`text`, optional `duration`). Experimental; may be removed or changed in a later version. |
+| **Entity Format** | The one DP-1 structure for a person or organization — artists, curators, partners, publishers, note authors. Defined in the core Ref Manifest (refVersion 1.2.0, §4.2). |
+| **Note** | Optional intermission object (`text`, optional `duration`, `title`, `author`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
 | **Display locale** | The local timezone and clock of the display that presents the playlist; authority for timezone-less `displayAt` values (not the casting client). |
@@ -101,14 +101,18 @@ These extensions enable playlists to transition from static collections to live,
 | `summary` | string | OPTIONAL | Playlist description (1-2000 characters). |
 | `coverImage` | string (URI) | OPTIONAL | Playlist cover image. Supports `ipfs://`, `https://`, `ar://` URIs. |
 | `note` | object | OPTIONAL | Intermission card shown **before the playlist begins**. See §3.4. **Experimental.** |
+| `openAt` | string (ISO 8601 subset) | OPTIONAL | When this playlist's own subject became public — an exhibition's opening, a collection's release. Same wire shape as item-level `displayAt` (§3.5.2: local datetime or absolute `date-time`, date-only rejected), **not** the same mechanism: `openAt` sets no eligibility and starts no timer, it is a fact for ordering and display. See the note after this table. |
+| `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (same type enum as everywhere else `Link` is used — `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other` — plus `url` and optional `title`, `date`, `thumbnail`, `authors`). References only: the content stays at the URL — but the card a consumer draws travels with the entry. See §3.3.1. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 | `visibility` | string | OPTIONAL | Whether directories may list the playlist: `public` (default when absent) or `unlisted`. See §3.7. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
+**`openAt` is not displayAt Scheduling.** §3.5 is an item-level mechanism: it activates only when the current playlist's item list contains at least one item with a `displayAt`, and it governs which items are eligible to play right now. A playlist's own `openAt` sits one level up and means something simpler — the real-world date the playlist's subject became public — and participates in none of that: it triggers no activation, gates no item, starts no timer. The two fields share a wire shape (`$defs/DisplayAt`: local or absolute datetime, date-only rejected) because they are both dates DP-1 needs to parse the same way, not because they are the same mechanism. A consumer that implements §3.5 and sees a playlist-level `openAt` **MUST NOT** treat it as a scheduling input.
+
 ### 3.3 Entity Format (Curators)
 
-This extension uses the same unified entity shape as the Channel Extension.
+This extension uses the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.2) — the same model the Channel Extension uses for curators and publishers and the Ref Manifest uses for `metadata.artists[]`. A curator therefore carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -116,7 +120,10 @@ This extension uses the same unified entity shape as the Channel Extension.
 {
   "name": "Curator Name",
   "key": "did:key:z6Mk...",
-  "url": "https://curator.example.com"
+  "location": "City, Country",
+  "avatar": { "uri": "https://curator.example.com/avatar.jpg" },
+  "biographies": [ { "text": "One paragraph..." } ],
+  "links": [ { "type": "profile", "url": "https://curator.example.com" } ]
 }
 ```
 
@@ -125,10 +132,12 @@ This extension uses the same unified entity shape as the Channel Extension.
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
-| `key` | string | **REQUIRED** | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). |
-| `url` | string | OPTIONAL | Entity website or profile URL. |
+| `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only — signatures carry their own `kid`. |
+| `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted in `curators[]`, the entity is a curator; a partner presenting the show is listed in `curators[]` with `role: "partner"`. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.2. |
+| `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
-In the Playlist Extension, this entity shape is currently used by `curators[]`.
+In the Playlist Extension, this entity shape is used by `curators[]` and by `note.author` (§3.4).
 
 **Example:**
 
@@ -142,7 +151,27 @@ In the Playlist Extension, this entity shape is currently used by `curators[]`.
   {
     "name": "Bob Collaborator",
     "key": "did:key:z6Mkf5rG..."
+  },
+  {
+    "name": "Example Art Museum",
+    "role": "partner",
+    "links": [ { "type": "website", "url": "https://museum.example.org" } ]
   }
+]
+```
+
+#### 3.3.1 Links
+
+`links` lists editorial content about the playlist — a curatorial essay, an opening event, an announcement — as Ref Manifest `Link` objects, in the order a consumer shows them. `title` labels the entry and `date` (RFC 3339 date-time) dates it — when an article was published, when an event starts. `thumbnail` is the image the entry is shown with, in the same `Thumbnail` shape as everywhere else in DP-1 (`uri`, optional `w`, `h`, `sha256`); its `w` and `h` let a consumer reserve the space before the image loads. `authors` credits who wrote or presented the content, as Entity entries. The content itself stays at `url`; a playlist carries references, not the text.
+
+The split is between the card and the content. A consumer renders the card — image, title, date, byline — and it has nothing to fall back on if a field is missing: `url` is a page to fetch and parse, which a player is not expected to do. So a producer that holds a cover or a byline **SHOULD** emit `thumbnail` and `authors`; one that holds neither omits them, and the consumer renders what is there rather than guessing. The text behind the link is never carried: that is the line `links[]` does not cross.
+
+`type` is the one `Link.type` enum defined once in the core Ref Manifest schema (`$defs/Link`) and used unchanged everywhere a `Link` appears — artist and curator profiles, playlist `links`. It is not narrowed at the playlist level, so the same nine values (`website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other`) are valid here too; `article`, `event` and `news` are the ones a playlist's own editorial content is expected to use, but a producer MAY reuse `website`/`profile`/`publication` etc. when that is the better fit (for example, crediting a presenting institution's own site in the same list), and consumers MUST accept any of the nine.
+
+```json
+"links": [
+  { "type": "article", "url": "https://example.com/journal/essay", "title": "Curatorial essay", "date": "2026-10-01T00:00:00Z" },
+  { "type": "event", "url": "https://example.com/events/opening", "title": "Opening night", "date": "2026-10-10T19:00:00-04:00" }
 ]
 ```
 
@@ -158,6 +187,8 @@ The **`note`** object is an **optional** intermission card: short, **artist-auth
 |:------|:-----|:---------|:------------|
 | `text` | string | **REQUIRED** | Body copy for the intermission (1–500 characters). |
 | `duration` | number (seconds) | OPTIONAL | How long the intermission page stays visible **before** the player continues. **Default: 20** when omitted. **MUST** be greater than zero when present. |
+| `title` | string | OPTIONAL | Heading shown above `text` (1–200 characters). |
+| `author` | object | OPTIONAL | Who wrote the text, as an Entity (§3.3). Omitted, the note is the curators' own. |
 
 **Playlist-level `note`:** When present, players **SHOULD** render a **dedicated intermission page** (full-screen or player-defined “card”) **before** starting playback of the playlist body (including before the first static or dynamic item), for the effective duration.
 
@@ -954,6 +985,17 @@ Current version: **0.2.0**
 
 ## 11 · Changelog
 
+### Amendment (2026-10-29) — Entity, links, note title and author, openAt
+
+- `$defs/Entity` now references the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`), so a curator, partner or note author carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`, with `url` deprecated in favour of a `links` entry. The channels extension references the same definition, so the two cannot drift.
+- `key` is no longer required on a curator. It is informational only, and a partner organization that has no DID is named by `name` and `links` instead of a placeholder.
+- Documented optional playlist-level **`links[]`** (§3.3.1): editorial content about the playlist — articles, events, news — in the order to show it. References only; the content stays at the URL. Each entry is the core `$defs/Link`, which gains `profile`, `publication`, `article`, `event` and `news` types and optional `title`, `date`, `thumbnail` and `authors`, so a consumer draws a card from the entry alone without fetching the page behind it.
+- Documented optional playlist-level **`openAt`** (§3.4): when the playlist's own subject became public, such as an exhibition's opening. It reuses `$defs/DisplayAt`'s wire shape for one date format, but it is **not** part of §3.5 displayAt Scheduling: it sets no eligibility, starts no timer and causes no activation. It is distinct from `created`, which is the document's issuance time and churns on re-export.
+- `note` gains optional **`title`** (1–200 characters) and **`author`** (an Entity). Omitting `author` means the note is the curators' own.
+- Additive for documents, following the Note, Inline Manifest and Visibility precedent (see §8.1): every playlist valid before this amendment stays valid, and none of the new fields asks a conforming player to do anything it did not do before. Two costs land on consumers rather than producers. A validator built on the previous shape rejects a playlist that uses a keyless curator or a new `Link.type` — the price of the loosening. And `schema.json` has referenced the core Ref Manifest since v0.2.0, but now does so for `Entity` and `Link` as well, so a validator must resolve `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json` to compile it.
+- JSON: `extensions/playlists/schema.json` (`openAt`, `links`, `note.title`, `note.author`, `$defs/Entity`) and `extensions/playlists/bundles/playlist-core-v1.1.0.json` (mirrors the core edits). Examples: `examples/exhibition-with-curators-note-and-links.json`, `examples/items/item-with-entity-links-and-permissions.json`, `examples/items/item-with-medium.json`, and eight single-field mutations under `examples/items/rejected/`.
+- No `$id` changed, and the extension remains **v0.2.0** (draft).
+
 ### Amendment (2026-10-28) — visibility
 
 - Documented optional playlist-level **`visibility`** (§3.7): `public` (the default when absent) or `unlisted`. Directories that implement §3.7 leave an unlisted playlist out of every listing; it stays reachable by its address. It is a listing request inside the signed bytes, not access control: a directory built before this amendment may still list it.
@@ -1014,8 +1056,8 @@ Current version: **0.2.0**
 - Graceful fallback on failures (screen never goes dark)
 
 **Entity Format:**
-- Unified curator format: `name` (required), `key` (required), `url` (optional)
-- DID-based verifiable identities
+- One Entity model for curators, partners, publishers, note authors and artists, defined in the core Ref Manifest (refVersion 1.2.0): `name` (required); `key`, `role`, `location`, `avatar`, `biographies`, `links` (optional)
+- DID-based identities when the entity has one; `key` is informational only
 
 **Player Requirements:**
 - Immediate rendering of static content
@@ -1068,13 +1110,13 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
     "curators": {
       "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "key"],
-        "properties": {
-          "name": { "type": "string" },
-          "key": { "type": "string" },
-          "url": { "type": "string", "format": "uri" }
-        }
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Link"
       }
     },
     "summary": {
@@ -1167,6 +1209,14 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
           "type": "number",
           "default": 20,
           "exclusiveMinimum": 0
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "author": {
+          "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
         }
       }
     }
