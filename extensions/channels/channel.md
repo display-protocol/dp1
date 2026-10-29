@@ -579,7 +579,6 @@ Additive and loosening for documents: every channel valid under v1.0.0 stays val
 
 **Normative clarification (2026-05-20):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` (§5.2). This requirement is specified in prose and is **not** enforced by `schema.json`.
 
-
 **Core Features:**
 - Self-contained channel schema (ordered playlist URLs + attribution)
 - Unified entity format for curators and publisher (`name`, `key`, optional `url`)
