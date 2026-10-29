@@ -1,11 +1,11 @@
-# DP-1 Channel Extension (v1.0.0)
+# DP-1 Channel Extension (v1.1.0)
 
 *A formal extension to DP-1 v1.0.0+ for collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities.*
 
-**Specification version:** 1.0.0  
+**Specification version:** 1.1.0  
 **Status:** Released Extension  
 **DP-1 compatibility:** v1.0.0+  
-**Published:** 2026-03-11
+**Published:** 2026-10-29
 
 ---
 
@@ -518,7 +518,7 @@ Channel extension follows SemVer:
 - **Minor:** Additive features, backward-compatible
 - **Patch:** Bug fixes, clarifications, editorial changes
 
-Current version: **1.0.0**
+Current version: **1.1.0**
 
 ### 10.2 Proposed Future Features
 
@@ -528,7 +528,7 @@ Current version: **1.0.0**
 - Enhanced analytics/tracking fields
 - Playlist ordering strategies (shuffle, personalized)
 
-**Potential v1.1.0 changes:**
+**Potential v1.2.0 changes:**
 - Production-ready status after community feedback
 - Finalized compliance badge requirements
 - Reference implementation validation
@@ -565,13 +565,20 @@ Current version: **1.0.0**
 
 ## 13 · Changelog
 
+### v1.1.0 (2026-10-29)
+
+**One Entity model for curators, partners and publishers.** `curators[]` and `publisher` now reference the **Entity** model defined once in the core Ref Manifest schema (§3.3), so a curator, partner or publisher carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`. `key` relaxes from **MUST** to **SHOULD** (§5.3), so a partner organization that has no DID can still be named.
+
+Additive and loosening for documents: every channel valid under v1.0.0 stays valid, and a document that uses none of the new fields may keep declaring `"version": "1.0.0"`. Two costs for consumers — a validator built on the v1.0.0 shape rejects a channel with a keyless entity, and `schema.json` is no longer self-contained, so compiling it requires resolving `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json`.
+
+**Why the version moved.** v1.0.0 was self-contained: resolving its `$id` fully determined what a channel document had to satisfy. Referencing the core Ref Manifest changes that permanently — the core schema is edited in place under an unchanged `$id`, so every later additive edit to its `Entity`, `Link` or `Thumbnail` definitions would also change what validates under this extension's identifier, with nothing here to signal it. A released `$id` has to keep denoting stable content, so the live `$ref` is adopted under a new version and `$id` (`.../extensions/channels/v1.1.0/schema.json`) rather than grafted onto the published one. v1.0.0's content stands as published.
+
 ### v1.0.0 (2026-03-11)
 
 **Initial stable release of Channel Extension.**
 
 **Normative clarification (2026-05-20):** Conforming players **MUST** verify at least one signature with role `feed` and at least one with role `publisher` (§5.2). This requirement is specified in prose and is **not** enforced by `schema.json`.
 
-**Entity model amendment (2026-10-29):** `curators[]` and `publisher` now reference the **Entity** model defined once in the core Ref Manifest schema (§3.3), so a curator, partner or publisher carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`. `key` relaxes from **MUST** to **SHOULD** (§5.3), so a partner organization that has no DID can still be named. Additive and loosening for documents: every channel valid before this amendment stays valid. Two costs for consumers — a validator built on the previous shape rejects a channel with a keyless entity, and `schema.json` is no longer self-contained, so compiling it requires resolving `https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json`. The extension remains **v1.0.0** with its `$id` unchanged, per §10.1 and the 2026-05-20 precedent.
 
 **Core Features:**
 - Self-contained channel schema (ordered playlist URLs + attribution)

@@ -7,17 +7,17 @@
     {
       "id": "channels",
       "name": "Channel Extension",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "released",
       "description": "Collaborative, persistent feeds of playlists with enhanced metadata and curation capabilities. Adds multi-curator support, publisher attribution, verifiable identities, and multi-signature roles including publisher. Conforming players verify feed and publisher signatures per the extension spec (rules are documented in prose, not enforced by the JSON Schema). Curators and publisher use the one DP-1 Entity model, defined in the core Ref Manifest schema and shared with the Playlist Extension and metadata.artists[].",
       "compatibility": {
         "dpVersion": "1.0.0+",
         "extends": "playlist"
       },
-      "published": "2026-03-11T00:00:00Z",
+      "published": "2026-10-29T00:00:00Z",
       "resources": {
-        "specification": "https://dp1.feralfile.com/extensions/channels/v1.0.0/channel.md",
-        "schema": "https://dp1.feralfile.com/extensions/channels/v1.0.0/schema.json",
+        "specification": "https://dp1.feralfile.com/extensions/channels/v1.1.0/channel.md",
+        "schema": "https://dp1.feralfile.com/extensions/channels/v1.1.0/schema.json",
         "repository": "https://github.com/display-protocol/dp1/tree/main/extensions/channels"
       },
       "features": [
