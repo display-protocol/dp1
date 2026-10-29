@@ -139,7 +139,7 @@ A channel is an ordered list of playlist URLs plus attribution metadata. All fie
 
 ### 3.3 Entity Format (Curators & Publisher)
 
-Both `curators` and `publisher` use the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.1). It is the same model the Playlist Extension uses for curators and note authors and the Ref Manifest uses for `metadata.artists[]`, so a curator or publisher carries the same profile fields as an artist.
+Both `curators` and `publisher` use the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.2). It is the same model the Playlist Extension uses for curators and note authors and the Ref Manifest uses for `metadata.artists[]`, so a curator or publisher carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -159,7 +159,7 @@ Both `curators` and `publisher` use the **Entity** model defined once in the cor
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
 | `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only (§5.3). |
 | `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted, the role follows the position: `curators[]` is curator, `publisher` is publisher. A partner presenting the channel is listed in `curators[]` with `role: "partner"`. |
-| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.1. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.2. |
 | `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
 **Curators:**

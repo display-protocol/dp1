@@ -40,7 +40,7 @@ These extensions enable playlists to transition from static collections to live,
 | **Resolution Profile** | Versioned interface contract defining request/response format (e.g., `graphql-v1`, `https-json-v1`). |
 | **Template Variable** | Placeholder in query configuration that gets hydrated with runtime data (e.g., `{{viewer_address}}`). |
 | **Indexer** | External service providing blockchain data or content discovery via standardized query interfaces. |
-| **Entity Format** | The one DP-1 structure for a person or organization — artists, curators, partners, publishers, note authors. Defined in the core Ref Manifest (refVersion 1.2.0, §4.1). |
+| **Entity Format** | The one DP-1 structure for a person or organization — artists, curators, partners, publishers, note authors. Defined in the core Ref Manifest (refVersion 1.2.0, §4.2). |
 | **Note** | Optional intermission object (`text`, optional `duration`, `title`, `author`). Experimental; may be removed or changed in a later version. |
 | **Intermission** | A dedicated player screen or page that shows the note before the playlist starts or before an individual item loads. |
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
@@ -112,7 +112,7 @@ Playlist items **MAY** include an optional `note` field with the same object sha
 
 ### 3.3 Entity Format (Curators)
 
-This extension uses the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.1) — the same model the Channel Extension uses for curators and publishers and the Ref Manifest uses for `metadata.artists[]`. A curator therefore carries the same profile fields as an artist.
+This extension uses the **Entity** model defined once in the core Ref Manifest schema (`schemas/ref-manifest.json`, `$defs/Entity`; prose in Ref Manifest §4.2) — the same model the Channel Extension uses for curators and publishers and the Ref Manifest uses for `metadata.artists[]`. A curator therefore carries the same profile fields as an artist.
 
 **Entity Object:**
 
@@ -134,7 +134,7 @@ This extension uses the **Entity** model defined once in the core Ref Manifest s
 | `name` | string | **REQUIRED** | Entity display name. MAY be empty (wallet-based publishers can emit the signing identity unnamed); consumers MUST NOT reject a document over an empty name and SHOULD fall back to displaying `key`. |
 | `key` | string | OPTIONAL | Verifiable identity in DID format (e.g., `did:key:z6Mk...`). Informational only — signatures carry their own `kid`. |
 | `role` | string | OPTIONAL | `artist`, `curator`, `partner`, `sponsor`, `publisher` or `other`. Omitted in `curators[]`, the entity is a curator; a partner presenting the show is listed in `curators[]` with `role: "partner"`. |
-| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.1. |
+| `id`, `addresses`, `avatar`, `biographies`, `links`, `location` | — | OPTIONAL | As in Ref Manifest §4.2. |
 | `url` | string | OPTIONAL | **Deprecated.** Single profile URL; write a `links` entry of type `profile` or `website` instead. |
 
 In the Playlist Extension, this entity shape is used by `curators[]` and by `note.author` (§3.4).
