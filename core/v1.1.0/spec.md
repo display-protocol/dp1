@@ -425,9 +425,13 @@ GET /api/v1/playlists?chain=tezos&type=code&limit=50
 
 Returns array of playlist summaries.
 
+A directory that implements Playlist Extension §3.7 leaves out every playlist its owner marked `"visibility": "unlisted"`. It lists a playlist only when `visibility` is absent or exactly `public`, so a value it does not recognize keeps the playlist out. An unlisted playlist is still served by its own address.
+
 ---
 
 ## 16 · Changelog
+
+* **Editorial (2026-10-28)** §15 Directory API: directories leave out playlists marked `"visibility": "unlisted"` (Playlist Extension §3.7), and list a playlist only when `visibility` is absent or exactly `public`. No schema change; the field is defined by the Playlist Extension.
 
 * **Editorial (2026-10-20)** Display and identity fields that producers already hold but could not express:
   * `display.imageRendering` (`auto` | `pixelated`) on `DisplayPrefs` (§4) and on the Ref Manifest's `controls.display`, for pixel art that must keep hard edges when scaled.

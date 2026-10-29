@@ -1,0 +1,31 @@
+{
+  "dpVersion": "1.1.0",
+  "id": "6f1c2b8e-4d3a-4f6e-9b1a-2c7d8e9f0a1b",
+  "slug": "for-a-friend-6f1c2b8e",
+  "title": "For a Friend",
+  "created": "2026-10-28T00:00:00Z",
+  "visibility": "unlisted",
+  "curators": [
+    {
+      "name": "Example Curator",
+      "key": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+    }
+  ],
+  "items": [
+    {
+      "id": "0b5e8f2a-7c1d-4e3b-a9f6-5d2c8b1e4a70",
+      "title": "Pre-Process",
+      "source": "https://cdn.example.com/pre-process.html"
+    }
+  ],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "ts": "2026-10-28T00:00:00Z",
+      "payload_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "role": "curator",
+      "sig": "example-signature-bytes-not-for-production-use-only"
+    }
+  ]
+}

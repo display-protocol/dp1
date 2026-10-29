@@ -6,7 +6,7 @@
 **Status:** Draft Extension  
 **DP-1 compatibility:** v1.0.0+  
 **Published:** 2026-03-11  
-**Updated:** 2026-08-13
+**Updated:** 2026-10-28
 
 ---
 
@@ -19,6 +19,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 3. **Note (experimental)**: Optional intermission card with short artist-authored text, shown before the playlist or before an item
 4. **displayAt Scheduling**: Optional time-based filtering so conforming implementations play only items that are eligible at a given time (for example, Daily-style one artwork per day)
 5. **Inline Manifest**: Optional inline carriage of the standardized Ref Manifest on a `PlaylistItem`, for playlists with nowhere to host a `ref`
+6. **Visibility**: Optional signed request that directories leave a playlist out of their listings, for playlists shared by address only
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -45,6 +46,8 @@ These extensions enable playlists to transition from static collections to live,
 | **displayAt** | Optional ISO 8601 datetime on a playlist item indicating when that item becomes eligible for playback. When present on any item in the list, displayAt scheduling (§3.5) activates automatically. |
 | **Display locale** | The local timezone and clock of the display that presents the playlist; authority for timezone-less `displayAt` values (not the casting client). |
 | **Inline Manifest** | A complete DP-1 Ref Manifest document carried directly on a `PlaylistItem` as `inlineManifest`, instead of behind a `ref` URL. Same schema, same validation. |
+| **Visibility** | Optional playlist-level string saying whether directories may list the playlist: `public` (the default) or `unlisted`. A listing request, not access control. |
+| **Directory** | Any endpoint that enumerates playlists the client did not name: a feed's playlist list (core §15), a list filtered by curator, an item list that spans playlists, search, a sitemap. Fetching one playlist by its address is not a directory. |
 
 ---
 
@@ -101,6 +104,7 @@ These extensions enable playlists to transition from static collections to live,
 | `openAt` | string (ISO 8601 subset) | OPTIONAL | When this playlist's own subject became public — an exhibition's opening, a collection's release. Same wire shape as item-level `displayAt` (§3.5.2: local datetime or absolute `date-time`, date-only rejected), **not** the same mechanism: `openAt` sets no eligibility and starts no timer, it is a fact for ordering and display. See the note after this table. |
 | `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (same type enum as everywhere else `Link` is used — `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other` — plus `url` and optional `title`, `date`, `thumbnail`, `authors`). References only: the content stays at the URL — but the card a consumer draws travels with the entry. See §3.3.1. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
+| `visibility` | string | OPTIONAL | Whether directories may list the playlist: `public` (default when absent) or `unlisted`. See §3.7. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
@@ -434,6 +438,46 @@ defaults → inlineManifest → ref → item.local
   }
 }
 ```
+
+---
+
+### 3.7 Visibility
+
+A playlist **MAY** carry an optional top-level `visibility` string. It says whether the playlist's owner wants it found through directories, or only by people who already have its address. The typical case is a playlist someone made and sent to a few people by link.
+
+| Value | Meaning |
+|:------|:--------|
+| `public` | Directories **MAY** list the playlist. Same as omitting the field. |
+| `unlisted` | Directories that implement this section **MUST** leave the playlist out of every listing. |
+
+Excerpt (signatures omitted):
+
+```json
+{
+  "dpVersion": "1.1.0",
+  "id": "6f1c2b8e-4d3a-4f6e-9b1a-2c7d8e9f0a1b",
+  "slug": "for-a-friend-6f1c2b8e",
+  "title": "For a Friend",
+  "created": "2026-10-28T00:00:00Z",
+  "visibility": "unlisted",
+  "items": [
+    {
+      "id": "0b5e8f2a-7c1d-4e3b-a9f6-5d2c8b1e4a70",
+      "title": "Pre-Process",
+      "source": "https://cdn.example.com/pre-process.html"
+    }
+  ]
+}
+```
+
+**Rules:**
+
+- **Signed intent.** `visibility` is part of the signed document (DP-1 §7.1), so only a signer can set it, and changing it is a re-signed replacement like any other edit. A feed **MUST NOT** add, drop or rewrite it.
+- **Not access control.** An unlisted playlist is still served to anyone who requests its address, and anyone who has the address can pass it on. A directory built before this section may still list it, and a container that names it publishes its address (see **Containers**). An author who needs secrecy should not put the playlist on a public feed. Because the address is the main protection, producers **SHOULD** give unlisted playlists ids that cannot be guessed, such as a random (version 4) UUID.
+- **Directories.** A directory **MUST** include a playlist only when `visibility` is absent or exactly `public`. Any other value, including one a later version defines, **MUST** be treated as `unlisted`: a directory that does not understand the request fails closed. Non-string values are invalid.
+- **Containers.** A channel or playlist-group that references an unlisted playlist names it in the container's own signed document. Listing that container's members (for example a feed's playlist list filtered by channel) **MAY** therefore include the unlisted playlist: the container's author chose to name it.
+- **Aliases.** A feed **SHOULD NOT** resolve an unlisted playlist through any alias that is easier to guess than its id, such as a `slug` derived from the title. It **MAY** still hold the alias for uniqueness.
+- **Playback.** Visibility has no effect on playback. Players play an unlisted playlist exactly as they play a public one.
 
 ---
 
@@ -836,6 +880,7 @@ type ContractInfo {
 - Parse all extended playlist fields (catalog UIs **MAY** display them)
 - Verify playlist signatures per DP-1 §7.1 on the full catalog document before eligibility filtering when displayAt scheduling is active (§3.5.1)
 - Handle missing optional fields gracefully
+- Feeds and other directories **MUST** apply §3.7 to every listing they serve
 - Any implementation that accepts playlists with item-level `displayAt` for scheduled playback **MUST** implement eligibility, transitions, and start-item selection per §3.5. Catalog-only clients that never perform playback **MAY** omit filtering and **MUST NOT** claim scheduled-playback compliance.
 - Pass reference test suite (10+ sample playlists)
 
@@ -894,6 +939,8 @@ Playlist extension follows SemVer:
 
 Current version: **0.2.0**
 
+**Draft amendments.** While the extension is a draft, an optional field that adds no required player behavior may be added as a dated amendment, without a version bump or `$id` change, and is recorded in the changelog (§11). Note, Inline Manifest and Visibility were added this way. A field that changes what conforming players must do (as displayAt scheduling did) takes a minor bump.
+
 ### 8.2 Proposed Future Features
 
 **Potential v0.3.0 additions:**
@@ -937,6 +984,14 @@ Current version: **0.2.0**
 ---
 
 ## 11 · Changelog
+
+### Amendment (2026-10-28) — visibility
+
+- Documented optional playlist-level **`visibility`** (§3.7): `public` (the default when absent) or `unlisted`. Directories that implement §3.7 leave an unlisted playlist out of every listing; it stays reachable by its address. It is a listing request inside the signed bytes, not access control: a directory built before this amendment may still list it.
+- Directories fail closed: they list a playlist only when `visibility` is absent or exactly `public`, so a value they do not recognize keeps the playlist out. Container listings (a channel's or group's members) may include an unlisted playlist the container names. Feeds should not resolve an unlisted playlist by a guessable alias such as its slug.
+- The schema accepts any string, following the content-rating extension's open vocabulary, so a value defined later cannot make an older validator refuse the whole document.
+- JSON: `extensions/playlists/schema.json` (top-level `visibility`); example: `extensions/playlists/examples/unlisted-playlist.json`. Canonical core `playlist.json` is unchanged.
+- Additive, following the Note and Inline Manifest precedent (see §8.1): a document without `visibility`, or with a string `visibility`, validates exactly as before. A non-string `visibility`, which the previous schema did not check, is now invalid. No `$id` changed, and the extension remains **v0.2.0** (draft).
 
 ### Amendment (2026-08-13) — single-item schema covers inlineManifest
 
@@ -1061,6 +1116,10 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
     "coverImage": {
       "type": "string",
       "format": "uri"
+    },
+    "visibility": {
+      "type": "string",
+      "description": "Whether directories may list the playlist (§3.7). Values defined: public (default when absent), unlisted. Directories treat any other value as unlisted."
     },
     "dynamicQuery": {
       "type": "object",
