@@ -155,6 +155,8 @@ Transitions between items are implementation-defined.
 
 Players **MUST** compute the first‑frame SHA‑256; discrepancy triggers `reproMismatch`. If an artwork requires a derived seed, the logic **MUST** be contained within the artwork payload; DP-1 does not standardize seedScript execution at this time.
 
+`frameHash.phash` is **OPTIONAL**. When present it is the first frame's 64-bit DCT perceptual hash: the frame scaled to 64×64 pixels with bilinear interpolation, converted to luma (0.299 R + 0.587 G + 0.114 B), transformed by an unscaled two-dimensional DCT-II, and the top-left 8×8 coefficients read row by row; bit 63 − *i* is set when coefficient *i* is greater than the 33rd smallest of the 64. It is written as `0x` and 16 lowercase hex digits, zero-padded. Two pHashes are compared by Hamming distance (0 = identical, 64 = every bit differs); thresholds are implementation-defined. The reference implementation is `PerceptionHash` in [corona10/goimagehash](https://github.com/corona10/goimagehash) v1.1.0; where this description leaves a detail open, it decides.
+
 ---
 
 ## 6 · Provenance (`provenance`)
@@ -430,6 +432,8 @@ A directory that implements Playlist Extension §3.7 leaves out every playlist i
 ---
 
 ## 16 · Changelog
+
+* **Tightening (2026-10-30)** §5 pins `frameHash.phash`: a 64-bit DCT perceptual hash, written as `0x` and 16 hex digits, compared by Hamming distance. The schema pattern was `^0x[a-f0-9]+$`, any length and no algorithm, so two conforming producers could emit hashes that cannot be compared. Unlike the entries below, this one invalidates documents that validated before: a `phash` of any other length.
 
 * **Editorial (2026-10-28)** §15 Directory API: directories leave out playlists marked `"visibility": "unlisted"` (Playlist Extension §3.7), and list a playlist only when `visibility` is absent or exactly `public`. No schema change; the field is defined by the Playlist Extension.
 
