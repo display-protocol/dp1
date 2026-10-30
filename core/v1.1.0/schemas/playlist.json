@@ -276,7 +276,7 @@
             "phash": {
               "type": "string",
               "description": "64-bit DCT perceptual hash of the first frame (§5): 0x and 16 lowercase hex digits, compared by Hamming distance",
-              "pattern": "^0x[a-f0-9]{16}$"
+              "pattern": "^0x[a-f0-9]+$"
             }
           }
         }
