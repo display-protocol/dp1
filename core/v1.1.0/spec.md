@@ -117,14 +117,14 @@ See [document](ref-manifest.md)
 -  **number** → pixels (CSS‑px, device‑independent)
 -  **string** → `%(vw\|vh)` units (`"5%"`, `"3vw"`, `"2vh"`) Players **MUST** support px, %, vw, vh and **MUST** reject unknown units.
 
-| Field                   | Type             | Default    | Behaviour                                                                                                                                                                    |
+| Field                   | Type             | Default    | Behavior                                                                                                                                                                     |
 | :---------------------- | :--------------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scaling`               | "fit" \| "fill" \| "stretch" \| "auto" | from defaults or "fit" | fit: entire artwork visible with letterbox; fill: fill viewport cropping if needed; stretch: fill both axes ignoring aspect; auto: player decides based on device/profile. |
 | `margin`                | number or string | 0          | Even margin around artwork. Number = px; string supports %, vw, vh (computed relative to viewport).                                                                          |
 | `background`            | string           | "\#000000" | Hex/RGB color used outside the artwork and beneath any transparent pixels. Special value "transparent" lets the underlying screen show through.                              |
 | `autoplay`              | bool             | true       | Attempt to start playback automatically. Player MUST fall back to waiting for a first user gesture when the runtime blocks WebAudio/video autoplay (e.g., browser policies). |
 | `loop`                  | bool             | true       | When `true`, time-based sources (video, audio) repeat continuously. When `false`, players **MUST** advance to the next playlist item at end-of-stream (see §4.1). Has no effect on non-time-based sources. |
-| `imageRendering`        | "auto" \| "pixelated" | "auto"   | How raster images are resampled when scaled. `pixelated` keeps hard pixel edges (nearest-neighbour) for pixel art and bitmaps; `auto` lets the player smooth. Independent of `scaling`, which decides how the artwork fits. |
+| `imageRendering`        | "auto" \| "pixelated" | "auto"   | How raster images are resampled when scaled. `pixelated` keeps hard pixel edges (nearest-neighbor) for pixel art and bitmaps; `auto` lets the player smooth. Independent of `scaling`, which decides how the artwork fits. |
 | `interaction.keyboard`  | string\[\]       | \[\]       | Allowed keys, using [W3C UI Events code values](https://www.w3.org/TR/uievents-code/) (e.g., `"ArrowLeft"`, `"Space"`, `"KeyW"`). Players MUST ignore unknown codes.         |
 | `interaction.mouse`     | object           | all false  | `{click, scroll, drag, hover}` booleans.                                                                                                                                     |
 | `userOverrides.<field>` | bool             | true       | Viewer may change field if true.                                                                                                                                             |
@@ -338,7 +338,7 @@ Legacy signature verification:
 
 ### 7.2 License Modes
 
-| Mode           | Behaviour                                            |
+| Mode           | Behavior                                             |
 | :------------- | :--------------------------------------------------- |
 | `open`         | No viewer auth.                                      |
 | `token`        | Wallet proof (EIP‑4361, Tezos Signed Payload, etc.). |
@@ -435,7 +435,7 @@ A directory that implements Playlist Extension §3.7 leaves out every playlist i
 
 ## 16 · Changelog
 
-* **Editorial (2026-10-30)** Ref Manifest `$defs/Entity`: the `addresses` and `avatar` descriptions speak of the entity, not the artist. Entity names curators, partners, publishers and note authors as well as artists, and a producer could read the old wording as limiting `addresses` to artists. Descriptions only; no validation changes.
+* **Editorial (2026-10-30)** Ref Manifest `$defs/Entity`: the `addresses` and `avatar` descriptions speak of the entity, not the artist. Entity names curators, partners, publishers and note authors as well as artists, and a producer could read the old wording as limiting `addresses` to artists. Schema descriptions and prose outside changelog entries use US spelling (color, neighbor, behavior). Descriptions only; no validation changes.
 
 * **Editorial (2026-10-30)** §5 pins `frameHash.phash`: a 64-bit DCT perceptual hash, which producers **MUST** write as `0x` and 16 hex digits, compared by Hamming distance. The schema said only `^0x[a-f0-9]+$`, any length and no algorithm, so two conforming producers could emit hashes that cannot be compared. The schema pattern is unchanged, so nothing previously valid changes; the field description states the pin.
 

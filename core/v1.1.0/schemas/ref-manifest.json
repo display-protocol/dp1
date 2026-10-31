@@ -87,7 +87,7 @@
             },
             "details": {
               "type": "array",
-              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with colour and sound, dimensions, duration, technique, toolchain.",
+              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with color and sound, dimensions, duration, technique, toolchain.",
               "items": {
                 "type": "string",
                 "minLength": 1,
@@ -349,7 +349,7 @@
         },
         "imageRendering": {
           "type": "string",
-          "description": "How raster images are resampled when scaled. \"pixelated\" keeps hard pixel edges (nearest-neighbour), for pixel art and bitmaps; \"auto\" lets the player smooth. Independent of scaling, which decides how the artwork fits",
+          "description": "How raster images are resampled when scaled. \"pixelated\" keeps hard pixel edges (nearest-neighbor), for pixel art and bitmaps; \"auto\" lets the player smooth. Independent of scaling, which decides how the artwork fits",
           "enum": ["auto", "pixelated"]
         },
         "interaction": {
