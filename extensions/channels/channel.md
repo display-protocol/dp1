@@ -11,13 +11,15 @@
 
 ## 1 · Purpose & Scope
 
-The **Channel Extension** formalizes higher-level groupings of playlists as persistent, branded feeds with rich metadata. Channels address use cases including:
+The **Channel Extension** defines attribution and signatures for a grouping of playlists: a persistent feed of playlist URLs, attributed to a publisher, with rich metadata. Publishers have used channels for, among others:
 
 - **Multi-curator exhibitions** with shared or distributed authorship
 - **Publisher attribution** for institutions, galleries, and collectives
-- **Exhibition hierarchies** preserving publisher → exhibition → playlist relationships
+- **Feeds at different levels**: one channel per platform, per gallery or organizer, or per exhibition
 
-Channels are self-contained curated-feed documents: ordered playlist URLs with publisher and curator attribution. They add no requirements to DP-1 core playlists and remain fully compatible with existing DP-1 v1.0.0+ implementations.
+The extension does not define at what level a publisher groups, or how a player or catalog displays or nests channels. Those are the publisher's and the consumer's choices.
+
+Channels are self-contained documents: ordered playlist URLs with publisher attribution and optional curator credit. They add no requirements to DP-1 core playlists and remain fully compatible with existing DP-1 v1.0.0+ implementations.
 
 ### 1.1 Relationship to Core DP-1
 
@@ -33,9 +35,9 @@ Channels are self-contained curated-feed documents: ordered playlist URLs with p
 
 | Term | Definition |
 |:-----|:-----------|
-| **Channel** | A persistent, curator-authored feed that groups playlists with shared metadata and publisher attribution. |
+| **Channel** | A persistent feed of playlists, attributed to a publisher, optionally with channel-level curators. |
 | **Publisher** | The entity responsible for distributing the channel (e.g., gallery, institution, collective). |
-| **Curator** | Individual or entity who authored/selected the playlists within a channel. Channels support multiple curators. |
+| **Curator** | Individual or entity credited for the channel as a whole. Channels support multiple curators. Credit for the works in a playlist belongs on that playlist's `curators` (Playlist Extension §3.2). |
 
 ---
 
@@ -566,6 +568,8 @@ Current version: **1.1.0**
 ## 13 · Changelog
 
 ### v1.1.0 (2026-10-29)
+
+**Editorial clarification (2026-10-30):** §1 and §2 say what a channel is in the terms the schema and §5.2 already use: a publisher's grouping of playlists, signed by that publisher. A channel was defined as "curator-authored" and its purpose listed "branded feeds" and a publisher → exhibition → playlist hierarchy, which read as if grouping playlists under a channel claimed curatorial authorship over them and as if a channel sat at one level. Curator credit for a playlist's works stays on that playlist's `curators`; channel-level `curators` credit the channel as a whole. No schema change; every channel valid before stays valid.
 
 **One Entity model for curators, partners and publishers.** `curators[]` and `publisher` now reference the **Entity** model defined once in the core Ref Manifest schema (§3.3), so a curator, partner or publisher carries the same fields as `metadata.artists[]`: optional `role`, `location`, `addresses`, `avatar`, `biographies` and `links`. `key` relaxes from **MUST** to **SHOULD** (§5.3), so a partner organization that has no DID can still be named.
 

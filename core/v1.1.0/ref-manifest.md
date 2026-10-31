@@ -13,7 +13,7 @@ Within a DP-1 playlist item:
 ```json
 {
   "source": "ipfs://bafy.../index.html",
-  "provenance": { "type": "erc721", "contract": "eip155:1:0x...:1234" },
+  "provenance": { "type": "onChain", "contract": { "chain": "evm", "standard": "erc721", "address": "0x...", "tokenId": "1234" } },
   "ref": "ipfs://bafy.../ref.json", // ipfs:// or https://... (content-addressed preferred)
   "refHash": "abcd" // Required if the ref is not content-addressed
 }

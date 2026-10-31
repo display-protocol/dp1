@@ -294,7 +294,7 @@
         },
         "contract": {
           "type": "object",
-          "description": "Smart contract details (required for onChain and seriesRegistry types)",
+          "description": "Where the record lives: contract details for onChain and seriesRegistry (required for those types). For offChainURI, carries the canonical link in uri.",
           "properties": {
             "chain": {
               "type": "string",
@@ -330,7 +330,7 @@
             },
             "uri": {
               "type": "string",
-              "description": "URI to token metadata (ipfs://, eth://, https://)",
+              "description": "URI to the record (ipfs://, eth://, https://): token metadata on chain, or the canonical off-chain record for offChainURI. The block's only link to its record.",
               "format": "uri"
             },
             "metaHash": {

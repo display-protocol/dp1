@@ -168,9 +168,9 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
   "type": "onChain"           // onChain | seriesRegistry | offChainURI
                               // onChain     → explicit contract object
                               // seriesRegistry → parent collection in SeriesRegistry
-                              // offChainURI   → uri points to canonical JSON/PDF
+                              // offChainURI   → contract.uri names the canonical record
 
-  /* present when type == "onChain"  OR "seriesRegistry" */
+  /* REQUIRED when type == "onChain" OR "seriesRegistry"; for "offChainURI", carries uri */
   "contract": {
     "chain":    "evm" | "tezos" | "bitmark" | "other",
     "standard": "erc721" | "erc1155" | "fa2" | "other",   // OPTIONAL
@@ -194,7 +194,7 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 
 ### Mutability & authority
 
-* `uri` and any `dependencies.uri` **SHOULD** be content-addressed (IPFS CID, Arweave TXID) to guarantee immutability.
+* `contract.uri` and any `dependencies.uri` **SHOULD** be content-addressed (IPFS CID, Arweave TXID) to guarantee immutability.
 * If an `https://` or `eth://` URI is used, **any** change to the referenced data **MUST** result in a new manifest, and the playlist **MUST** be re-signed.
 * When `metaHash` is present, players **SHOULD** verify it; implementers **MAY** perform this check asynchronously (i.e., without blocking first render).
 * Only the **playlist signer** has authority to update the `provenance` block.
@@ -205,13 +205,15 @@ Each `PlaylistItem` **MAY** embed a `provenance` object that links the rendered 
 | :-------------------------------- | :------------------------------------------------------------------------- |
 | Entire series only                | `seriesRegistry` \+ `contract.seriesId`; omit `tokenId`.                   |
 | One specific edition              | `seriesRegistry` or `onChain` with `seriesId` **and** `tokenId`.           |
-| Contract with no “series” concept | `type:"onChain"` and provide `uri`/`address`; omit `seriesId`.             |
-| Edition published, not yet on chain | `type:"offChainURI"` with `contract.seriesId` **and** `contract.tokenId`; `uri` names the published record. |
-| Off-chain certificate / PDF       | `type:"offChainURI"` and put the canonical link in `uri`; omit `contract`. |
+| Contract with no “series” concept | `type:"onChain"` and provide `contract.uri`/`contract.address`; omit `seriesId`. |
+| Edition published, not yet on chain | `type:"offChainURI"` with `contract.seriesId` **and** `contract.tokenId`; `contract.uri` names the published record. |
+| Off-chain certificate / PDF       | `type:"offChainURI"` and put the canonical link in `contract.uri`, with `contract.metaHash` when the link is mutable; omit the chain fields. |
+
+The link to the record is always `contract.uri`, whatever the `type`. `provenance` has no `uri` of its own, and `dependencies[].uri` names documentary dependencies, not the record.
 
 `seriesId` is the identifier the contract itself uses for the series — whatever name the contract gives it (a series, a project, an artwork with editions). Write it as an integer when it fits in a JSON number exactly; otherwise as a decimal string.
 
-An edition a publisher has announced but not minted — one that mints when it sells — has no token to name, and is still one of the editions a consumer groups by its series. State it as `offChainURI` keeping the `seriesId` and the `tokenId` it will take: the identity is settled, only the chain has not caught up, and leaving it out drops the edition from the series instead. `uri` names whatever record stands for it until then. Consumers **MUST NOT** read such a `tokenId` as a claim that the token exists on chain; verify it only when `type` says the chain holds it.
+An edition a publisher has announced but not minted — one that mints when it sells — has no token to name, and is still one of the editions a consumer groups by its series. State it as `offChainURI` keeping the `seriesId` and the `tokenId` it will take: the identity is settled, only the chain has not caught up, and leaving it out drops the edition from the series instead. `contract.uri` names whatever record stands for it until then. Consumers **MUST NOT** read such a `tokenId` as a claim that the token exists on chain; verify it only when `type` says the chain holds it.
 
 `dependencies` exist **solely for documentation & verification**—players **MUST NOT** fetch or execute remote code at runtime.
 
@@ -434,6 +436,8 @@ A directory that implements Playlist Extension §3.7 leaves out every playlist i
 ## 16 · Changelog
 
 * **Editorial (2026-10-30)** §5 pins `frameHash.phash`: a 64-bit DCT perceptual hash, which producers **MUST** write as `0x` and 16 hex digits, compared by Hamming distance. The schema said only `^0x[a-f0-9]+$`, any length and no algorithm, so two conforming producers could emit hashes that cannot be compared. The schema pattern is unchanged, so nothing previously valid changes; the field description states the pin.
+
+* **Editorial (2026-10-30)** §6 names `contract.uri` as the one place a provenance block links its record, for `offChainURI` as for the other types. The "Off-chain certificate / PDF" row said to put the link in `uri` and omit `contract`, which left it nowhere the schema declares; it now keeps `contract`, carrying `uri` (and `metaHash` when the link is mutable). Prose only — the schema already allowed `contract.uri` on `offChainURI`, and nothing previously valid changes.
 
 * **Editorial (2026-10-28)** §15 Directory API: directories leave out playlists marked `"visibility": "unlisted"` (Playlist Extension §3.7), and list a playlist only when `visibility` is absent or exactly `public`. No schema change; the field is defined by the Playlist Extension.
 
