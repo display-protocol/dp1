@@ -435,6 +435,8 @@ A directory that implements Playlist Extension §3.7 leaves out every playlist i
 
 ## 16 · Changelog
 
+* **Editorial (2026-10-30)** Ref Manifest `$defs/Entity`: the `addresses` and `avatar` descriptions speak of the entity, not the artist. Entity names curators, partners, publishers and note authors as well as artists, and a producer could read the old wording as limiting `addresses` to artists. Descriptions only; no validation changes.
+
 * **Editorial (2026-10-30)** §5 pins `frameHash.phash`: a 64-bit DCT perceptual hash, which producers **MUST** write as `0x` and 16 hex digits, compared by Hamming distance. The schema said only `^0x[a-f0-9]+$`, any length and no algorithm, so two conforming producers could emit hashes that cannot be compared. The schema pattern is unchanged, so nothing previously valid changes; the field description states the pin.
 
 * **Editorial (2026-10-30)** §6 names `contract.uri` as the one place a provenance block links its record, for `offChainURI` as for the other types. The "Off-chain certificate / PDF" row said to put the link in `uri` and omit `contract`, which left it nowhere the schema declares; it now keeps `contract`, carrying `uri` (and `metaHash` when the link is mutable). Prose only — the schema already allowed `contract.uri` on `offChainURI`, and nothing previously valid changes.

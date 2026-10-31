@@ -475,7 +475,7 @@ Excerpt (signatures omitted):
 - **Signed intent.** `visibility` is part of the signed document (DP-1 §7.1), so only a signer can set it, and changing it is a re-signed replacement like any other edit. A feed **MUST NOT** add, drop or rewrite it.
 - **Not access control.** An unlisted playlist is still served to anyone who requests its address, and anyone who has the address can pass it on. A directory built before this section may still list it, and a container that names it publishes its address (see **Containers**). An author who needs secrecy should not put the playlist on a public feed. Because the address is the main protection, producers **SHOULD** give unlisted playlists ids that cannot be guessed, such as a random (version 4) UUID.
 - **Directories.** A directory **MUST** include a playlist only when `visibility` is absent or exactly `public`. Any other value, including one a later version defines, **MUST** be treated as `unlisted`: a directory that does not understand the request fails closed. Non-string values are invalid.
-- **Containers.** A channel or playlist-group that references an unlisted playlist names it in the container's own signed document. Listing that container's members (for example a feed's playlist list filtered by channel) **MAY** therefore include the unlisted playlist: the container's author chose to name it.
+- **Containers.** A channel that references an unlisted playlist names it in the container's own signed document. Listing that container's members (for example a feed's playlist list filtered by channel) **MAY** therefore include the unlisted playlist: the container's author chose to name it.
 - **Aliases.** A feed **SHOULD NOT** resolve an unlisted playlist through any alias that is easier to guess than its id, such as a `slug` derived from the title. It **MAY** still hold the alias for uniqueness.
 - **Playback.** Visibility has no effect on playback. Players play an unlisted playlist exactly as they play a public one.
 
@@ -984,6 +984,10 @@ Current version: **0.2.0**
 ---
 
 ## 11 · Changelog
+
+### Editorial (2026-10-30)
+
+- §3.7 **Containers** names channels only. It also named playlist-groups, which DP-1 core removed (core §16, 2026-07-31).
 
 ### Amendment (2026-10-29) — Entity, links, note title and author, openAt
 
