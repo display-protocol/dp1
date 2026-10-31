@@ -87,7 +87,7 @@
             },
             "details": {
               "type": "array",
-              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with colour and sound, dimensions, duration, technique, toolchain.",
+              "description": "How the medium reads on the work's page: one short line per fact, in display order — format with color and sound, dimensions, duration, technique, toolchain.",
               "items": {
                 "type": "string",
                 "minLength": 1,
@@ -164,7 +164,7 @@
         },
         "addresses": {
           "type": "array",
-          "description": "Raw wallet addresses this producer attributes to the artist (0x... EVM, tz1|tz2|tz3|tz4... Tezos). Contract addresses (Tezos KT1..., EVM collection contracts) name a collection, not a person, and MUST NOT be listed; see provenance.contract. The only field consumers MAY use to correlate an artist across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one artist.",
+          "description": "Raw wallet addresses this producer attributes to the entity (0x... EVM, tz1|tz2|tz3|tz4... Tezos). Contract addresses (Tezos KT1..., EVM collection contracts) name a collection, not a person, and MUST NOT be listed; see provenance.contract. The only field consumers MAY use to correlate an entity across producers. A signed claim of the producer, not a fact: a wallet may be shared, and overlap between two producers' lists does not by itself make one entity.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -172,7 +172,7 @@
         },
         "avatar": {
           "$ref": "#/$defs/Thumbnail",
-          "description": "Portrait or profile image of the artist"
+          "description": "Portrait or profile image of the entity"
         },
         "biographies": {
           "type": "array",
@@ -349,7 +349,7 @@
         },
         "imageRendering": {
           "type": "string",
-          "description": "How raster images are resampled when scaled. \"pixelated\" keeps hard pixel edges (nearest-neighbour), for pixel art and bitmaps; \"auto\" lets the player smooth. Independent of scaling, which decides how the artwork fits",
+          "description": "How raster images are resampled when scaled. \"pixelated\" keeps hard pixel edges (nearest-neighbor), for pixel art and bitmaps; \"auto\" lets the player smooth. Independent of scaling, which decides how the artwork fits",
           "enum": ["auto", "pixelated"]
         },
         "interaction": {

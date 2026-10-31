@@ -94,7 +94,7 @@ the catalog by, and once as the lines a reader sees under the title. The two are
 not the same string. `type` is the filter — a closed enumeration, so a consumer
 groups works without parsing prose, and omitted where the producer does not know
 it. `details` is the reading: short lines in the order they are shown, each one
-fact — the format with its colour and sound, the dimensions, the duration, the
+fact — the format with its color and sound, the dimensions, the duration, the
 technique, the toolchain. A producer writes as many as it has and no more; a
 consumer renders them in order and **MUST NOT** reorder or parse them.
 
