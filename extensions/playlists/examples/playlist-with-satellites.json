@@ -1,0 +1,32 @@
+{
+  "dpVersion": "1.1.0",
+  "id": "1b1f2b4e-6a3d-4c2e-9f0a-7d8e9f0a1b2c",
+  "slug": "peer-to-peer-pjb",
+  "title": "Peer to Peer",
+  "created": "2026-11-09T00:00:00Z",
+  "satellites": [
+    {
+      "playlist": "https://feed.feralfile.com/playlists/peer-to-peer-launch-party-exclusive-wci",
+      "kind": "launch-party",
+      "title": "Launch Party Exclusive",
+      "note": "One edition given to guests at the Peer to Peer launch event."
+    }
+  ],
+  "items": [
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-9f1a-2b3c4d5e6f70",
+      "title": "Peer to Peer",
+      "source": "https://example.com/art/peer-to-peer/index.html"
+    }
+  ],
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "kid": "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+      "ts": "2026-11-09T00:00:00Z",
+      "payload_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "role": "curator",
+      "sig": "example-signature-bytes-not-for-production-use-only"
+    }
+  ]
+}
