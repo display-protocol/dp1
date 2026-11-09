@@ -6,7 +6,7 @@
 **Status:** Draft Extension  
 **DP-1 compatibility:** v1.0.0+  
 **Published:** 2026-03-11  
-**Updated:** 2026-10-28
+**Updated:** 2026-11-09
 
 ---
 
@@ -20,6 +20,7 @@ The **Playlist Extension** provides the following enhancements to DP-1 playlists
 4. **displayAt Scheduling**: Optional time-based filtering so conforming implementations play only items that are eligible at a given time (for example, Daily-style one artwork per day)
 5. **Inline Manifest**: Optional inline carriage of the standardized Ref Manifest on a `PlaylistItem`, for playlists with nowhere to host a `ref`
 6. **Visibility**: Optional signed request that directories leave a playlist out of their listings, for playlists shared by address only
+7. **Satellites**: Optional signed list of smaller playlists published around this one — a burn record, a memento run, a catalog or launch-party edition — rendered as labeled sections of this playlist's page rather than as shows of their own
 
 These extensions enable playlists to transition from static collections to live, personalized feeds while maintaining backwards compatibility with DP-1 core.
 
@@ -48,6 +49,7 @@ These extensions enable playlists to transition from static collections to live,
 | **Inline Manifest** | A complete DP-1 Ref Manifest document carried directly on a `PlaylistItem` as `inlineManifest`, instead of behind a `ref` URL. Same schema, same validation. |
 | **Visibility** | Optional playlist-level string saying whether directories may list the playlist: `public` (the default) or `unlisted`. A listing request, not access control. |
 | **Directory** | Any endpoint that enumerates playlists the client did not name: a feed's playlist list (core §15), a list filtered by curator, an item list that spans playlists, search, a sitemap. Fetching one playlist by its address is not a directory. |
+| **Satellite** | A smaller playlist published around another one — a burn record, a memento run, a catalog or launch-party edition — named on its parent via `satellites[]` and rendered as a labeled section of the parent's page by a consumer that implements §3.8. Remains a complete, independent playlist and a member of `channel.playlists[]` in its own right; `satellites[]` only changes how a browsing consumer that implements it presents the satellite. |
 
 ---
 
@@ -105,6 +107,7 @@ These extensions enable playlists to transition from static collections to live,
 | `links` | array of objects | OPTIONAL | Editorial content about the playlist — articles, events, news — in the order to show them. Each entry is a Ref Manifest `Link` (same type enum as everywhere else `Link` is used — `website`, `twitter`, `instagram`, `profile`, `publication`, `article`, `event`, `news`, `other` — plus `url` and optional `title`, `date`, `thumbnail`, `authors`). References only: the content stays at the URL — but the card a consumer draws travels with the entry. See §3.3.1. |
 | `dynamicQuery` | object | OPTIONAL | Dynamic item fetching configuration. See §4. |
 | `visibility` | string | OPTIONAL | Whether directories may list the playlist: `public` (default when absent) or `unlisted`. See §3.7. |
+| `satellites` | array of `$defs/Satellite` | OPTIONAL | Smaller playlists published around this one, named here on the parent and rendered as sections of this playlist's page. Does not affect `channel.playlists[]` membership or ordering. See §3.8. |
 
 Playlist items **MAY** include an optional `note` field with the same object shape; when present, players **SHOULD** show that intermission **before loading that item** (after any prior item or intermission). Items **MAY** also include an optional top-level `displayAt` datetime (same level as `source`, **not** inside `display`). These fields are **not** part of canonical DP-1 core; they are defined only by this extension. In JSON Schema, item-level `note` and `displayAt` are validated by an **`allOf` overlay**: `extensions/playlists/schema.json` adds optional `properties.items.items.properties.note` and `properties.items.items.properties.displayAt` (see Appendix A), composed with `extensions/playlists/bundles/playlist-core-v1.1.0.json` via `playlist_with_extension.json`—the bundle’s `PlaylistItem` definition is not forked for these fields.
 
@@ -478,6 +481,76 @@ Excerpt (signatures omitted):
 - **Containers.** A channel that references an unlisted playlist names it in the container's own signed document. Listing that container's members (for example a feed's playlist list filtered by channel) **MAY** therefore include the unlisted playlist: the container's author chose to name it.
 - **Aliases.** A feed **SHOULD NOT** resolve an unlisted playlist through any alias that is easier to guess than its id, such as a `slug` derived from the title. It **MAY** still hold the alias for uniqueness.
 - **Playback.** Visibility has no effect on playback. Players play an unlisted playlist exactly as they play a public one.
+
+---
+
+### 3.8 Satellites
+
+A playlist **MAY** carry an optional top-level `satellites` array. Each entry names a smaller, independently signed playlist published around this one — a burn record, a set of mementos, a catalog or launch-party edition — that a consumer implementing this section **SHOULD** present as a labeled section of this playlist's page, rather than as a show of its own. The relation is named on the parent, the same pattern `Channel.playlists[]` already uses one level up: the satellite's own document carries no back-reference.
+
+**`$defs/Satellite`:**
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `playlist` | string (URI) | **REQUIRED** | Absolute URI of the satellite's own playlist. Not a channel-relative or otherwise relative address: `format: uri` (JSON Schema) requires an absolute URI, and this section defines no relative-resolution rule. |
+| `kind` | string | **REQUIRED** | Open vocabulary (as in content-rating): the kind of satellite this is, e.g. `"burn"`, `"mementos"`, `"catalog"`, `"launch-party"`. Any string is valid; an unrecognized value is still a valid satellite, just an unlabeled one. |
+| `title` | string | OPTIONAL | Heading shown above the satellite's items (1–200 characters), when different from a human-readable form of `kind`. |
+| `note` | string | OPTIONAL | One paragraph of context shown above the satellite's items (1–2000 characters), e.g. what a memento is and when it was given out. |
+
+Excerpt (signatures omitted):
+
+```json
+{
+  "dpVersion": "1.1.0",
+  "id": "1b1f2b4e-6a3d-4c2e-9f0a-7d8e9f0a1b2c",
+  "slug": "peer-to-peer-pjb",
+  "title": "Peer to Peer",
+  "satellites": [
+    {
+      "playlist": "https://feed.feralfile.com/playlists/peer-to-peer-launch-party-exclusive-wci",
+      "kind": "launch-party",
+      "title": "Launch Party Exclusive",
+      "note": "One edition given to guests at the Peer to Peer launch event."
+    }
+  ],
+  "items": [
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-9f1a-2b3c4d5e6f70",
+      "title": "Peer to Peer",
+      "source": "https://example.com/art/peer-to-peer/index.html"
+    }
+  ]
+}
+```
+
+A parent **MAY** name more than one satellite, with or without `title`:
+
+```json
+{
+  "dpVersion": "1.1.0",
+  "id": "2c3d4e5f-7b4e-4d3f-a05b-8e9f0a1b2c3d",
+  "slug": "unsupervised",
+  "title": "Unsupervised",
+  "satellites": [
+    { "playlist": "https://feed.feralfile.com/playlists/unsupervised-burn", "kind": "burn" },
+    { "playlist": "https://feed.feralfile.com/playlists/unsupervised-mementos", "kind": "mementos", "title": "Mementos" }
+  ],
+  "items": [
+    {
+      "id": "3d4e5f6a-8c5f-4e4a-b16c-9f0a1b2c3d4e",
+      "title": "Unsupervised",
+      "source": "https://example.com/art/unsupervised/index.html"
+    }
+  ]
+}
+```
+
+**Rules:**
+
+- **Channel membership is unchanged.** A satellite's playlist stays exactly where a producer already puts it for playback: a member of `channel.playlists[]`, immediately after its parent, same as today. This field **MUST NOT** be read as removing or reordering that membership — a satellite's own per-show channel independently folds its series into the parent's own series list for a per-show cast, but a site-wide, sequential, catalog-wide playback walks `channel.playlists[]` in order and carries the satellite's content only because it remains a member there. Removing it from the channel would silently drop it from that playback, since the parent's own playlist item deliberately excludes the satellite's items and nothing else in the sequence carries them.
+- **Self-contained.** `satellites[]` is the whole mechanism for this relation: a consumer that implements this section renders the named satellite as a labeled section (`kind`, `title`, `note`) of its parent's page. A consumer that does not implement this section has no defined fallback here — it is free to list the satellite's playlist on its own terms, same as any playlist it does not have special handling for. This section does not ask a producer to set anything else (such as `visibility`, §3.7) to get that behavior, and does not change what §3.7 itself means for a playlist that happens to also be a satellite.
+- **Independent document.** A satellite's playlist remains a complete, independently valid, independently signable `Playlist` — its own series, id and signature. This section adds no required field to it.
+- **Parent-only.** `satellites[]` is named only on the parent. A satellite's own playlist **MUST NOT** be expected to carry a back-reference to its parent; a consumer that needs the relation in the other direction derives it by resolving every playlist's `satellites[]`, the same way it would for `channel.playlists[]`.
 
 ---
 
@@ -985,6 +1058,16 @@ Current version: **0.2.0**
 
 ## 11 · Changelog
 
+### Amendment (2026-11-09) — satellites
+
+- Documented optional playlist-level **`satellites`** (§3.8): an array of `$defs/Satellite` (`playlist` URI and `kind`, both required; optional `title`, `note`) naming smaller playlists published around this one — a burn record, a memento run, a catalog or launch-party edition — so a consumer that implements this section renders each as a labeled section of this playlist's page instead of as a show of its own.
+- Named on the parent only, the same pattern `Channel.playlists[]` already uses one level up: the satellite's own playlist carries no back-reference and needs no mandatory parent at mint time.
+- Does **not** touch `channel.playlists[]` membership or ordering: a satellite's playlist stays exactly where a producer already puts it for playback, immediately after its parent, unchanged by this amendment.
+- Self-contained: `satellites[]` carries the whole relation on its own. A consumer that implements §3.8 renders the named satellite as a section of its parent; this amendment defines no required interaction with `visibility` (§3.7) or any other field for that behavior.
+- Additive, following the Note, Inline Manifest and Visibility precedent (see §8.1): a document without `satellites` validates exactly as before; no existing field's meaning changes.
+- JSON: `extensions/playlists/schema.json` (top-level `satellites`, `$defs/Satellite`). Examples added: `extensions/playlists/examples/playlist-with-satellites.json`.
+- No `$id` changed, and the extension remains **v0.2.0** (draft).
+
 ### Editorial (2026-10-30)
 
 - §3.7 **Containers** names channels only. It also named playlist-groups, which DP-1 core removed (core §16, 2026-07-31).
@@ -1136,6 +1219,13 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
       "type": "string",
       "description": "Whether directories may list the playlist (§3.7). Values defined: public (default when absent), unlisted. Directories treat any other value as unlisted."
     },
+    "satellites": {
+      "type": "array",
+      "description": "Smaller playlists published around this one, rendered as sections of this playlist's page (§3.8). Does not affect channel.playlists[] membership or ordering.",
+      "items": {
+        "$ref": "#/$defs/Satellite"
+      }
+    },
     "dynamicQuery": {
       "type": "object",
       "required": ["profile", "endpoint", "responseMapping"],
@@ -1221,6 +1311,29 @@ Canonical machine-readable schema: `extensions/playlists/schema.json`. The fragm
         },
         "author": {
           "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity"
+        }
+      }
+    },
+    "Satellite": {
+      "type": "object",
+      "required": ["playlist", "kind"],
+      "properties": {
+        "playlist": {
+          "type": "string",
+          "format": "uri"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
         }
       }
     }

@@ -48,6 +48,13 @@
       "type": "string",
       "description": "Whether directories may list the playlist (§3.7). Values defined by this version: public (the default when absent) and unlisted. A listing request, not access control: an unlisted playlist is still served to anyone with its address. Directories treat any value other than public as unlisted. Non-string values are invalid."
     },
+    "satellites": {
+      "type": "array",
+      "description": "Smaller playlists published around this one — a burn record, a memento run, a catalog or launch-party edition — named here on the parent and rendered as sections of this playlist's page (§3.8). Does not affect channel.playlists[] membership or ordering: a satellite's playlist stays a member there, unchanged, for playback.",
+      "items": {
+        "$ref": "#/$defs/Satellite"
+      }
+    },
     "dynamicQuery": {
       "description": "Dynamic item fetching configuration",
       "$ref": "#/$defs/DynamicQuery"
@@ -124,6 +131,37 @@
     "Entity": {
       "$ref": "https://dp1.feralfile.com/schemas/v1.1.0/ref-manifest.json#/$defs/Entity",
       "description": "The unified DP-1 Entity, defined once in the core Ref Manifest schema and shared with the channels extension and with metadata.artists[]"
+    },
+    "Satellite": {
+      "type": "object",
+      "description": "A smaller playlist published around this one — a burn record, a memento run, a catalog or launch-party edition — that a consumer should present as part of this playlist's page rather than as a show of its own. Independent document: its own series, id and signature; this entry only names it and how to present it.",
+      "required": [
+        "playlist",
+        "kind"
+      ],
+      "properties": {
+        "playlist": {
+          "type": "string",
+          "format": "uri",
+          "description": "Absolute URI of the satellite's own playlist."
+        },
+        "kind": {
+          "type": "string",
+          "description": "Open vocabulary (as in contentRating): the kind of satellite this is, e.g. \"burn\", \"mementos\", \"catalog\", \"launch-party\". Producers may use any string a consumer can render as a section label; an unrecognized value is still a valid satellite, just an unlabeled one."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Heading shown above the satellite's items, when different from a human-readable form of kind."
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "One paragraph of context shown above the satellite's items, e.g. what a memento is and when it was given out."
+        }
+      }
     },
     "DynamicQuery": {
       "type": "object",
