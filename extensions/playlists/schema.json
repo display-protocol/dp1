@@ -143,7 +143,7 @@
         "playlist": {
           "type": "string",
           "format": "uri",
-          "description": "URI of the satellite's playlist (or the channel-relative address a consumer resolves the same way it resolves any other playlist reference)."
+          "description": "Absolute URI of the satellite's own playlist."
         },
         "kind": {
           "type": "string",

@@ -492,7 +492,7 @@ A playlist **MAY** carry an optional top-level `satellites` array. Each entry na
 
 | Field | Type | Required | Description |
 |:------|:-----|:---------|:------------|
-| `playlist` | string (URI) | **REQUIRED** | URI of the satellite's own playlist. |
+| `playlist` | string (URI) | **REQUIRED** | Absolute URI of the satellite's own playlist. Not a channel-relative or otherwise relative address: `format: uri` (JSON Schema) requires an absolute URI, and this section defines no relative-resolution rule. |
 | `kind` | string | **REQUIRED** | Open vocabulary (as in content-rating): the kind of satellite this is, e.g. `"burn"`, `"mementos"`, `"catalog"`, `"launch-party"`. Any string is valid; an unrecognized value is still a valid satellite, just an unlabeled one. |
 | `title` | string | OPTIONAL | Heading shown above the satellite's items (1–200 characters), when different from a human-readable form of `kind`. |
 | `note` | string | OPTIONAL | One paragraph of context shown above the satellite's items (1–2000 characters), e.g. what a memento is and when it was given out. |
