@@ -147,7 +147,7 @@
         },
         "kind": {
           "type": "string",
-          "description": "Open vocabulary (as in contentRating and visibility): the kind of satellite this is, e.g. \"burn\", \"mementos\", \"catalog\", \"launch-party\". Producers may use any string a consumer can render as a section label; an unrecognized value is still a valid satellite, just an unlabeled one."
+          "description": "Open vocabulary (as in contentRating): the kind of satellite this is, e.g. \"burn\", \"mementos\", \"catalog\", \"launch-party\". Producers may use any string a consumer can render as a section label; an unrecognized value is still a valid satellite, just an unlabeled one."
         },
         "title": {
           "type": "string",

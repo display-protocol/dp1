@@ -67,7 +67,7 @@
         "displayAt scheduling: automatically active when any item has displayAt; playback includes only the current release (latest past displayAt instant) plus items without displayAt (ISO 8601; bare local = display locale, Z/offset absolute; date-only not accepted); transitions apply immediately",
         "Inline Manifest: a full Ref Manifest document carried on a PlaylistItem as inlineManifest — same schema and validation as a ref-fetched manifest, ref overrides inline, integrity via the playlist signature (no refHash needed)",
         "Visibility: optional signed playlist-level visibility (public, the default, or unlisted); directories list a playlist only when visibility is absent or public, container listings may include an unlisted playlist the container names; a listing request, not access control",
-        "Satellites: optional signed playlist-level satellites[] naming smaller playlists published around this one (burn, mementos, catalog, launch-party, open vocabulary) via $defs/Satellite (playlist, kind required; title, note optional); rendered as labeled sections of this playlist's page by a consumer that implements it, with visibility: unlisted as the SHOULD-recommended fallback for others; does not remove or reorder the satellite's own membership in channel.playlists[]"
+        "Satellites: optional signed playlist-level satellites[] naming smaller playlists published around this one (burn, mementos, catalog, launch-party, open vocabulary) via $defs/Satellite (playlist, kind required; title, note optional); rendered as labeled sections of this playlist's page by a consumer that implements it; self-contained, no required interaction with visibility or any other field; does not remove or reorder the satellite's own membership in channel.playlists[]"
       ],
       "maintainer": {
         "name": "Feral File",
@@ -112,7 +112,7 @@
       "date": "2026-11-09T00:00:00Z",
       "changes": [
         "Playlist extension: optional top-level satellites[] ($defs/Satellite: playlist URI and kind required; title, note optional). Names smaller playlists published around this one — a burn record, a memento run, a catalog or launch-party edition — on the parent, so a consumer that implements it renders each as a labeled section of the parent's page instead of as a show of its own.",
-        "Playlist extension: satellites[] does not remove or reorder channel.playlists[] membership; a satellite's playlist stays a member there, immediately after its parent, exactly as today, which is what keeps it in a sequential, catalog-wide playback. visibility: unlisted (§3.7) remains the SHOULD-recommended fallback on a satellite's playlist for a directory that has not implemented satellites[]; canonical core playlist.json unchanged; status remains draft extension v0.2.0."
+        "Playlist extension: satellites[] does not remove or reorder channel.playlists[] membership; a satellite's playlist stays a member there, immediately after its parent, exactly as today, which is what keeps it in a sequential, catalog-wide playback. satellites[] is self-contained and defines no required interaction with visibility or any other field; canonical core playlist.json unchanged; status remains draft extension v0.2.0."
       ]
     },
     {
